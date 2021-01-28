@@ -99,22 +99,20 @@ struct PerfDesc
 {
     char node_name[MAX_PERF_NODE_NAME_SIZE];
     int node_name_len;
-    double time_unit_to_sec;
-    double mem_unit_to_m;
 };
 
 struct PerfCPU
 {
-    double call_count; //调用次数   
-    double call_use_time;  //调用耗时    
+    long long call_count; //调用次数   
+    long long call_use_time;  //调用耗时    
     long long user_val_sum; //用户累加值      
 };
 
 struct PerfMEM
 {
-    double call_count; //调用次数   
-    double change_mem;  //内存累加变化    
-    double fixed_size; //内存固定值     
+    long long call_count; //调用次数   
+    long long change_mem;  //内存累加变化    
+    long long fixed_size; //内存固定值     
 };
 
 struct PerfNode
@@ -133,7 +131,7 @@ struct PerfNode
 #define PERF_USE_THREAD
 #define PERF_USE_REALTIME
 
-inline double perf_now_ns()
+inline long long perf_now_ns()
 {
 #ifdef WIN32
     FILETIME ft;
@@ -143,7 +141,7 @@ inline double perf_now_ns()
     now |= ft.dwLowDateTime;
     now /= 10;
     now -= 11644473600000000ULL;
-    return now * 1000.0; //ns
+    return (long long)now * 1000; //ns
 
 #elif (defined PERF_USE_REALTIME)
     struct timespec ts;
@@ -160,6 +158,47 @@ inline double perf_now_ns()
 #endif
 }
 
+
+inline int perf_self_memory_use()
+{
+    const char* file = "/proc/self/status";
+    FILE* fp = fopen(file, "r");
+    if (NULL == fp)
+    {
+        return 0;
+    }
+
+    char line_buff[256];
+    int vm_size = 0;
+    while (fgets(line_buff, sizeof(line_buff), fp) != NULL)
+    {
+        if (strstr(line_buff, "VmSize") != NULL)
+        {
+            const char* p = line_buff;
+            while (p < &line_buff[255] && (*p < '0' || *p > '9'))
+            {
+                p++;
+            }
+            if (p == &line_buff[255])
+            {
+                break;
+            }
+
+            int ret = sscanf(p, "%d", &vm_size);
+            if (ret <= 0)
+            {
+                vm_size = 0;
+                break;
+            }
+            break;
+        }
+    }
+
+    fclose(fp);
+    return (long long) vm_size * 1000;
+}
+
+
 class PerfTime
 {
 public:
@@ -167,32 +206,32 @@ public:
     {
         begin_tick();
     }
-    PerfTime(double begin)
+    PerfTime(long long begin)
     {
         last_time_ = begin;
-        duration_ = 0.0;
+        duration_ = 0;
     }
-    double nomalize_sec() const { return  1.0 / 1000.0 / 1000.0 / 1000.0; }
     void begin_tick()
     {
         last_time_ = perf_now_ns();
-        duration_ = 0.0f;
+        duration_ = 0;
     }
 
     PerfTime& end_tick()
     {
-        double elapse = perf_now_ns() - last_time_;
-        duration_ = elapse > 0.0 ? elapse : 0.0;
+        long long elapse = perf_now_ns() - last_time_;
+        duration_ = elapse > 0 ? elapse : 0;
         return *this;
     }
 
-    double duration() {return duration_; }
-    double end(){ return last_time_ + duration_;}
-    double begin(){return last_time_;}
+    long long duration() {return duration_; }
+    double duration_second() { return (double)duration_ / (1000.0 * 1000.0 * 1000.0); }
+    long long end(){ return last_time_ + duration_;}
+    long long begin(){return last_time_;}
     
 private:
-    double last_time_;
-    double duration_;
+    long long last_time_;
+    long long duration_;
 };
 
 
@@ -212,7 +251,7 @@ public:
         return inst;
     }
     
-    inline int regist_node(int idx, const char* desc, double cpu_unit, double mem_unit, bool overwrite);
+    inline int regist_node(int idx, const char* desc, bool overwrite);
     inline int add_node_child(int idx, int child);
 
     void reset_cpu(int idx)
@@ -223,24 +262,24 @@ public:
     void reset_mem(int idx)
     {
         PerfNode& node = nodes_[idx];
-        double fixed_size = node.mem.fixed_size;
+        long long fixed_size = node.mem.fixed_size;
         memset(&node.mem, 0, sizeof(node.mem));
         node.mem.fixed_size = fixed_size;
     }
-    void call_cpu(int idx, double call_count, double use_time, long long add_val)
+    void call_cpu(int idx, long long call_count, long long use_time, long long add_val)
     {
         PerfNode& node = nodes_[idx];
         node.cpu.call_count += call_count;
         node.cpu.call_use_time += use_time;
         node.cpu.user_val_sum += add_val;
     }
-    void call_mem(int idx, double call_count, double change_mem)
+    void call_mem(int idx, long long call_count, long long change_mem)
     {
         PerfNode& node = nodes_[idx];
         node.mem.call_count += call_count;
         node.mem.change_mem += change_mem;
     }
-    void set_fixed_mem(int idx, double fixed_size)
+    void set_fixed_mem(int idx, long long fixed_size)
     {
         PerfNode& node = nodes_[idx];
         node.mem.fixed_size = fixed_size;
@@ -290,7 +329,7 @@ int PerfRecord<T, S>::add_node_child(int idx, int cidx)
 }
 
 template<int T, int S>
-int PerfRecord<T, S>::regist_node(int idx, const char* desc, double cpu_unit, double mem_unit, bool overwrite)
+int PerfRecord<T, S>::regist_node(int idx, const char* desc, bool overwrite)
 {
     if (idx < 0)
     {
@@ -321,8 +360,6 @@ int PerfRecord<T, S>::regist_node(int idx, const char* desc, double cpu_unit, do
     memset(&node, 0, sizeof(node));
     memcpy(node.desc.node_name, desc, len+1);
     node.desc.node_name_len = len;
-    node.desc.time_unit_to_sec = cpu_unit;
-    node.desc.mem_unit_to_m = mem_unit;
     node.active = true;
     return 0;
 }
@@ -356,8 +393,8 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         {
             return -3;
         }
-        double sum = (node.cpu.call_use_time * node.desc.time_unit_to_sec);
-        double avg = sum / (node.cpu.call_count < 1.0 ? 1.0 : node.cpu.call_count);
+        double sum = node.cpu.call_use_time /(1000.0*1000.0*1000.0);
+        double avg = sum /node.cpu.call_count;
         int ret = 0;
         if (avg > 1.0)
         {
@@ -408,26 +445,40 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         {
             return -6;
         }
-        double sum = node.mem.change_mem * node.desc.mem_unit_to_m;
+        double sum = node.mem.change_mem /(1000.0*1000.0);
         double avg = sum / (node.mem.call_count < 1.0 ? 1.0 : node.mem.call_count);
         int ret = 0;
 
         if (avg > 1.0)
         {
-            ret = sprintf(buff, "[%s] mem: call:<%lld>  avg change: %g m  sum use: %g m  fixed size:<%g> \n",
+            ret = sprintf(buff, "[%s] mem: call:<%lld>  avg change: %g m  sum use: %g m  fixed size:<%lld> \n",
                 node.desc.node_name, (long long)node.mem.call_count, avg, sum, node.mem.fixed_size);
         }
         else if (avg * 1000 > 1.0)
         {
-            ret = sprintf(buff, "[%s] mem: call:<%lld>  avg change: %g k  sum use: %g m  fixed size:<%g> \n",
+            ret = sprintf(buff, "[%s] mem: call:<%lld>  avg change: %g k  sum use: %g m  fixed size:<%lld> \n",
                 node.desc.node_name, (long long)node.mem.call_count, avg * 1000.0, sum, node.mem.fixed_size);
         }
         else
         {
-            ret = sprintf(buff, "[%s] mem: call:<%lld>  avg change: %g b  sum use: %g m  fixed size:<%g> \n",
+            ret = sprintf(buff, "[%s] mem: call:<%lld>  avg change: %g b  sum use: %g m  fixed size:<%lld> \n",
                 node.desc.node_name, (long long)node.mem.call_count, avg * 1000.0 * 1000.0, sum, node.mem.fixed_size);
         }
 
+        if (ret < 0)
+        {
+            return -7;
+        }
+        buff += ret;
+        buff_len -= ret;
+        if (buff_len < 0)
+        {
+            return -8;
+        }
+    }
+    if (node.cpu.call_count <= 0 && node.mem.call_count <= 0)
+    {
+        int ret = sprintf(buff, "[%s] no any call data. mem fixed size:<%lld>. \n", node.desc.node_name, node.mem.fixed_size);
         if (ret < 0)
         {
             return -7;
