@@ -37,9 +37,7 @@ void entry_cpu_test()
 void entry_mem_test()
 {
 
-    PerfInst.regist_node(5, "entry", false);
-    PerfInst.regist_node(6, "alloc", false);
-    PerfInst.regist_node(7, "free", false);
+
     PerfTime use;
     PerfTime alloc_use;
     for (size_t i = 0; i < 10000; i++)

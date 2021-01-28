@@ -253,7 +253,7 @@ public:
     
     inline int regist_node(int idx, const char* desc, bool overwrite);
     inline int add_node_child(int idx, int child);
-
+    
     void reset_cpu(int idx)
     {
         PerfNode& node = nodes_[idx];
@@ -266,6 +266,7 @@ public:
         memset(&node.mem, 0, sizeof(node.mem));
         node.mem.fixed_size = fixed_size;
     }
+    inline void reset_childs(int idx, int depth = 0);
     void call_cpu(int idx, long long call_count, long long use_time, long long add_val)
     {
         PerfNode& node = nodes_[idx];
@@ -279,6 +280,7 @@ public:
         node.mem.call_count += call_count;
         node.mem.change_mem += change_mem;
     }
+    
     void set_fixed_mem(int idx, long long fixed_size)
     {
         PerfNode& node = nodes_[idx];
@@ -364,9 +366,34 @@ int PerfRecord<T, S>::regist_node(int idx, const char* desc, bool overwrite)
     return 0;
 }
 
-static inline const char* human_count_format(long long count)
+template<int T, int S>
+void PerfRecord<T, S>::reset_childs(int idx, int depth)
 {
-    static char buff[100] = { 0 };
+    if (idx < 0)
+    {
+        return;
+    }
+    if (idx >= NODE_COUNT)
+    {
+        return;
+    }
+    PerfNode& node = nodes_[idx];
+    memset(&node.cpu, 0, sizeof(node.cpu));
+    memset(&node.mem, 0, sizeof(node.mem));
+    if (depth > 5)
+    {
+        return;
+    }
+    for (int i = 0; i < node.child_count; i++)
+    {
+        reset_childs(node.child_ids[i], depth + 1);
+    }
+}
+
+
+
+static inline const char* human_count_format(char *buff, long long count)
+{
     if (count > 1000 * 1000)
     {
         sprintf(buff, "%lld,%03lld,%03lld", count / 1000 / 1000, (count / 1000) % 1000, count % 1000);
@@ -381,9 +408,14 @@ static inline const char* human_count_format(long long count)
     return buff;
 }
 
-static inline const char* human_time_format(long long ns)
+static inline const char* human_count_format(long long count)
 {
     static char buff[100] = { 0 };
+    return human_count_format(buff, count);
+}
+
+static inline const char* human_time_format(char* buff, long long ns)
+{
     if (ns > 1000*1000*1000)
     {
         sprintf(buff, "%.4lfs", ns / 1000.0 / 1000.0 / 1000.0);
@@ -403,9 +435,14 @@ static inline const char* human_time_format(long long ns)
     return buff;
 }
 
-static inline const char* human_mem_format(long long bytes)
+static inline const char* human_time_format(long long ns)
 {
     static char buff[100] = { 0 };
+    return human_time_format(buff, ns);
+}
+
+static inline const char* human_mem_format(char* buff, long long bytes)
+{
     if (bytes > 1024 * 1024 * 1024)
     {
         sprintf(buff, "%.4lfg", bytes / 1024.0 / 1024.0 / 1024.0);
@@ -424,6 +461,13 @@ static inline const char* human_mem_format(long long bytes)
     sprintf(buff, "%lldb", bytes);
     return buff;
 }
+
+static inline const char* human_mem_format(long long bytes)
+{
+    static char buff[100] = { 0 };
+    return human_mem_format(buff, bytes);
+}
+
 
 template<int T, int S>
 int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int buff_len)
@@ -453,12 +497,18 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         {
             return -3;
         }
+        char buff_call[50];
+        human_count_format(buff_call, node.cpu.call_count);
+        char buff_avg[50];
+        human_time_format(buff_avg, node.cpu.call_use_time / node.cpu.call_count);
+        char buff_sum[50];
+        human_time_format(buff_sum, node.cpu.call_use_time);
+        char buff_val[50];
+        human_count_format(buff_val, node.cpu.user_val_sum);
+
         int ret = sprintf(buff, "[%s] cpu: call:%s  avg use: %s  sum use: %s  user val sum:%s \n",
-            node.desc.node_name, 
-            human_count_format(node.cpu.call_count), 
-            human_time_format(node.cpu.call_use_time/ node.cpu.call_count), 
-            human_time_format(node.cpu.call_use_time), 
-            human_count_format(node.cpu.user_val_sum));
+            node.desc.node_name, buff_call, buff_avg, buff_sum, buff_val);
+
         if (ret < 0)
         {
             return -4;
@@ -487,12 +537,17 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         {
             return -6;
         }
+        char buff_call[50];
+        human_count_format(buff_call, node.mem.call_count);
+        char buff_avg[50];
+        human_time_format(buff_avg, node.mem.change_mem / node.mem.call_count);
+        char buff_sum[50];
+        human_time_format(buff_sum, node.mem.change_mem);
+        char buff_val[50];
+        human_count_format(buff_val, node.mem.fixed_size);
+
         int ret = sprintf(buff, "[%s] cpu: call:%s  avg change: %s  sum: %s  fixed size:%s \n",
-            node.desc.node_name,
-            human_count_format(node.mem.call_count),
-            human_mem_format(node.mem.change_mem / node.mem.call_count),
-            human_mem_format(node.mem.change_mem),
-            human_mem_format(node.mem.fixed_size));
+            node.desc.node_name, buff_call, buff_avg, buff_sum, buff_val);
 
         if (ret < 0)
         {

@@ -58,12 +58,19 @@ int main(int argc, char *argv[])
     LogDebug() << "perf record node size:" << sizeof(PerfInst) << "bytes";
 
 
-    entry_mem_test();
+    
     PerfInst.add_node_child(0, 1);
+
+
+    PerfInst.regist_node(5, "entry", false);
+    PerfInst.regist_node(6, "alloc", false);
+    PerfInst.regist_node(7, "free", false);
     PerfInst.add_node_child(5, 6);
     PerfInst.add_node_child(5, 7);
     PerfInst.regist_node(8, "empty", false);
     PerfInst.add_node_child(8, 5);
+
+    entry_mem_test();
     PerfInst.call_mem(8, 1, perf_self_memory_use());
     for (int i = 0; i < PerfInst.node_count(); i++)
     {
@@ -72,6 +79,18 @@ int main(int argc, char *argv[])
             LogDebug() << PerfInst.serialize(i);
         }
     }
+
+    PerfInst.reset_childs(8);
+    entry_mem_test();
+    PerfInst.call_mem(8, 1, perf_self_memory_use());
+    for (int i = 0; i < PerfInst.node_count(); i++)
+    {
+        if (PerfInst.node(i).active && !PerfInst.node(i).is_child)
+        {
+            LogDebug() << PerfInst.serialize(i);
+        }
+    }
+
 
     PerfTime sleep_use;
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
