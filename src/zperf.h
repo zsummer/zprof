@@ -87,6 +87,11 @@
 #endif
 #endif
 
+#ifdef _WIN32
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
 
 #ifndef ZPERF_H
 #define ZPERF_H
@@ -127,13 +132,21 @@ struct PerfNode
 };  
 
 
-
-#define PERF_USE_THREAD
-#define PERF_USE_REALTIME
+//#define PERF_RDTSC
+//#define PERF_USE_THREAD
+//#define PERF_USE_REALTIME
 
 inline long long perf_now_ns()
 {
+#ifdef PERF_RDTSC
 #ifdef WIN32
+    return (long long) __rdtsc();
+#else
+    unsigned int lo, hi;
+    __asm__ __volatile__("rdtsc" : "=a" (lo), "=d" (hi));
+    return (long long)(((uint64_t)hi << 32) | lo);
+#endif
+#elif (defined WIN32)
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
     unsigned long long now = ft.dwHighDateTime;
@@ -486,6 +499,10 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
     PerfNode& node = nodes_[entry_idx];
     if (node.cpu.call_count > 0)
     {
+        if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+        {
+            return -6;
+        }
         for (int i = 0; i < depth; i++)
         {
             *buff++ = ' ';
@@ -495,7 +512,7 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         *(buff + 1) = '\0';
         if (buff_len < MAX_PERF_NODE_LINE_SIZE)
         {
-            return -3;
+            return -6;
         }
         char buff_call[50];
         human_count_format(buff_call, node.cpu.call_count);
@@ -540,13 +557,13 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         char buff_call[50];
         human_count_format(buff_call, node.mem.call_count);
         char buff_avg[50];
-        human_time_format(buff_avg, node.mem.change_mem / node.mem.call_count);
+        human_mem_format(buff_avg, node.mem.change_mem / node.mem.call_count);
         char buff_sum[50];
-        human_time_format(buff_sum, node.mem.change_mem);
+        human_mem_format(buff_sum, node.mem.change_mem);
         char buff_val[50];
-        human_count_format(buff_val, node.mem.fixed_size);
+        human_mem_format(buff_val, node.mem.fixed_size);
 
-        int ret = sprintf(buff, "[%s] cpu: call:%s  avg change: %s  sum: %s  fixed size:%s \n",
+        int ret = sprintf(buff, "[%s] mem: call:%s  avg change: %s  sum: %s  fixed size:%s \n",
             node.desc.node_name, buff_call, buff_avg, buff_sum, buff_val);
 
         if (ret < 0)
@@ -562,6 +579,21 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
     }
     if (node.cpu.call_count <= 0 && node.mem.call_count <= 0)
     {
+        if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+        {
+            return -6;
+        }
+        for (int i = 0; i < depth; i++)
+        {
+            *buff++ = ' ';
+            *buff++ = ' ';
+            buff_len -= 2;
+        }
+        *(buff + 1) = '\0';
+        if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+        {
+            return -6;
+        }
         int ret = sprintf(buff, "[%s] no any call data. mem fixed size:<%lld>. \n", node.desc.node_name, node.mem.fixed_size);
         if (ret < 0)
         {
