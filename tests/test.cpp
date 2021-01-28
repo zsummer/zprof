@@ -21,8 +21,8 @@
 void entry_cpu_test()
 {
     PerfTime entry_use;
-    PerfInst.regist_node(0, "entry", 1.0 / (1000 * 1000 * 1000), 1.0 / (1000 * 1000), false);
-    PerfInst.regist_node(1, "perf_now_ns", 1.0 / (1000 * 1000 * 1000), 1.0 / (1000 * 1000), false);
+    PerfInst.regist_node(0, "entry", false);
+    PerfInst.regist_node(1, "perf_now_ns", false);
     double sum = 0.0;
     PerfTime get_now_use;
     for (size_t i = 0; i < 10000000; i++)
@@ -37,9 +37,9 @@ void entry_cpu_test()
 void entry_mem_test()
 {
 
-    PerfInst.regist_node(5, "entry", 1.0 / (1000 * 1000 * 1000), 1.0 / (1000 * 1000), false);
-    PerfInst.regist_node(6, "alloc", 1.0 / (1000 * 1000 * 1000), 1.0 / (1000 * 1000), false);
-    PerfInst.regist_node(7, "free", 1.0 / (1000 * 1000 * 1000), 1.0 / (1000 * 1000), false);
+    PerfInst.regist_node(5, "entry", false);
+    PerfInst.regist_node(6, "alloc", false);
+    PerfInst.regist_node(7, "free", false);
     PerfTime use;
     PerfTime alloc_use;
     for (size_t i = 0; i < 10000; i++)
