@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 {
     PerfTime log_start_use;
     FNLog::FastStartDebugLogger();
-    LogDebug() << " main begin test. use time:" << log_start_use.end_tick().duration_second();
+    LogDebug() << " main begin test. use time:" << human_time_format(log_start_use.end_tick().duration());
 
     PerfTime get_time_use;
     double time = 0.0f;
@@ -32,16 +32,16 @@ int main(int argc, char *argv[])
     {
         time += perf_now_ns();
     }
-    LogDebug() << "get now time bat 10,000,000  use:" << get_time_use.end_tick().duration_second() <<" s, sum test val:" << time;
+    LogDebug() << "get now time bat 10,000,000  use:" << human_time_format(get_time_use.end_tick().duration()) <<", sum test val:" << time;
 
-    double d = 0.0;
+    long long d = 0;
     for (size_t i = 0; i < 10000000; i++)
     {
         get_time_use.begin_tick();
         time += perf_now_ns();
         d += get_time_use.end_tick().duration();
     }
-    LogDebug() << "get now time 10,000,000 sum use:" << d /1000.0/1000.0/1000.0 << ", sum test val:" << time;
+    LogDebug() << "get now time 10,000,000 sum use:" << human_time_format(d) << ", sum test val:" << time;
 
 
 
@@ -54,8 +54,8 @@ int main(int argc, char *argv[])
         PerfInst.call_cpu(1, 1, get_now_use.end_tick().duration(), 0);
     }
 
-    LogDebug() << "get now time 10,000,000 sum use:" << PerfInst.node(1).cpu.call_use_time /1000.0/1000.0/1000.0 << ", sum test val:" << time;
-    LogDebug() << "perf record node size:" << sizeof(PerfInst) << "bytes";
+    LogDebug() << "get now time 10,000,000 sum use:" << human_time_format(PerfInst.node(1).cpu.call_use_time) << ", sum test val:" << time;
+    LogDebug() << "perf record node size:" << human_mem_format(sizeof(PerfInst));
 
 
     
