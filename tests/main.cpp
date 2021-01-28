@@ -25,6 +25,9 @@ int main(int argc, char *argv[])
     PerfTime log_start_use;
     FNLog::FastStartDebugLogger();
     LogDebug() << " main begin test. use time:" << human_time_format(log_start_use.end_tick().duration());
+    LogDebug() << "perf record node size:" << human_mem_format(sizeof(PerfInst));
+
+    regist_perf();
 
     PerfTime get_time_use;
     double time = 0.0f;
@@ -32,46 +35,12 @@ int main(int argc, char *argv[])
     {
         time += perf_now_ns();
     }
-    LogDebug() << "get now time bat 10,000,000  use:" << human_time_format(get_time_use.end_tick().duration()) <<", sum test val:" << time;
-
-    long long d = 0;
-    for (size_t i = 0; i < 10000000; i++)
-    {
-        get_time_use.begin_tick();
-        time += perf_now_ns();
-        d += get_time_use.end_tick().duration();
-    }
-    LogDebug() << "get now time 10,000,000 sum use:" << human_time_format(d) << ", sum test val:" << time;
-
-
+    PerfInst.call_cpu(ENUM_BAT, 10000000, get_time_use.end_tick().duration(), 0);
 
     entry_cpu_test();
-    PerfTime get_now_use;
-    for (size_t i = 0; i < 10000000; i++)
-    {
-        get_now_use.begin_tick();
-        time += perf_now_ns();
-        PerfInst.call_cpu(1, 1, get_now_use.end_tick().duration(), 0);
-    }
-
-    LogDebug() << "get now time 10,000,000 sum use:" << human_time_format(PerfInst.node(1).cpu.call_use_time) << ", sum test val:" << time;
-    LogDebug() << "perf record node size:" << human_mem_format(sizeof(PerfInst));
-
-
-    
-    PerfInst.add_node_child(0, 1);
-
-
-    PerfInst.regist_node(5, "entry", false);
-    PerfInst.regist_node(6, "alloc", false);
-    PerfInst.regist_node(7, "free", false);
-    PerfInst.add_node_child(5, 6);
-    PerfInst.add_node_child(5, 7);
-    PerfInst.regist_node(8, "empty", false);
-    PerfInst.add_node_child(8, 5);
 
     entry_mem_test();
-    PerfInst.call_mem(8, 1, perf_self_memory_use());
+    PerfInst.call_mem(ENUM_EMPTY, 1, perf_self_memory_use());
     for (int i = 0; i < PerfInst.node_count(); i++)
     {
         if (PerfInst.node(i).active && !PerfInst.node(i).is_child)
@@ -80,9 +49,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    PerfInst.reset_childs(8);
+    PerfInst.reset_childs(ENUM_EMPTY);
     entry_mem_test();
-    PerfInst.call_mem(8, 1, perf_self_memory_use());
+    PerfInst.call_mem(ENUM_EMPTY, 1, perf_self_memory_use());
     for (int i = 0; i < PerfInst.node_count(); i++)
     {
         if (PerfInst.node(i).active && !PerfInst.node(i).is_child)
@@ -94,7 +63,7 @@ int main(int argc, char *argv[])
 
     PerfTime sleep_use;
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    LogDebug() << "sleep 300ms use:" << sleep_use.end_tick().duration_second()  ;
+    LogDebug() << "sleep 300ms use:" << human_time_format(sleep_use.end_tick().duration())  ;
 
 
 

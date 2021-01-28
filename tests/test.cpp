@@ -17,39 +17,35 @@
 */
 
 #include "zperf.h"
-
+#include "test.h"
 void entry_cpu_test()
 {
     PerfTime entry_use;
-    PerfInst.regist_node(0, "entry", false);
-    PerfInst.regist_node(1, "perf_now_ns", false);
     double sum = 0.0;
     PerfTime get_now_use;
     for (size_t i = 0; i < 10000000; i++)
     {
         get_now_use.begin_tick();
         sum += perf_now_ns();
-        PerfInst.call_cpu(1, 1, get_now_use.end_tick().duration(), 0);
+        PerfInst.call_cpu(ENUM_IND, 1, get_now_use.end_tick().duration(), 0);
     }
-    PerfInst.call_cpu(0, 1, entry_use.end_tick().duration(), 0);
+    PerfInst.call_cpu(ENUM_IND_SUM, 1, entry_use.end_tick().duration(), 0);
 }
 
 void entry_mem_test()
 {
-
-
     PerfTime use;
     PerfTime alloc_use;
     for (size_t i = 0; i < 10000; i++)
     {
         alloc_use.begin_tick();
         char* ptr = new char[10];
-        PerfInst.call_mem(6, 1, 10);
-        PerfInst.call_cpu(6, 1, alloc_use.end_tick().duration(), 10);
+        PerfInst.call_mem(ENUM_ALLOC, 1, 10);
+        PerfInst.call_cpu(ENUM_ALLOC, 1, alloc_use.end_tick().duration(), 10);
         alloc_use.begin_tick();
         delete[] ptr;
-        PerfInst.call_mem(7, 1, 10);
-        PerfInst.call_cpu(7, 1, alloc_use.end_tick().duration(), 10);
+        PerfInst.call_mem(ENUM_FREE, 1, 10);
+        PerfInst.call_cpu(ENUM_FREE, 1, alloc_use.end_tick().duration(), 10);
     }
-    PerfInst.call_cpu(5, 1, use.end_tick().duration(), 0);
+    PerfInst.call_cpu(ENUM_ENTRY, 1, use.end_tick().duration(), 0);
 }
