@@ -364,6 +364,66 @@ int PerfRecord<T, S>::regist_node(int idx, const char* desc, bool overwrite)
     return 0;
 }
 
+static inline const char* human_count_format(long long count)
+{
+    static char buff[100] = { 0 };
+    if (count > 1000 * 1000)
+    {
+        sprintf(buff, "%lld,%03lld,%03lld", count / 1000 / 1000, (count / 1000) % 1000, count % 1000);
+        return buff;
+    }
+    else if (count > 1000)
+    {
+        sprintf(buff, "%lld,%03lld", count / 1000, count % 1000);
+        return buff;
+    }
+    sprintf(buff, "%lld", count);
+    return buff;
+}
+
+static inline const char* human_time_format(long long ns)
+{
+    static char buff[100] = { 0 };
+    if (ns > 1000*1000*1000)
+    {
+        sprintf(buff, "%.4lfs", ns / 1000.0 / 1000.0 / 1000.0);
+        return buff;
+    }
+    else if (ns > 1000*1000)
+    {
+        sprintf(buff, "%.4lfms", ns / 1000.0 / 1000.0);
+        return buff;
+    }
+    else if (ns > 1000)
+    {
+        sprintf(buff, "%.4lfus", ns / 1000.0 );
+        return buff;
+    }
+    sprintf(buff, "%lldns", ns);
+    return buff;
+}
+
+static inline const char* human_mem_format(long long bytes)
+{
+    static char buff[100] = { 0 };
+    if (bytes > 1024 * 1024 * 1024)
+    {
+        sprintf(buff, "%.4lfg", bytes / 1024.0 / 1024.0 / 1024.0);
+        return buff;
+    }
+    else if (bytes > 1024 * 1024)
+    {
+        sprintf(buff, "%.4lfm", bytes / 1024.0 / 1024.0);
+        return buff;
+    }
+    else if (bytes > 1024)
+    {
+        sprintf(buff, "%.4lfk", bytes / 1024.0);
+        return buff;
+    }
+    sprintf(buff, "%lldb", bytes);
+    return buff;
+}
 
 template<int T, int S>
 int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int buff_len)
@@ -393,30 +453,12 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         {
             return -3;
         }
-        double sum = node.cpu.call_use_time /(1000.0*1000.0*1000.0);
-        double avg = sum /node.cpu.call_count;
-        int ret = 0;
-        if (avg > 1.0)
-        {
-            ret = sprintf(buff, "[%s] cpu: call:<%lld>  avg use: %g s  sum use: %g s  user val sum:<%lld> \n",
-                node.desc.node_name, (long long)node.cpu.call_count, avg, sum, node.cpu.user_val_sum);
-        }
-        else if (avg * 1000 > 1.0)
-        {
-            ret = sprintf(buff, "[%s] cpu: call:<%lld>  avg use: %g ms  sum use: %g s  user val sum:<%lld> \n",
-                node.desc.node_name, (long long)node.cpu.call_count, avg * 1000.0, sum, node.cpu.user_val_sum);
-        }
-        else if (avg * 1000 * 1000 > 1.0)
-        {
-            ret = sprintf(buff, "[%s] cpu: call:<%lld>  avg use: %g us  sum use: %g s  user val sum:<%lld> \n",
-                node.desc.node_name, (long long)node.cpu.call_count, avg * 1000.0 * 1000.0, sum, node.cpu.user_val_sum);
-        }
-        else
-        {
-            ret = sprintf(buff, "[%s] cpu: call:<%lld>  avg use: %g ns  sum use: %g s  user val sum:<%lld> \n",
-                node.desc.node_name, (long long)node.cpu.call_count, avg * 1000.0 * 1000.0 * 1000, sum, node.cpu.user_val_sum);
-        }
-
+        int ret = sprintf(buff, "[%s] cpu: call:%s  avg use: %s  sum use: %s  user val sum:%s \n",
+            node.desc.node_name, 
+            human_count_format(node.cpu.call_count), 
+            human_time_format(node.cpu.call_use_time/ node.cpu.call_count), 
+            human_time_format(node.cpu.call_use_time), 
+            human_count_format(node.cpu.user_val_sum));
         if (ret < 0)
         {
             return -4;
@@ -445,25 +487,12 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         {
             return -6;
         }
-        double sum = node.mem.change_mem /(1000.0*1000.0);
-        double avg = sum / (node.mem.call_count < 1.0 ? 1.0 : node.mem.call_count);
-        int ret = 0;
-
-        if (avg > 1.0)
-        {
-            ret = sprintf(buff, "[%s] mem: call:<%lld>  avg change: %g m  sum use: %g m  fixed size:<%lld> \n",
-                node.desc.node_name, (long long)node.mem.call_count, avg, sum, node.mem.fixed_size);
-        }
-        else if (avg * 1000 > 1.0)
-        {
-            ret = sprintf(buff, "[%s] mem: call:<%lld>  avg change: %g k  sum use: %g m  fixed size:<%lld> \n",
-                node.desc.node_name, (long long)node.mem.call_count, avg * 1000.0, sum, node.mem.fixed_size);
-        }
-        else
-        {
-            ret = sprintf(buff, "[%s] mem: call:<%lld>  avg change: %g b  sum use: %g m  fixed size:<%lld> \n",
-                node.desc.node_name, (long long)node.mem.call_count, avg * 1000.0 * 1000.0, sum, node.mem.fixed_size);
-        }
+        int ret = sprintf(buff, "[%s] cpu: call:%s  avg change: %s  sum: %s  fixed size:%s \n",
+            node.desc.node_name,
+            human_count_format(node.mem.call_count),
+            human_mem_format(node.mem.change_mem / node.mem.call_count),
+            human_mem_format(node.mem.change_mem),
+            human_mem_format(node.mem.fixed_size));
 
         if (ret < 0)
         {
