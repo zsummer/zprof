@@ -20,7 +20,7 @@
 #include "test.h"
 void entry_cpu_test()
 {
-    PerfTime entry_use;
+    PerfGuardTime guard(ENUM_IND_SUM, 0);
     double sum = 0.0;
     PerfTime get_now_use;
     for (size_t i = 0; i < 10000000; i++)
@@ -29,23 +29,21 @@ void entry_cpu_test()
         sum += perf_now_ns();
         PerfInst.call_cpu(ENUM_IND, 1, get_now_use.end_tick().duration(), 0);
     }
-    PerfInst.call_cpu(ENUM_IND_SUM, 1, entry_use.end_tick().duration(), 0);
 }
 
 void entry_mem_test()
 {
-    PerfTime use;
+    PERF_FUNC_GUARD(ENUM_ENTRY, 0);
     PerfTime alloc_use;
     for (size_t i = 0; i < 10000; i++)
     {
         alloc_use.begin_tick();
         char* ptr = new char[10];
-        PerfInst.call_mem(ENUM_ALLOC, 1, 10);
-        PerfInst.call_cpu(ENUM_ALLOC, 1, alloc_use.end_tick().duration(), 10);
+        PERF_CALL_ONCE_CPU_REAL(ENUM_ALLOC, alloc_use, 10);
+        PERF_CALL_ONCE_MEM(ENUM_ALLOC, 10);
         alloc_use.begin_tick();
         delete[] ptr;
-        PerfInst.call_mem(ENUM_FREE, 1, 10);
-        PerfInst.call_cpu(ENUM_FREE, 1, alloc_use.end_tick().duration(), 10);
+        PERF_CALL_ONCE_CPU_REAL(ENUM_FREE, alloc_use, 10);
+        PERF_CALL_ONCE_MEM(ENUM_FREE, 10);
     }
-    PerfInst.call_cpu(ENUM_ENTRY, 1, use.end_tick().duration(), 0);
 }

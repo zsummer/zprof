@@ -35,8 +35,7 @@ enum MyEnum
     ENUM_FREE,
 };
 
-#define REGIST_NODE(id)  PerfInst.regist_node(id, #id, false)
-#define BIND_CHILD(id, cid)  PerfInst.add_node_child(id, cid)
+
 inline void regist_perf()
 {
     REGIST_NODE(ENUM_BAT);
