@@ -38,6 +38,7 @@ enum MyEnum
 
 inline void regist_perf()
 {
+    sprintf(PerfInst.mutable_desc(), "test");
     REGIST_NODE(ENUM_BAT);
     REGIST_NODE(ENUM_IND_SUM);
     REGIST_NODE(ENUM_IND);

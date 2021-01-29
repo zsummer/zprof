@@ -693,6 +693,17 @@ private:
 #endif
 
 
+#define PERF_SERIALIZE_FN_LOG()     LogDebug() << "\n\n ------------------------------------------------------------------ " \
+"\n ----------------------PerfRecord[" << PerfInst.desc() << "] begin ---------------------- \n"; \
+for (int i = 0; i < PerfInst.node_count(); i++) \
+{ \
+    if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
+    { \
+        LogDebug() << PerfInst.serialize(i); \
+    } \
+} \
+LogDebug() << "\n ----------------------PerfRecord[" << PerfInst.desc() << "] end ----------------------" \
+"\n ------------------------------------------------------------------\n\n";
 
 
 #endif

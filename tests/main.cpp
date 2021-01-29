@@ -41,24 +41,15 @@ int main(int argc, char *argv[])
 
     entry_mem_test();
     PerfInst.call_mem(ENUM_EMPTY, 1, perf_self_memory_use());
-    for (int i = 0; i < PerfInst.node_count(); i++)
-    {
-        if (PerfInst.node(i).active && !PerfInst.node(i).is_child)
-        {
-            LogDebug() << PerfInst.serialize(i);
-        }
-    }
+
+    PERF_SERIALIZE_FN_LOG();
 
     PerfInst.reset_childs(ENUM_EMPTY);
     entry_mem_test();
     PerfInst.call_mem(ENUM_EMPTY, 1, perf_self_memory_use());
-    for (int i = 0; i < PerfInst.node_count(); i++)
-    {
-        if (PerfInst.node(i).active && !PerfInst.node(i).is_child)
-        {
-            LogDebug() << PerfInst.serialize(i);
-        }
-    }
+
+    PERF_SERIALIZE_FN_LOG();
+
 
 
     PerfTime sleep_use;
