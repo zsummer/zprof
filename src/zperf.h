@@ -101,6 +101,15 @@
 #define MAX_PERF_NODE_CHILD_COUNT 10
 #define MAX_PERF_NODE_CHILD_DEPTH 5
 #define MAX_PERF_NODE_SIZE 100
+
+
+//#define PERF_RDTSC
+#define PERF_RDTSC_FLUSH
+//#define PERF_USE_MONOTONIC_RAW
+//#define PERF_USE_THREAD
+
+//#define PERF_PDTSC2
+
 struct PerfDesc
 {
     char node_name[MAX_PERF_NODE_NAME_SIZE];
@@ -111,6 +120,7 @@ struct PerfCPU
 {
     long long call_count; //调用次数   
     long long call_use_time;  //调用耗时    
+    long long smooth_use_time;
     long long user_val_sum; //用户累加值      
 };
 
@@ -132,21 +142,45 @@ struct PerfNode
 };  
 
 
-//#define PERF_RDTSC
-//#define PERF_USE_THREAD
-//#define PERF_USE_REALTIME
 
-inline long long perf_now_ns()
+
+inline long long perf_now_rdtsc()
 {
-#ifdef PERF_RDTSC
 #ifdef WIN32
-    return (long long) __rdtsc();
+    return (long long)__rdtsc();
+//#elif (defined PERF_RDTSC_FLUSH)
+//    asm("XOR %eax, %eax\n\t"
+//        "CPUID\n\t"
+//        "RDTSC");
+//    // * 1. use CPUID instruction to enforce flush cpu cache, maybe penalty, and inject extra 200 cycles
+//    // *2. bind to cpu
 #else
-    unsigned int lo, hi;
-    __asm__ __volatile__("rdtsc" : "=a" (lo), "=d" (hi));
-    return (long long)(((uint64_t)hi << 32) | lo);
+    unsigned long long a;
+    asm volatile("rdtsc" : "=a" (a) :: "memory");
+    return a;
+    // unsigned long cpuMask = 2; /* bind to cpu 1 */
+    // sched_setaffinity(0, sizeof(cpuMask), &cpuMask);
 #endif
-#elif (defined WIN32)
+}
+
+
+
+inline long long perf_now_clock()
+{
+#if (defined WIN32)
+    long long count = 0;
+    QueryPerformanceCounter((LARGE_INTEGER*)&count);
+    return count;
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    return ts.tv_sec * 1000 * 1000 + ts.tv_nsec;
+#endif
+}
+
+inline long long perf_now_clock_thread()
+{
+#if (defined WIN32)
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
     unsigned long long now = ft.dwHighDateTime;
@@ -155,21 +189,32 @@ inline long long perf_now_ns()
     now /= 10;
     now -= 11644473600000000ULL;
     return (long long)now * 1000; //ns
-
-#elif (defined PERF_USE_REALTIME)
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    return ts.tv_sec * 1000 * 1000 + ts.tv_nsec;
-#elif (defined PERF_USE_THREAD)
+#else
     struct timespec ts;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
     return ts.tv_sec * 1000 * 1000 + ts.tv_nsec;
+#endif
+}
+
+
+inline long long perf_now_sys()
+{
+#if (defined WIN32)
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    unsigned long long now = ft.dwHighDateTime;
+    now <<= 32;
+    now |= ft.dwLowDateTime;
+    now /= 10;
+    now -= 11644473600000000ULL;
+    return (long long)now * 1000; //ns
 #else
     struct timeval tm;
     gettimeofday(&tm, nullptr);
     return tm.tv_sec * 1000 * 1000 * 1000 + tm.tv_usec * 1000;
 #endif
 }
+
 
 
 inline int perf_self_memory_use()
@@ -226,19 +271,34 @@ public:
     }
     void begin_tick()
     {
-        last_time_ = perf_now_ns();
+        last_time_ = perf_now_clock();
         duration_ = 0;
     }
 
     PerfTime& end_tick()
     {
-        long long elapse = perf_now_ns() - last_time_;
+        long long elapse = perf_now_clock() - last_time_;
         duration_ = elapse > 0 ? elapse : 0;
         return *this;
     }
 
     long long duration() {return duration_; }
-    double duration_second() { return (double)duration_ / (1000.0 * 1000.0 * 1000.0); }
+    long long duration_ns()
+    {
+        
+#ifdef WIN32
+        double rate = 0;
+        long long win_freq = 0;
+        QueryPerformanceFrequency((LARGE_INTEGER*)&win_freq);
+        rate = 1.0 / win_freq;
+        rate *= 1000.0 * 1000 * 1000;
+        return (long long)(duration_ * rate);
+#else
+        return duration_;
+#endif // WIN32
+
+    }
+    double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
     long long end(){ return last_time_ + duration_;}
     long long begin(){return last_time_;}
     
@@ -286,6 +346,8 @@ public:
         node.cpu.call_count += call_count;
         node.cpu.call_use_time += use_time;
         node.cpu.user_val_sum += add_val;
+        node.cpu.smooth_use_time = node.cpu.smooth_use_time == 0 ? use_time/call_count : node.cpu.smooth_use_time;
+        node.cpu.smooth_use_time = (long long)(node.cpu.smooth_use_time * 0.8) + (long long)(use_time * 0.2/call_count);
     }
     void call_mem(int idx, long long call_count, long long change_mem)
     {
@@ -495,7 +557,15 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         return -2;
     }
     char* buff = org_buff;
+    double rate = 1.0f;
+#ifdef WIN32
+    long long win_freq = 0;
+    QueryPerformanceFrequency((LARGE_INTEGER*)&win_freq);
+    rate = 1.0 / win_freq;
+    rate *= 1000 * 1000 * 1000;
+#endif // WIN32
 
+    
 
     PerfNode& node = nodes_[entry_idx];
     if (node.cpu.call_count > 0)
@@ -518,14 +588,16 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         char buff_call[50];
         human_count_format(buff_call, node.cpu.call_count);
         char buff_avg[50];
-        human_time_format(buff_avg, node.cpu.call_use_time / node.cpu.call_count);
+        human_time_format(buff_avg, (long long)(node.cpu.call_use_time * rate) / node.cpu.call_count);
+        char buff_smooth[50];
+        human_time_format(buff_smooth, (long long)(node.cpu.smooth_use_time * rate));
         char buff_sum[50];
-        human_time_format(buff_sum, node.cpu.call_use_time);
+        human_time_format(buff_sum, (long long)(node.cpu.call_use_time * rate));
         char buff_val[50];
         human_count_format(buff_val, node.cpu.user_val_sum);
 
-        int ret = sprintf(buff, "[%s] cpu: call:%s  avg: %s  sum: %s  user:%s \n",
-            node.desc.node_name, buff_call, buff_avg, buff_sum, buff_val);
+        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s smooth: %s sum: %s  user:%s \n",
+            node.desc.node_name, buff_call, buff_avg, buff_smooth, buff_sum, buff_val);
 
         if (ret < 0)
         {
@@ -562,7 +634,7 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         char buff_sum[50];
         human_mem_format(buff_sum, node.mem.change_mem);
 
-        int ret = sprintf(buff, "[%s] mem: call:%s  avg: %s  sum: %s \n",
+        int ret = sprintf(buff, "[[ %s ]] mem: call:%s  avg: %s  sum: %s \n",
             node.desc.node_name, buff_call, buff_avg, buff_sum);
 
         if (ret < 0)
@@ -646,7 +718,8 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 
 
 #define PerfInst PerfRecord<0, MAX_PERF_NODE_SIZE>::instance()
-#define REGIST_NODE(id)  PerfInst.regist_node(id, #id, false)
+#define REGIST_NODE(id, name)  PerfInst.regist_node(id, name, false)
+#define REGIST_NODE_AUTO(id)  PerfInst.regist_node(id, #id, false)
 #define BIND_CHILD(id, cid)  PerfInst.add_node_child(id, cid)
 
 
@@ -680,7 +753,7 @@ private:
 #define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) PERF_CALL_MULTI_CPU_REAL(idx, 1, perf_time, add)
 #define PERF_CALL_ONCE_CPU(idx, perf_time, add) PERF_CALL_MULTI_CPU(idx, 1, perf_time, add)
 #define PERF_CALL_ONCE_MEM(idx, mem) PERF_CALL_MULTI_MEM(idx, 1, mem)
-#define PERF_FUNC_GUARD(idx, user) PerfGuardTime __perf_func_guard(ENUM_ENTRY, 0)
+#define PERF_FUNC_GUARD(idx, user) PerfGuardTime __perf_func_guard(idx, user)
 #else
 #define PERF_RESET_CHILD(idx) 
 #define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) 

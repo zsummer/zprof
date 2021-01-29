@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     double time = 0.0f;
     for (size_t i = 0; i < 10000000; i++)
     {
-        time += perf_now_ns();
+        time += perf_now_sys();
     }
     PerfInst.call_cpu(ENUM_BAT, 10000000, get_time_use.end_tick().duration(), 0);
 
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
     PerfTime sleep_use;
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    LogDebug() << "sleep 300ms use:" << human_time_format(sleep_use.end_tick().duration())  ;
+    LogDebug() << "sleep 300ms use:" << human_time_format(sleep_use.end_tick().duration_ns())  ;
 
 
 
