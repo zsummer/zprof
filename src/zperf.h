@@ -100,6 +100,7 @@
 #define MAX_PERF_NODE_LINE_SIZE (MAX_PERF_NODE_NAME_SIZE + 200)
 #define MAX_PERF_NODE_CHILD_COUNT 10
 #define MAX_PERF_NODE_CHILD_DEPTH 5
+#define MAX_PERF_NODE_SIZE 100
 struct PerfDesc
 {
     char node_name[MAX_PERF_NODE_NAME_SIZE];
@@ -116,8 +117,7 @@ struct PerfCPU
 struct PerfMEM
 {
     long long call_count; //调用次数   
-    long long change_mem;  //内存累加变化    
-    long long fixed_size; //内存固定值     
+    long long change_mem;  //内存累加变化       
 };
 
 struct PerfNode
@@ -257,6 +257,8 @@ public:
     PerfRecord() 
     {
         memset(nodes_, 0, sizeof(nodes_));
+        desc_[0] = '\0';
+        state_ = 0;
     };
     static PerfRecord& instance()
     {
@@ -275,9 +277,7 @@ public:
     void reset_mem(int idx)
     {
         PerfNode& node = nodes_[idx];
-        long long fixed_size = node.mem.fixed_size;
         memset(&node.mem, 0, sizeof(node.mem));
-        node.mem.fixed_size = fixed_size;
     }
     inline void reset_childs(int idx, int depth = 0);
     void call_cpu(int idx, long long call_count, long long use_time, long long add_val)
@@ -294,11 +294,6 @@ public:
         node.mem.change_mem += change_mem;
     }
     
-    void set_fixed_mem(int idx, long long fixed_size)
-    {
-        PerfNode& node = nodes_[idx];
-        node.mem.fixed_size = fixed_size;
-    }
 
     int serialize(int entry_idx, int depth, char* org_buff, int buff_len);
     const char* serialize(int entry_idx);
@@ -306,8 +301,14 @@ public:
 
     PerfNode& node(int idx) { return nodes_[idx]; }
     int node_count()const { return NODE_COUNT; }
+    const char* desc() const { return desc_; }
+    char* mutable_desc() { return desc_; }
+    const unsigned int state() const { return state_; }
+    void set_state(unsigned int state) { state_ = state; }
 private:
     PerfNode nodes_[S];
+    char desc_[MAX_PERF_NODE_NAME_SIZE];
+    unsigned int state_;
 };
 
 template<int T, int S>
@@ -523,7 +524,7 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         char buff_val[50];
         human_count_format(buff_val, node.cpu.user_val_sum);
 
-        int ret = sprintf(buff, "[%s] cpu: call:%s  avg use: %s  sum use: %s  user val sum:%s \n",
+        int ret = sprintf(buff, "[%s] cpu: call:%s  avg: %s  sum: %s  user:%s \n",
             node.desc.node_name, buff_call, buff_avg, buff_sum, buff_val);
 
         if (ret < 0)
@@ -560,11 +561,9 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         human_mem_format(buff_avg, node.mem.change_mem / node.mem.call_count);
         char buff_sum[50];
         human_mem_format(buff_sum, node.mem.change_mem);
-        char buff_val[50];
-        human_mem_format(buff_val, node.mem.fixed_size);
 
-        int ret = sprintf(buff, "[%s] mem: call:%s  avg change: %s  sum: %s  fixed size:%s \n",
-            node.desc.node_name, buff_call, buff_avg, buff_sum, buff_val);
+        int ret = sprintf(buff, "[%s] mem: call:%s  avg: %s  sum: %s \n",
+            node.desc.node_name, buff_call, buff_avg, buff_sum);
 
         if (ret < 0)
         {
@@ -594,7 +593,7 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         {
             return -6;
         }
-        int ret = sprintf(buff, "[%s] no any call data. mem fixed size:<%lld>. \n", node.desc.node_name, node.mem.fixed_size);
+        int ret = sprintf(buff, "[%s] no any call data. \n", node.desc.node_name);
         if (ret < 0)
         {
             return -7;
@@ -646,8 +645,52 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 }
 
 
-#define PerfInst PerfRecord<0, 100>::instance()
+#define PerfInst PerfRecord<0, MAX_PERF_NODE_SIZE>::instance()
+#define REGIST_NODE(id)  PerfInst.regist_node(id, #id, false)
+#define BIND_CHILD(id, cid)  PerfInst.add_node_child(id, cid)
 
+
+class PerfGuardTime
+{
+public:
+    PerfGuardTime(int idx, int user)
+    {
+        idx_ = idx;
+        user_ = user;
+    }
+    ~PerfGuardTime()
+    {
+        if (idx_ >= 0 && idx_ < MAX_PERF_NODE_SIZE)
+        {
+            PerfInst.call_cpu(idx_, 1, create_time_.end_tick().duration(), user_);
+        }
+    }
+
+private:
+    PerfTime create_time_;
+    int idx_;
+    int user_;
+};
+
+#ifndef OPEN_ZPERF
+#define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
+#define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.end_tick().duration(), add)
+#define PERF_CALL_MULTI_CPU(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.duration(), add)
+#define PERF_CALL_MULTI_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
+#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) PERF_CALL_MULTI_CPU_REAL(idx, 1, perf_time, add)
+#define PERF_CALL_ONCE_CPU(idx, perf_time, add) PERF_CALL_MULTI_CPU(idx, 1, perf_time, add)
+#define PERF_CALL_ONCE_MEM(idx, mem) PERF_CALL_MULTI_MEM(idx, 1, mem)
+#define PERF_FUNC_GUARD(idx, user) PerfGuardTime __perf_func_guard(ENUM_ENTRY, 0)
+#else
+#define PERF_RESET_CHILD(idx) 
+#define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) 
+#define PERF_CALL_MULTI_CPU(idx, count, perf_time, add) 
+#define PERF_CALL_MULTI_MEM(idx, count, mem) 
+#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) 
+#define PERF_CALL_ONCE_CPU(idx, perf_time, add) 
+#define PERF_CALL_ONCE_MEM(idx, mem) 
+#define PERF_FUNC_GUARD(idx, user)
+#endif
 
 
 
