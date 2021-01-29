@@ -26,14 +26,14 @@ void entry_cpu_test()
     for (size_t i = 0; i < 10000000; i++)
     {
         get_now_use.begin_tick();
-        sum += perf_now_ns();
+        sum += perf_now_sys();
         PerfInst.call_cpu(ENUM_IND, 1, get_now_use.end_tick().duration(), 0);
     }
 }
 
 void entry_mem_test()
 {
-    PERF_FUNC_GUARD(ENUM_ENTRY, 0);
+    PERF_FUNC_GUARD(ENUM_EMPTY, 0);
     PerfTime alloc_use;
     for (size_t i = 0; i < 10000; i++)
     {
@@ -46,4 +46,12 @@ void entry_mem_test()
         PERF_CALL_ONCE_CPU_REAL(ENUM_FREE, alloc_use, 10);
         PERF_CALL_ONCE_MEM(ENUM_FREE, 10);
     }
+
+    alloc_use.begin_tick();
+    for (size_t i = 0; i < 10000; i++)
+    {
+        char* ptr = new char[10];
+        delete[] ptr;
+    }
+    PERF_CALL_ONCE_CPU_REAL(ENUM_ENTRY, alloc_use, 10);
 }
