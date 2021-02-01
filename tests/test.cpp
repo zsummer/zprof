@@ -26,17 +26,17 @@ void entry_mem_test()
     PerfTime<> alloc_use;
     for (size_t i = 0; i < 10000; i++)
     {
-        alloc_use.begin_tick();
+        alloc_use.begin_track();
         char* ptr = new char[10];
         PERF_CALL_ONCE_CPU_REAL(ENUM_ALLOC, alloc_use, 10);
         PERF_CALL_ONCE_MEM(ENUM_ALLOC, 10);
-        alloc_use.begin_tick();
+        alloc_use.begin_track();
         delete[] ptr;
         PERF_CALL_ONCE_CPU_REAL(ENUM_FREE, alloc_use, 10);
         PERF_CALL_ONCE_MEM(ENUM_FREE, 10);
     }
 
-    alloc_use.begin_tick();
+    alloc_use.begin_track();
     for (size_t i = 0; i < 10000; i++)
     {
         char* ptr = new char[10];
