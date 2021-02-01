@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     PerfTime<> log_start_use;
     FNLog::FastStartDebugLogger();
     LogDebug() << " main begin test. use time:" << human_time_format(log_start_use.end_track().duration());
-    LogDebug() << "perf record node size:" << human_mem_format(sizeof(PerfInst));
+    LogDebug() << "perf record track size:" << human_mem_format(sizeof(PerfInst));
 
     regist_perf();
     double time = 0.0f;
