@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     PerfInst.init_perf();
     PerfTime<> log_start_use;
     FNLog::FastStartDebugLogger();
-    LogDebug() << " main begin test. use time:" << human_time_format(log_start_use.end_tick().duration());
+    LogDebug() << " main begin test. use time:" << human_time_format(log_start_use.end_track().duration());
     LogDebug() << "perf record node size:" << human_mem_format(sizeof(PerfInst));
 
     regist_perf();
@@ -43,9 +43,9 @@ int main(int argc, char *argv[])
         PerfDynLine<> dyn_time("perf_now_sys dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            dyn_time.begin_tick();
+            dyn_time.begin_track();
             time += perf_now_sys();
-            dyn_time.end_tick();
+            dyn_time.end_track();
         }
     }
 

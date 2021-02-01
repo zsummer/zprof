@@ -482,7 +482,7 @@ class PerfTime
 public:
     PerfTime()
     {
-        begin_tick();
+        begin_track();
     }
     PerfTime(long long begin)
     {
@@ -490,13 +490,13 @@ public:
         duration_ = 0;
     }
 
-    void begin_tick()
+    void begin_track()
     {
         last_time_ = perf_now<T>((PerfTimeEmpty<T>*)NULL);
         duration_ = 0;
     }
 
-    PerfTime& end_tick()
+    PerfTime& end_track()
     {
         long long elapse = perf_now<T>((PerfTimeEmpty<T>*)NULL) - last_time_;
         duration_ = elapse > 0 ? elapse : 0;
@@ -928,7 +928,7 @@ public:
     {
         if (idx_ >= 0 && idx_ < PERF_MAX_NODE_SIZE)
         {
-            PerfInst.call_cpu(idx_, 1, create_time_.end_tick().duration(), user_);
+            PerfInst.call_cpu(idx_, 1, create_time_.end_track().duration(), user_);
         }
     }
 
@@ -951,7 +951,7 @@ public:
         {
             this_id_ = dyn_id++;
             PerfInst.regist_node(this_id_, desc, T, false);
-            perf_time_.begin_tick();
+            perf_time_.begin_track();
         }
     }
     PerfDynLine(const char* desc, long long tick) : perf_time_((long long)tick)
@@ -965,20 +965,20 @@ public:
         }
     }
 
-    void begin_tick()
+    void begin_track()
     {
-        perf_time_.begin_tick();
+        perf_time_.begin_track();
     }
 
-    void end_tick()
+    void end_track()
     {
-        PerfInst.call_cpu(this_id_, perf_time_.end_tick().duration(), 0);
+        PerfInst.call_cpu(this_id_, perf_time_.end_track().duration(), 0);
     }
 
 
-    void end_tick(long long count, long long val)
+    void end_track(long long count, long long val)
     {
-        PerfInst.call_cpu(this_id_, count, perf_time_.end_tick().duration(), val);
+        PerfInst.call_cpu(this_id_, count, perf_time_.end_track().duration(), val);
     }
 
     const char* show()
@@ -1005,7 +1005,7 @@ public:
     }
     ~PerfDynLineGuard()
     {
-        dyn_line_.end_tick(count_, val_);
+        dyn_line_.end_track(count_, val_);
     }
 
 private:
@@ -1018,11 +1018,11 @@ private:
 
 #ifndef OPEN_ZPERF
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
-#define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.end_tick().duration(), add)
+#define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.end_track().duration(), add)
 #define PERF_CALL_MULTI_CPU(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.duration(), add)
 #define PERF_CALL_MULTI_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
 
-#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) PerfInst.call_cpu(idx, perf_time.end_tick().duration(), add)
+#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) PerfInst.call_cpu(idx, perf_time.end_track().duration(), add)
 #define PERF_CALL_ONCE_CPU(idx, perf_time, add) PerfInst.call_cpu(idx, perf_time.duration(), add)
 #define PERF_CALL_ONCE_MEM(idx, mem) PerfInst.call_mem(idx, 1, mem)
 #define PERF_FUNC_GUARD(idx, user) PerfTimeGuard<> __perf_func_guard(idx, user)
