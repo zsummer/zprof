@@ -24,7 +24,7 @@
 
 enum MyEnum
 {
-    ENUM_BAT,
+    ENUM_BAT = PERF_USER_NODE_BEGIN,
     ENUM_IND_SUM,
     ENUM_IND,
     ENUM_EMPTY,
@@ -56,9 +56,16 @@ inline void regist_perf()
     BIND_CHILD(ENUM_ENTRY, ENUM_FREE_SUM);
     BIND_CHILD(ENUM_ALLOC_SUM, ENUM_ALLOC);
     BIND_CHILD(ENUM_FREE_SUM, ENUM_FREE);
+
+#ifndef WIN32
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    CPU_SET(2, &set);
+    sched_setaffinity(0, sizeof(set), &set);
+#endif
 }
 
-void entry_cpu_test();
+
 void entry_mem_test();
 
 #endif
