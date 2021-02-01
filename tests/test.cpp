@@ -18,23 +18,12 @@
 
 #include "zperf.h"
 #include "test.h"
-void entry_cpu_test()
-{
-    PerfGuardTime guard(ENUM_IND_SUM, 0);
-    double sum = 0.0;
-    PerfTime get_now_use;
-    for (size_t i = 0; i < 10000000; i++)
-    {
-        get_now_use.begin_tick();
-        sum += perf_now_sys();
-        PerfInst.call_cpu(ENUM_IND, 1, get_now_use.end_tick().duration(), 0);
-    }
-}
+
 
 void entry_mem_test()
 {
     PERF_FUNC_GUARD(ENUM_EMPTY, 0);
-    PerfTime alloc_use;
+    PerfTime<> alloc_use;
     for (size_t i = 0; i < 10000; i++)
     {
         alloc_use.begin_tick();

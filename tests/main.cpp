@@ -22,26 +22,89 @@
 
 int main(int argc, char *argv[])
 {
-    PerfTime log_start_use;
+    PerfTime<> log_start_use;
     FNLog::FastStartDebugLogger();
     LogDebug() << " main begin test. use time:" << human_time_format(log_start_use.end_tick().duration());
     LogDebug() << "perf record node size:" << human_mem_format(sizeof(PerfInst));
 
     regist_perf();
-
-    PerfTime get_time_use;
     double time = 0.0f;
-    for (size_t i = 0; i < 10000000; i++)
+    if (true)
     {
-        time += perf_now_sys();
+        PerfDynLineGuard<> guard("perf_now_sys bat 1000w", 1000*10000, 0);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            time += perf_now_sys();
+        }
     }
-    PerfInst.call_cpu(ENUM_BAT, 10000000, get_time_use.end_tick().duration(), 0);
+    if (true)
+    {
+        PerfDynLine<> dyn_time("perf_now_sys dis 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            dyn_time.begin_tick();
+            time += perf_now_sys();
+            dyn_time.end_tick();
+        }
+    }
 
-    entry_cpu_test();
+    if (true)
+    {
+        PerfDynLineGuard<> guard("perf_now_clock bat 1000w", 1000 * 10000, 0);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            time += perf_now_clock();
+        }
+    }
+    if (true)
+    {
+        PerfDynLineGuard<> guard("perf_now_rdtscp bat 1000w", 1000 * 10000, 0);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            time += perf_now_rdtscp();
+        }
+    }
+    if (true)
+    {
+        PerfDynLineGuard<> guard("perf_now_rdtscp bat 1000w", 1000 * 10000, 0);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            time += perf_now_rdtscp();
+        }
+    }
+    if (true)
+    {
+        PerfDynLineGuard<> guard("sleep 300ms", 1, 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    }
+    if (true)
+    {
+        PerfDynLineGuard<> guard("call cpu 1000w", 1, 0);
+        for (int i = 0; i < 10000000; i++)
+        {
+            PerfInst.call_cpu(ENUM_EMPTY, 10, 1000, 0);
+        }
+    }
+    if (true)
+    {
+        PerfDynLineGuard<> guard("call cpu 1000w (without count)", 1, 0);
+        for (int i = 0; i < 10000000; i++)
+        {
+            PerfInst.call_cpu(ENUM_EMPTY, 1000, 0);
+        }
+    }
+    if (true)
+    {
+        PerfDynLineGuard<> guard("call mem 1000w ", 1, 0);
+        for (int i = 0; i < 10000000; i++)
+        {
+            PerfInst.call_mem(ENUM_EMPTY, 1, 1000);
+        }
+    }
 
+    PerfInst.reset_childs(ENUM_EMPTY);
     entry_mem_test();
     PerfInst.call_mem(ENUM_EMPTY, 1, perf_self_memory_use());
-
     PERF_SERIALIZE_FN_LOG();
 
     PerfInst.reset_childs(ENUM_EMPTY);
@@ -50,15 +113,6 @@ int main(int argc, char *argv[])
 
     PERF_SERIALIZE_FN_LOG();
 
-
-
-    PerfTime sleep_use;
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    LogDebug() << "sleep 300ms use:" << human_time_format(sleep_use.end_tick().duration_ns())  ;
-
-
-
-    
 
 
 

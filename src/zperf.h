@@ -96,15 +96,24 @@
 #ifndef ZPERF_H
 #define ZPERF_H
 
-#define MAX_PERF_NODE_NAME_SIZE 100
-#define MAX_PERF_NODE_LINE_SIZE (MAX_PERF_NODE_NAME_SIZE + 200)
-#define MAX_PERF_NODE_CHILD_COUNT 10
-#define MAX_PERF_NODE_CHILD_DEPTH 5
-#define MAX_PERF_NODE_SIZE 100
+#define PERF_MAX_NODE_SIZE 300
+#define PERF_RESERVE_NODE_BEGIN 0
+#define PERF_USER_NODE_BEGIN 100
+#define PERF_DYN_NODE_BEGIN 200
 
+
+#define PERF_MAX_NODE_NAME_SIZE 100
+#define PERF_MAX_NODE_LINE_SIZE (PERF_MAX_NODE_NAME_SIZE + 200)
+#define PERF_MAX_NODE_CHILD_COUNT 10
+#define PERF_MAX_NODE_CHILD_DEPTH 5
+
+
+static_assert(PERF_RESERVE_NODE_BEGIN < PERF_USER_NODE_BEGIN, "");
+static_assert(PERF_USER_NODE_BEGIN < PERF_DYN_NODE_BEGIN, "");
+static_assert(PERF_DYN_NODE_BEGIN < PERF_MAX_NODE_SIZE, "");
 
 //#define PERF_RDTSC
-#define PERF_RDTSC_FLUSH
+//#define PERF_RDTSC_FLUSH
 //#define PERF_USE_MONOTONIC_RAW
 //#define PERF_USE_THREAD
 
@@ -112,29 +121,30 @@
 
 struct PerfDesc
 {
-    char node_name[MAX_PERF_NODE_NAME_SIZE];
+    char node_name[PERF_MAX_NODE_NAME_SIZE];
     int node_name_len;
 };
 
 struct PerfCPU
 {
-    long long call_count; //调用次数   
-    long long call_use_time;  //调用耗时    
-    long long smooth_use_time;
-    long long user_val_sum; //用户累加值      
+    long long c; 
+    long long use;  
+    long long dv; 
+    long long sm;
+    long long val;  
 };
 
 struct PerfMEM
 {
-    long long call_count; //调用次数   
-    long long change_mem;  //内存累加变化       
+    long long c;  
+    long long use;
 };
 
 struct PerfNode
 {
     bool active; 
     bool is_child;  
-    std::array<unsigned int, MAX_PERF_NODE_CHILD_COUNT> child_ids; 
+    std::array<unsigned int, PERF_MAX_NODE_CHILD_COUNT> child_ids; 
     int child_count; 
     PerfDesc desc; 
     PerfCPU cpu; 
@@ -144,7 +154,7 @@ struct PerfNode
 
 
 
-inline long long perf_now_rdtsc()
+inline long long perf_now_rdtscp()
 {
 #ifdef WIN32
     return (long long)__rdtsc();
@@ -154,12 +164,19 @@ inline long long perf_now_rdtsc()
 //        "RDTSC");
 //    // * 1. use CPUID instruction to enforce flush cpu cache, maybe penalty, and inject extra 200 cycles
 //    // *2. bind to cpu
-#else
+#elif (defined PERF_RDTSC)
     unsigned long long a;
     asm volatile("rdtsc" : "=a" (a) :: "memory");
     return a;
-    // unsigned long cpuMask = 2; /* bind to cpu 1 */
-    // sched_setaffinity(0, sizeof(cpuMask), &cpuMask);
+#else
+    unsigned long hi, lo;
+    asm volatile("rdtscp" : "=a"(lo), "=d"(hi));
+    uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+    return (long long)val;
+//    cpu_set_t set;
+//    CPU_ZERO(&set);
+//    CPU_SET(2, &set);
+//    sched_setaffinity(0, sizeof(set), &set);
 #endif
 }
 
@@ -174,25 +191,21 @@ inline long long perf_now_clock()
 #else
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-    return ts.tv_sec * 1000 * 1000 + ts.tv_nsec;
+    return ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec;
 #endif
 }
+
 
 inline long long perf_now_clock_thread()
 {
 #if (defined WIN32)
-    FILETIME ft;
-    GetSystemTimeAsFileTime(&ft);
-    unsigned long long now = ft.dwHighDateTime;
-    now <<= 32;
-    now |= ft.dwLowDateTime;
-    now /= 10;
-    now -= 11644473600000000ULL;
-    return (long long)now * 1000; //ns
+    long long count = 0;
+    QueryPerformanceCounter((LARGE_INTEGER*)&count);
+    return count;
 #else
     struct timespec ts;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
-    return ts.tv_sec * 1000 * 1000 + ts.tv_nsec;
+    return ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec;
 #endif
 }
 
@@ -257,6 +270,47 @@ inline int perf_self_memory_use()
 }
 
 
+enum PERF_TIME_TYPE
+{
+    PERF_USE_RDTSCP,
+    PERF_USE_CLOCK,
+    PERF_USE_SYS,
+};
+
+template<int Timestamp>
+struct EmptyTimstamp
+{
+};
+
+template<class T>
+inline long long perf_now(const T * ptr)
+{
+    (void)ptr;
+    return perf_now_sys();
+}
+
+template<>
+inline long long perf_now(const EmptyTimstamp<PERF_USE_RDTSCP>* ptr)
+{
+    (void)ptr;
+    return perf_now_rdtscp();
+}
+
+template<>
+inline long long perf_now(const EmptyTimstamp<PERF_USE_CLOCK>* ptr)
+{
+    (void)ptr;
+    return perf_now_clock();
+}
+
+template<>
+inline long long perf_now(const EmptyTimstamp<PERF_USE_SYS>* ptr)
+{
+    (void)ptr;
+    return perf_now_sys();
+}
+
+template<class T = EmptyTimstamp<PERF_USE_CLOCK>>
 class PerfTime
 {
 public:
@@ -269,15 +323,16 @@ public:
         last_time_ = begin;
         duration_ = 0;
     }
+
     void begin_tick()
     {
-        last_time_ = perf_now_clock();
+        last_time_ = perf_now<T>((T*)NULL);
         duration_ = 0;
     }
 
     PerfTime& end_tick()
     {
-        long long elapse = perf_now_clock() - last_time_;
+        long long elapse = perf_now<T>((T*)NULL) - last_time_;
         duration_ = elapse > 0 ? elapse : 0;
         return *this;
     }
@@ -340,20 +395,33 @@ public:
         memset(&node.mem, 0, sizeof(node.mem));
     }
     inline void reset_childs(int idx, int depth = 0);
-    void call_cpu(int idx, long long call_count, long long use_time, long long add_val)
+    void call_cpu(int idx, long long c, long long use_time, long long add_val)
     {
+        long long dis = use_time / c;
         PerfNode& node = nodes_[idx];
-        node.cpu.call_count += call_count;
-        node.cpu.call_use_time += use_time;
-        node.cpu.user_val_sum += add_val;
-        node.cpu.smooth_use_time = node.cpu.smooth_use_time == 0 ? use_time/call_count : node.cpu.smooth_use_time;
-        node.cpu.smooth_use_time = (long long)(node.cpu.smooth_use_time * 0.8) + (long long)(use_time * 0.2/call_count);
+        node.cpu.c += c;
+        node.cpu.use += use_time;
+        node.cpu.val += add_val;
+        node.cpu.sm = node.cpu.sm == 0 ? dis : node.cpu.sm;
+        node.cpu.sm = (node.cpu.sm * 8 + dis * 2) / 10;
+        node.cpu.dv += abs(dis - node.cpu.sm);
     }
-    void call_mem(int idx, long long call_count, long long change_mem)
+    void call_cpu(int idx, long long use_time, long long add_val)
     {
         PerfNode& node = nodes_[idx];
-        node.mem.call_count += call_count;
-        node.mem.change_mem += change_mem;
+        node.cpu.c += 1;
+        node.cpu.use += use_time;
+        node.cpu.val += add_val;
+        node.cpu.sm = node.cpu.sm == 0 ? use_time : node.cpu.sm;
+        node.cpu.sm = (node.cpu.sm * 8 + use_time * 2) / 10;
+        node.cpu.dv += abs(use_time - node.cpu.sm);
+    }
+
+    void call_mem(int idx, long long c, long long use)
+    {
+        PerfNode& node = nodes_[idx];
+        node.mem.c += c;
+        node.mem.use += use;
     }
     
 
@@ -369,7 +437,7 @@ public:
     void set_state(unsigned int state) { state_ = state; }
 private:
     PerfNode nodes_[S];
-    char desc_[MAX_PERF_NODE_NAME_SIZE];
+    char desc_[PERF_MAX_NODE_NAME_SIZE];
     unsigned int state_;
 };
 
@@ -392,7 +460,7 @@ int PerfRecord<T, S>::add_node_child(int idx, int cidx)
     {
         return -3; //regist method has memset all info ; 
     }
-    if (node.child_count >= MAX_PERF_NODE_CHILD_COUNT)
+    if (node.child_count >= PERF_MAX_NODE_CHILD_COUNT)
     {
         return -4;
     }
@@ -430,7 +498,7 @@ int PerfRecord<T, S>::regist_node(int idx, const char* desc, bool overwrite)
     }
 
     int len = (int)strlen(desc);
-    if (len + 1 > MAX_PERF_NODE_NAME_SIZE)
+    if (len + 1 > PERF_MAX_NODE_NAME_SIZE)
     {
         return -4;
     }
@@ -552,7 +620,7 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
     {
         return -1;
     }
-    if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+    if (buff_len < PERF_MAX_NODE_LINE_SIZE)
     {
         return -2;
     }
@@ -568,9 +636,9 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
     
 
     PerfNode& node = nodes_[entry_idx];
-    if (node.cpu.call_count > 0)
+    if (node.cpu.c > 0)
     {
-        if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
         {
             return -6;
         }
@@ -581,23 +649,25 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             buff_len -= 2;
         }
         *(buff + 1) = '\0';
-        if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
         {
             return -6;
         }
         char buff_call[50];
-        human_count_format(buff_call, node.cpu.call_count);
+        human_count_format(buff_call, node.cpu.c);
         char buff_avg[50];
-        human_time_format(buff_avg, (long long)(node.cpu.call_use_time * rate) / node.cpu.call_count);
-        char buff_smooth[50];
-        human_time_format(buff_smooth, (long long)(node.cpu.smooth_use_time * rate));
+        human_time_format(buff_avg, (long long)(node.cpu.use * rate) / node.cpu.c);
+        char buff_sm[50];
+        human_time_format(buff_sm, (long long)(node.cpu.sm * rate));
+        char buff_dv[50];
+        human_time_format(buff_dv, (long long)(node.cpu.dv * rate / node.cpu.c));
         char buff_sum[50];
-        human_time_format(buff_sum, (long long)(node.cpu.call_use_time * rate));
+        human_time_format(buff_sum, (long long)(node.cpu.use * rate));
         char buff_val[50];
-        human_count_format(buff_val, node.cpu.user_val_sum);
+        human_count_format(buff_val, node.cpu.val);
 
-        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s smooth: %s sum: %s  user:%s \n",
-            node.desc.node_name, buff_call, buff_avg, buff_smooth, buff_sum, buff_val);
+        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s sm: %s dv:%s sum: %s  user:%s  \n",
+            node.desc.node_name, buff_call, buff_avg, buff_sm, buff_dv, buff_sum, buff_val);
 
         if (ret < 0)
         {
@@ -610,9 +680,9 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             return -5;
         }
     }
-    if (node.mem.call_count > 0)
+    if (node.mem.c > 0)
     {
-        if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
         {
             return -6;
         }
@@ -623,19 +693,19 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             buff_len -= 2;
         }
         *(buff + 1) = '\0';
-        if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
         {
             return -6;
         }
         char buff_call[50];
-        human_count_format(buff_call, node.mem.call_count);
+        human_count_format(buff_call, node.mem.c);
         char buff_avg[50];
-        human_mem_format(buff_avg, node.mem.change_mem / node.mem.call_count);
-        char buff_sum[50];
-        human_mem_format(buff_sum, node.mem.change_mem);
+        human_mem_format(buff_avg, node.mem.use / node.mem.c);
+        char buff_use[50];
+        human_mem_format(buff_use, node.mem.use);
 
-        int ret = sprintf(buff, "[[ %s ]] mem: call:%s  avg: %s  sum: %s \n",
-            node.desc.node_name, buff_call, buff_avg, buff_sum);
+        int ret = sprintf(buff, "[[ %s ]] mem: call:%s  avg: %s  use: %s \n",
+            node.desc.node_name, buff_call, buff_avg, buff_use);
 
         if (ret < 0)
         {
@@ -648,9 +718,9 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             return -8;
         }
     }
-    if (node.cpu.call_count <= 0 && node.mem.call_count <= 0)
+    if (node.cpu.c <= 0 && node.mem.c <= 0)
     {
-        if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
         {
             return -6;
         }
@@ -661,7 +731,7 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             buff_len -= 2;
         }
         *(buff + 1) = '\0';
-        if (buff_len < MAX_PERF_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
         {
             return -6;
         }
@@ -699,16 +769,26 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
 
 
 
+static const int perf_serialize_len = PERF_MAX_NODE_CHILD_DEPTH * PERF_MAX_NODE_CHILD_COUNT * PERF_MAX_NODE_LINE_SIZE * 2;
+static inline char* perf_serialize_buff()
+{
+    static char buff[perf_serialize_len];
+    return buff;
+}
+static inline int& perf_static_dyn_id()
+{
+    static_assert(PERF_DYN_NODE_BEGIN > 0, "0 is invalid begin.");
+    static int dyn_id = PERF_DYN_NODE_BEGIN;
+    return dyn_id;
+}
 
 
 template<int T, int S>
 const char* PerfRecord<T, S>::serialize(int entry_idx)
 {
-    static const int buff_size = MAX_PERF_NODE_CHILD_DEPTH * MAX_PERF_NODE_CHILD_COUNT * MAX_PERF_NODE_LINE_SIZE * 2;
-    static char buff[buff_size];
-    int remaind = buff_size;
-    remaind -= sprintf(buff, "serialize:\n");
-    int ret = serialize(entry_idx, 0, buff + (buff_size - remaind), remaind);
+    char* buff = perf_serialize_buff();
+    int remaind = perf_serialize_len;
+    int ret = serialize(entry_idx, 0, buff + (perf_serialize_len - remaind), remaind);
     if (ret < 0)
     {
         sprintf(buff, "serialize idx:<%d> has error:<%d>\n", entry_idx, ret);
@@ -717,43 +797,123 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 }
 
 
-#define PerfInst PerfRecord<0, MAX_PERF_NODE_SIZE>::instance()
+#define PerfInst PerfRecord<0, PERF_MAX_NODE_SIZE>::instance()
 #define REGIST_NODE(id, name)  PerfInst.regist_node(id, name, false)
 #define REGIST_NODE_AUTO(id)  PerfInst.regist_node(id, #id, false)
 #define BIND_CHILD(id, cid)  PerfInst.add_node_child(id, cid)
 
 
-class PerfGuardTime
+template <class T = EmptyTimstamp<PERF_USE_CLOCK>>
+class PerfTimeGuard
 {
 public:
-    PerfGuardTime(int idx, int user)
+    PerfTimeGuard(int idx, int user)
     {
         idx_ = idx;
         user_ = user;
     }
-    ~PerfGuardTime()
+    ~PerfTimeGuard()
     {
-        if (idx_ >= 0 && idx_ < MAX_PERF_NODE_SIZE)
+        if (idx_ >= 0 && idx_ < PERF_MAX_NODE_SIZE)
         {
             PerfInst.call_cpu(idx_, 1, create_time_.end_tick().duration(), user_);
         }
     }
 
 private:
-    PerfTime create_time_;
+    PerfTime<T> create_time_;
     int idx_;
     int user_;
 };
+
+
+template <class T = EmptyTimstamp<PERF_USE_CLOCK>>
+class PerfDynLine
+{
+public:
+    PerfDynLine(const char* desc) : perf_time_((long long)0)
+    {
+        this_id_ = 0;
+        int& dyn_id = perf_static_dyn_id();
+        if (dyn_id + 1 < PERF_MAX_NODE_SIZE)
+        {
+            this_id_ = dyn_id++;
+            PerfInst.regist_node(this_id_, desc, false);
+            perf_time_.begin_tick();
+        }
+    }
+    PerfDynLine(const char* desc, long long tick) : perf_time_((long long)tick)
+    {
+        this_id_ = 0;
+        int& dyn_id = perf_static_dyn_id();
+        if (dyn_id + 1 < PERF_MAX_NODE_SIZE)
+        {
+            this_id_ = dyn_id++;
+            PerfInst.regist_node(this_id_, desc, false);
+        }
+    }
+
+    void begin_tick()
+    {
+        perf_time_.begin_tick();
+    }
+
+    void end_tick()
+    {
+        PerfInst.call_cpu(this_id_, perf_time_.end_tick().duration(), 0);
+    }
+
+
+    void end_tick(long long count, long long val)
+    {
+        PerfInst.call_cpu(this_id_, count, perf_time_.end_tick().duration(), val);
+    }
+
+    const char* show()
+    {
+        return PerfInst.serialize(this_id_);
+    }
+
+    ~PerfDynLine()
+    {
+
+    }
+
+private:
+    int this_id_;
+    PerfTime<T> perf_time_;
+};
+
+template <class T = EmptyTimstamp<PERF_USE_CLOCK>>
+class PerfDynLineGuard
+{
+public:
+    PerfDynLineGuard(const char* desc, long long count, long long val):dyn_line_(desc), count_(count), val_(val)
+    {
+    }
+    ~PerfDynLineGuard()
+    {
+        dyn_line_.end_tick(count_, val_);
+    }
+
+private:
+    PerfDynLine<T> dyn_line_;
+    long long count_;
+    long long val_;
+};
+
+
 
 #ifndef OPEN_ZPERF
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.end_tick().duration(), add)
 #define PERF_CALL_MULTI_CPU(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.duration(), add)
 #define PERF_CALL_MULTI_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
-#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) PERF_CALL_MULTI_CPU_REAL(idx, 1, perf_time, add)
-#define PERF_CALL_ONCE_CPU(idx, perf_time, add) PERF_CALL_MULTI_CPU(idx, 1, perf_time, add)
-#define PERF_CALL_ONCE_MEM(idx, mem) PERF_CALL_MULTI_MEM(idx, 1, mem)
-#define PERF_FUNC_GUARD(idx, user) PerfGuardTime __perf_func_guard(idx, user)
+
+#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) PerfInst.call_cpu(idx, perf_time.end_tick().duration(), add)
+#define PERF_CALL_ONCE_CPU(idx, perf_time, add) PerfInst.call_cpu(idx, perf_time.duration(), add)
+#define PERF_CALL_ONCE_MEM(idx, mem) PerfInst.call_mem(idx, 1, mem)
+#define PERF_FUNC_GUARD(idx, user) PerfTimeGuard<> __perf_func_guard(idx, user)
 #else
 #define PERF_RESET_CHILD(idx) 
 #define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) 
@@ -766,16 +926,18 @@ private:
 #endif
 
 
-#define PERF_SERIALIZE_FN_LOG()     LogDebug() << "\n\n ------------------------------------------------------------------ " \
+#define PERF_SERIALIZE_FN_LOG()     LogDebug() \
+<< "\n\n ------------------------------------------------------------------ " \
 "\n ----------------------PerfRecord[" << PerfInst.desc() << "] begin ---------------------- \n"; \
 for (int i = 0; i < PerfInst.node_count(); i++) \
 { \
     if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
     { \
-        LogDebug() << PerfInst.serialize(i); \
+        LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) << PerfInst.serialize(i); \
     } \
 } \
-LogDebug() << "\n ----------------------PerfRecord[" << PerfInst.desc() << "] end ----------------------" \
+LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) \
+<< "\n ----------------------PerfRecord[" << PerfInst.desc() << "] end ----------------------" \
 "\n ------------------------------------------------------------------\n\n";
 
 
