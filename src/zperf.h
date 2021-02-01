@@ -96,21 +96,21 @@
 #ifndef ZPERF_H
 #define ZPERF_H
 
-#define PERF_MAX_NODE_SIZE 300
-#define PERF_RESERVE_NODE_BEGIN 0
-#define PERF_USER_NODE_BEGIN 100
-#define PERF_DYN_NODE_BEGIN 200
+#define PERF_MAX_TRACK_SIZE 300
+#define PERF_RESERVE_TRACK_BEGIN 0
+#define PERF_USER_TRACK_BEGIN 100
+#define PERF_DYN_TRACK_BEGIN 200
 
 
-#define PERF_MAX_NODE_NAME_SIZE 100
-#define PERF_MAX_NODE_LINE_SIZE (PERF_MAX_NODE_NAME_SIZE + 200)
-#define PERF_MAX_NODE_CHILD_COUNT 10
-#define PERF_MAX_NODE_CHILD_DEPTH 5
+#define PERF_MAX_TRACK_NAME_SIZE 100
+#define PERF_MAX_TRACK_LINE_SIZE (PERF_MAX_TRACK_NAME_SIZE + 200)
+#define PERF_MAX_TRACK_CHILD_COUNT 10
+#define PERF_MAX_TRACK_CHILD_DEPTH 5
 
 
-static_assert(PERF_RESERVE_NODE_BEGIN < PERF_USER_NODE_BEGIN, "");
-static_assert(PERF_USER_NODE_BEGIN < PERF_DYN_NODE_BEGIN, "");
-static_assert(PERF_DYN_NODE_BEGIN < PERF_MAX_NODE_SIZE, "");
+static_assert(PERF_RESERVE_TRACK_BEGIN < PERF_USER_TRACK_BEGIN, "");
+static_assert(PERF_USER_TRACK_BEGIN < PERF_DYN_TRACK_BEGIN, "");
+static_assert(PERF_DYN_TRACK_BEGIN < PERF_MAX_TRACK_SIZE, "");
 
 enum PerfTimeStamp
 {
@@ -123,8 +123,8 @@ enum PerfTimeStamp
 
 struct PerfDesc
 {
-    char node_name[PERF_MAX_NODE_NAME_SIZE];
-    int node_name_len;
+    char track_name[PERF_MAX_TRACK_NAME_SIZE];
+    int track_name_len;
     int perf_time;
 };
 
@@ -143,11 +143,11 @@ struct PerfMEM
     long long use;
 };
 
-struct PerfNode
+struct PerfTrack
 {
     bool active; 
     bool is_child;  
-    std::array<unsigned int, PERF_MAX_NODE_CHILD_COUNT> child_ids; 
+    std::array<unsigned int, PERF_MAX_TRACK_CHILD_COUNT> child_ids; 
     int child_count; 
     PerfDesc desc; 
     PerfCPU cpu; 
@@ -156,7 +156,7 @@ struct PerfNode
 
 
 
-static const int perf_serialize_len = PERF_MAX_NODE_CHILD_DEPTH * PERF_MAX_NODE_CHILD_COUNT * PERF_MAX_NODE_LINE_SIZE * 2;
+static const int perf_serialize_len = PERF_MAX_TRACK_CHILD_DEPTH * PERF_MAX_TRACK_CHILD_COUNT * PERF_MAX_TRACK_LINE_SIZE * 2;
 static inline char* perf_serialize_buff()
 {
     static char buff[perf_serialize_len];
@@ -164,8 +164,8 @@ static inline char* perf_serialize_buff()
 }
 static inline int& perf_static_dyn_id()
 {
-    static_assert(PERF_DYN_NODE_BEGIN > 0, "0 is invalid begin.");
-    static int dyn_id = PERF_DYN_NODE_BEGIN;
+    static_assert(PERF_DYN_TRACK_BEGIN > 0, "0 is invalid begin.");
+    static int dyn_id = PERF_DYN_TRACK_BEGIN;
     return dyn_id;
 }
 
@@ -199,11 +199,11 @@ template<int T, int S>
 class PerfRecord 
 {
 public:
-    static const int NODE_COUNT = S;
+    static const int TRACK_COUNT = S;
     static const int PERF_TYPE = T;
     PerfRecord() 
     {
-        memset(nodes_, 0, sizeof(nodes_));
+        memset(tracks_, 0, sizeof(tracks_));
         desc_[0] = '\0';
         state_ = 0;
     };
@@ -213,47 +213,47 @@ public:
         return inst;
     }
     inline int init_perf();
-    inline int regist_node(int idx, const char* desc, unsigned int perf_time, bool overwrite);
-    inline int add_node_child(int idx, int child);
+    inline int regist_track(int idx, const char* desc, unsigned int perf_time, bool overwrite);
+    inline int add_track_child(int idx, int child);
     
     void reset_cpu(int idx)
     {
-        PerfNode& node = nodes_[idx];
-        memset(&node.cpu, 0, sizeof(node.cpu));
+        PerfTrack& track = tracks_[idx];
+        memset(&track.cpu, 0, sizeof(track.cpu));
     }
     void reset_mem(int idx)
     {
-        PerfNode& node = nodes_[idx];
-        memset(&node.mem, 0, sizeof(node.mem));
+        PerfTrack& track = tracks_[idx];
+        memset(&track.mem, 0, sizeof(track.mem));
     }
     inline void reset_childs(int idx, int depth = 0);
     void call_cpu(int idx, long long c, long long use_time, long long add_val)
     {
         long long dis = use_time / c;
-        PerfNode& node = nodes_[idx];
-        node.cpu.c += c;
-        node.cpu.use += use_time;
-        node.cpu.val += add_val;
-        node.cpu.sm = node.cpu.sm == 0 ? dis : node.cpu.sm;
-        node.cpu.sm = (node.cpu.sm * 8 + dis * 2) / 10;
-        node.cpu.dv += abs(dis - node.cpu.sm);
+        PerfTrack& track = tracks_[idx];
+        track.cpu.c += c;
+        track.cpu.use += use_time;
+        track.cpu.val += add_val;
+        track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
+        track.cpu.sm = (track.cpu.sm * 8 + dis * 2) / 10;
+        track.cpu.dv += abs(dis - track.cpu.sm);
     }
     void call_cpu(int idx, long long use_time, long long add_val)
     {
-        PerfNode& node = nodes_[idx];
-        node.cpu.c += 1;
-        node.cpu.use += use_time;
-        node.cpu.val += add_val;
-        node.cpu.sm = node.cpu.sm == 0 ? use_time : node.cpu.sm;
-        node.cpu.sm = (node.cpu.sm * 8 + use_time * 2) / 10;
-        node.cpu.dv += abs(use_time - node.cpu.sm);
+        PerfTrack& track = tracks_[idx];
+        track.cpu.c += 1;
+        track.cpu.use += use_time;
+        track.cpu.val += add_val;
+        track.cpu.sm = track.cpu.sm == 0 ? use_time : track.cpu.sm;
+        track.cpu.sm = (track.cpu.sm * 8 + use_time * 2) / 10;
+        track.cpu.dv += abs(use_time - track.cpu.sm);
     }
 
     void call_mem(int idx, long long c, long long use)
     {
-        PerfNode& node = nodes_[idx];
-        node.mem.c += c;
-        node.mem.use += use;
+        PerfTrack& track = tracks_[idx];
+        track.mem.c += c;
+        track.mem.use += use;
     }
     
 
@@ -261,15 +261,15 @@ public:
     const char* serialize(int entry_idx);
 
 
-    PerfNode& node(int idx) { return nodes_[idx]; }
-    int node_count()const { return NODE_COUNT; }
+    PerfTrack& track(int idx) { return tracks_[idx]; }
+    int track_count()const { return TRACK_COUNT; }
     const char* desc() const { return desc_; }
     char* mutable_desc() { return desc_; }
     const unsigned int state() const { return state_; }
     void set_state(unsigned int state) { state_ = state; }
 private:
-    PerfNode nodes_[S];
-    char desc_[PERF_MAX_NODE_NAME_SIZE];
+    PerfTrack tracks_[S];
+    char desc_[PERF_MAX_TRACK_NAME_SIZE];
     unsigned int state_;
 };
 
@@ -530,9 +530,9 @@ private:
 
 
 template<int T, int S>
-int PerfRecord<T, S>::add_node_child(int idx, int cidx)
+int PerfRecord<T, S>::add_track_child(int idx, int cidx)
 {
-    if (idx < 0 || idx >= NODE_COUNT || cidx < 0 || cidx >= NODE_COUNT)
+    if (idx < 0 || idx >= TRACK_COUNT || cidx < 0 || cidx >= TRACK_COUNT)
     {
         return -1;
     }
@@ -542,22 +542,22 @@ int PerfRecord<T, S>::add_node_child(int idx, int cidx)
         return -2;  
     }
 
-    PerfNode& node = nodes_[idx];
-    PerfNode& child = nodes_[cidx];
-    if (!node.active || !child.active)
+    PerfTrack& track = tracks_[idx];
+    PerfTrack& child = tracks_[cidx];
+    if (!track.active || !child.active)
     {
         return -3; //regist method has memset all info ; 
     }
-    if (node.child_count >= PERF_MAX_NODE_CHILD_COUNT)
+    if (track.child_count >= PERF_MAX_TRACK_CHILD_COUNT)
     {
         return -4;
     }
-    if (std::find_if(node.child_ids.begin(), node.child_ids.end(), [cidx](int id) {return id == cidx; }) != node.child_ids.end())
+    if (std::find_if(track.child_ids.begin(), track.child_ids.end(), [cidx](int id) {return id == cidx; }) != track.child_ids.end())
     {
         return -5; //duplicate 
     }
 
-    node.child_ids[node.child_count++] = cidx;
+    track.child_ids[track.child_count++] = cidx;
     child.is_child = true;
     return 0;
 }
@@ -603,13 +603,13 @@ int PerfRecord<T, S>::init_perf()
 
 
 template<int T, int S>
-int PerfRecord<T, S>::regist_node(int idx, const char* desc, unsigned int perf_time, bool overwrite)
+int PerfRecord<T, S>::regist_track(int idx, const char* desc, unsigned int perf_time, bool overwrite)
 {
     if (idx < 0)
     {
         return -1;
     }
-    if (idx >= NODE_COUNT)
+    if (idx >= TRACK_COUNT)
     {
         return -2;
     }
@@ -617,25 +617,25 @@ int PerfRecord<T, S>::regist_node(int idx, const char* desc, unsigned int perf_t
     {
         return -3;
     }
-    PerfNode& node = nodes_[idx];
+    PerfTrack& track = tracks_[idx];
 
 
-    if (overwrite && node.active)
+    if (overwrite && track.active)
     {
         return 0;
     }
 
     int len = (int)strlen(desc);
-    if (len + 1 > PERF_MAX_NODE_NAME_SIZE)
+    if (len + 1 > PERF_MAX_TRACK_NAME_SIZE)
     {
         return -4;
     }
     
-    memset(&node, 0, sizeof(node));
-    memcpy(node.desc.node_name, desc, len+1);
-    node.desc.node_name_len = len;
-    node.active = true;
-    node.desc.perf_time = perf_time;
+    memset(&track, 0, sizeof(track));
+    memcpy(track.desc.track_name, desc, len+1);
+    track.desc.track_name_len = len;
+    track.active = true;
+    track.desc.perf_time = perf_time;
     return 0;
 }
 
@@ -646,20 +646,20 @@ void PerfRecord<T, S>::reset_childs(int idx, int depth)
     {
         return;
     }
-    if (idx >= NODE_COUNT)
+    if (idx >= TRACK_COUNT)
     {
         return;
     }
-    PerfNode& node = nodes_[idx];
-    memset(&node.cpu, 0, sizeof(node.cpu));
-    memset(&node.mem, 0, sizeof(node.mem));
+    PerfTrack& track = tracks_[idx];
+    memset(&track.cpu, 0, sizeof(track.cpu));
+    memset(&track.mem, 0, sizeof(track.mem));
     if (depth > 5)
     {
         return;
     }
-    for (int i = 0; i < node.child_count; i++)
+    for (int i = 0; i < track.child_count; i++)
     {
-        reset_childs(node.child_ids[i], depth + 1);
+        reset_childs(track.child_ids[i], depth + 1);
     }
 }
 
@@ -745,20 +745,20 @@ static inline const char* human_mem_format(long long bytes)
 template<int T, int S>
 int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int buff_len)
 {
-    if (entry_idx < 0 || entry_idx >= NODE_COUNT)
+    if (entry_idx < 0 || entry_idx >= TRACK_COUNT)
     {
         return -1;
     }
-    if (buff_len < PERF_MAX_NODE_LINE_SIZE)
+    if (buff_len < PERF_MAX_TRACK_LINE_SIZE)
     {
         return -2;
     }
     char* buff = org_buff;
 
-    PerfNode& node = nodes_[entry_idx];
-    if (node.cpu.c > 0)
+    PerfTrack& track = tracks_[entry_idx];
+    if (track.cpu.c > 0)
     {
-        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_TRACK_LINE_SIZE)
         {
             return -6;
         }
@@ -769,25 +769,25 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             buff_len -= 2;
         }
         *(buff + 1) = '\0';
-        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_TRACK_LINE_SIZE)
         {
             return -6;
         }
         char buff_call[50];
-        human_count_format(buff_call, node.cpu.c);
+        human_count_format(buff_call, track.cpu.c);
         char buff_avg[50];
-        human_time_format(buff_avg, (long long)(node.cpu.use * perf_time_hz(node.desc.perf_time)) / node.cpu.c);
+        human_time_format(buff_avg, (long long)(track.cpu.use * perf_time_hz(track.desc.perf_time)) / track.cpu.c);
         char buff_sm[50];
-        human_time_format(buff_sm, (long long)(node.cpu.sm * perf_time_hz(node.desc.perf_time)));
+        human_time_format(buff_sm, (long long)(track.cpu.sm * perf_time_hz(track.desc.perf_time)));
         char buff_dv[50];
-        human_time_format(buff_dv, (long long)(node.cpu.dv * perf_time_hz(node.desc.perf_time) / node.cpu.c));
+        human_time_format(buff_dv, (long long)(track.cpu.dv * perf_time_hz(track.desc.perf_time) / track.cpu.c));
         char buff_sum[50];
-        human_time_format(buff_sum, (long long)(node.cpu.use * perf_time_hz(node.desc.perf_time)));
+        human_time_format(buff_sum, (long long)(track.cpu.use * perf_time_hz(track.desc.perf_time)));
         char buff_val[50];
-        human_count_format(buff_val, node.cpu.val);
+        human_count_format(buff_val, track.cpu.val);
 
         int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s sm: %s dv:%s sum: %s  user:%s  \n",
-            node.desc.node_name, buff_call, buff_avg, buff_sm, buff_dv, buff_sum, buff_val);
+            track.desc.track_name, buff_call, buff_avg, buff_sm, buff_dv, buff_sum, buff_val);
 
         if (ret < 0)
         {
@@ -800,9 +800,9 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             return -5;
         }
     }
-    if (node.mem.c > 0)
+    if (track.mem.c > 0)
     {
-        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_TRACK_LINE_SIZE)
         {
             return -6;
         }
@@ -813,19 +813,19 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             buff_len -= 2;
         }
         *(buff + 1) = '\0';
-        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_TRACK_LINE_SIZE)
         {
             return -6;
         }
         char buff_call[50];
-        human_count_format(buff_call, node.mem.c);
+        human_count_format(buff_call, track.mem.c);
         char buff_avg[50];
-        human_mem_format(buff_avg, node.mem.use / node.mem.c);
+        human_mem_format(buff_avg, track.mem.use / track.mem.c);
         char buff_use[50];
-        human_mem_format(buff_use, node.mem.use);
+        human_mem_format(buff_use, track.mem.use);
 
         int ret = sprintf(buff, "[[ %s ]] mem: call:%s  avg: %s  use: %s \n",
-            node.desc.node_name, buff_call, buff_avg, buff_use);
+            track.desc.track_name, buff_call, buff_avg, buff_use);
 
         if (ret < 0)
         {
@@ -838,9 +838,9 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             return -8;
         }
     }
-    if (node.cpu.c <= 0 && node.mem.c <= 0)
+    if (track.cpu.c <= 0 && track.mem.c <= 0)
     {
-        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_TRACK_LINE_SIZE)
         {
             return -6;
         }
@@ -851,11 +851,11 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
             buff_len -= 2;
         }
         *(buff + 1) = '\0';
-        if (buff_len < PERF_MAX_NODE_LINE_SIZE)
+        if (buff_len < PERF_MAX_TRACK_LINE_SIZE)
         {
             return -6;
         }
-        int ret = sprintf(buff, "[%s] no any call data. \n", node.desc.node_name);
+        int ret = sprintf(buff, "[%s] no any call data. \n", track.desc.track_name);
         if (ret < 0)
         {
             return -7;
@@ -873,9 +873,9 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         return -9;
     }
 
-    for (int i = 0; i < node.child_count; i++)
+    for (int i = 0; i < track.child_count; i++)
     {
-        int ret = serialize(node.child_ids[i], depth + 1, buff, buff_len);
+        int ret = serialize(track.child_ids[i], depth + 1, buff, buff_len);
         if (ret < 0)
         {
             ret -= 10 * (1+depth);
@@ -906,10 +906,10 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 }
 
 
-#define PerfInst PerfRecord<0, PERF_MAX_NODE_SIZE>::instance()
-#define REGIST_NODE(id, name, pt, force)  PerfInst.regist_node(id, name, pt, force)
-#define REGIST_NODE_AUTO(id)  PerfInst.regist_node(id, #id, PERF_TIME_DEFAULT, false)
-#define BIND_CHILD(id, cid)  PerfInst.add_node_child(id, cid)
+#define PerfInst PerfRecord<0, PERF_MAX_TRACK_SIZE>::instance()
+#define REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
+#define REGIST_TRACK_AUTO(id)  PerfInst.regist_track(id, #id, PERF_TIME_DEFAULT, false)
+#define BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
 
 
 
@@ -926,7 +926,7 @@ public:
     }
     ~PerfTimeGuard()
     {
-        if (idx_ >= 0 && idx_ < PERF_MAX_NODE_SIZE)
+        if (idx_ >= 0 && idx_ < PERF_MAX_TRACK_SIZE)
         {
             PerfInst.call_cpu(idx_, 1, create_time_.end_track().duration(), user_);
         }
@@ -947,10 +947,10 @@ public:
     {
         this_id_ = 0;
         int& dyn_id = perf_static_dyn_id();
-        if (dyn_id + 1 < PERF_MAX_NODE_SIZE)
+        if (dyn_id + 1 < PERF_MAX_TRACK_SIZE)
         {
             this_id_ = dyn_id++;
-            PerfInst.regist_node(this_id_, desc, T, false);
+            PerfInst.regist_track(this_id_, desc, T, false);
             perf_time_.begin_track();
         }
     }
@@ -958,10 +958,10 @@ public:
     {
         this_id_ = 0;
         int& dyn_id = perf_static_dyn_id();
-        if (dyn_id + 1 < PERF_MAX_NODE_SIZE)
+        if (dyn_id + 1 < PERF_MAX_TRACK_SIZE)
         {
             this_id_ = dyn_id++;
-            PerfInst.regist_node(this_id_, desc, T, false);
+            PerfInst.regist_track(this_id_, desc, T, false);
         }
     }
 
@@ -1041,9 +1041,9 @@ private:
 #define PERF_SERIALIZE_FN_LOG()     LogDebug() \
 << "\n\n ------------------------------------------------------------------ " \
 "\n ----------------------PerfRecord[" << PerfInst.desc() << "] begin ---------------------- \n"; \
-for (int i = 0; i < PerfInst.node_count(); i++) \
+for (int i = 0; i < PerfInst.track_count(); i++) \
 { \
-    if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
+    if (PerfInst.track(i).active && !PerfInst.track(i).is_child) \
     { \
         LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) << PerfInst.serialize(i); \
     } \
