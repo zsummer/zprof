@@ -39,9 +39,6 @@ enum MyEnum
 inline void regist_perf()
 {
     sprintf(PerfInst.mutable_desc(), "test");
-    REGIST_NODE(ENUM_BAT, "bat");
-    REGIST_NODE(ENUM_IND_SUM, "ind sum");
-    REGIST_NODE_AUTO(ENUM_IND);
     REGIST_NODE_AUTO(ENUM_EMPTY);
     REGIST_NODE_AUTO(ENUM_ENTRY);
     REGIST_NODE_AUTO(ENUM_ALLOC_SUM);
@@ -56,13 +53,6 @@ inline void regist_perf()
     BIND_CHILD(ENUM_ENTRY, ENUM_FREE_SUM);
     BIND_CHILD(ENUM_ALLOC_SUM, ENUM_ALLOC);
     BIND_CHILD(ENUM_FREE_SUM, ENUM_FREE);
-
-#ifndef WIN32
-    cpu_set_t set;
-    CPU_ZERO(&set);
-    CPU_SET(2, &set);
-    sched_setaffinity(0, sizeof(set), &set);
-#endif
 }
 
 
