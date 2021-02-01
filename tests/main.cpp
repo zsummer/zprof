@@ -22,6 +22,7 @@
 
 int main(int argc, char *argv[])
 {
+    PerfInst.init_perf();
     PerfTime<> log_start_use;
     FNLog::FastStartDebugLogger();
     LogDebug() << " main begin test. use time:" << human_time_format(log_start_use.end_tick().duration());
@@ -64,17 +65,29 @@ int main(int argc, char *argv[])
             time += perf_now_rdtscp();
         }
     }
+
     if (true)
     {
-        PerfDynLineGuard<> guard("perf_now_rdtscp bat 1000w", 1000 * 10000, 0);
+        PerfDynLineGuard<> guard("perf_now_sys bat 1000w", 1000 * 10000, 0);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            time += perf_now_rdtscp();
+            time += perf_now_sys();
         }
+    }
+
+    if (true)
+    {
+        PerfDynLineGuard<PERF_TIME_SYS> guard("sleep 300ms: sys ", 1, 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PerfDynLineGuard<> guard("sleep 300ms", 1, 0);
+        PerfDynLineGuard<PERF_TIME_RDTSCP> guard("sleep 300ms rdtscp ", 1, 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    }
+    if (true)
+    {
+        PerfDynLineGuard<PERF_TIME_CLOCK> guard("sleep 300ms clock ", 1, 0);
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
