@@ -139,6 +139,10 @@ struct PerfCPU
     long long t_u;
     long long t_v;
 };
+struct PerfTimer
+{
+    long long last;
+};
 
 struct PerfMEM
 {
@@ -158,6 +162,7 @@ struct PerfTrack
     PerfDesc desc; 
     PerfCPU cpu; 
     PerfMEM mem; 
+    PerfTimer timer;
 };  
 
 
@@ -262,6 +267,17 @@ public:
         track.cpu.t_u += use;
         track.cpu.t_v = add_val;
     }
+    void call_timer(int idx, long long stamp)
+    {
+        PerfTrack& track = tracks_[idx];
+        if (track.timer.last == 0)
+        {
+            track.timer.last = stamp;
+            return;
+        }
+        call_cpu(idx, stamp - track.timer.last, 0);
+        track.timer.last = stamp;
+    }
 
     void call_mem(int idx, long long c, long long use)
     {
@@ -319,6 +335,7 @@ private:
 
 
 #define PERF_RDTSC
+
 
 inline long long perf_now_rdtscp()
 {
@@ -1048,7 +1065,7 @@ public:
     }
 
     int track_id() { return this_id_; }
-
+    PerfTime<T>& perf_time() { return perf_time_; }
 
     const char* show()
     {
@@ -1081,7 +1098,7 @@ public:
     {
         dyn_line_.end_track(count_, val_);
     }
-
+    PerfDynLine<T>& dyn_line() { return dyn_line_; }
 private:
     PerfDynLine<T> dyn_line_;
     long long count_;
@@ -1100,6 +1117,7 @@ private:
 #define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) PerfInst.call_cpu(idx, perf_time.end_track().duration(), add)
 #define PERF_CALL_ONCE_CPU(idx, perf_time, add) PerfInst.call_cpu(idx, perf_time.duration(), add)
 #define PERF_CALL_ONCE_MEM(idx, mem) PerfInst.call_mem(idx, 1, mem)
+#define PERF_CALL_ONCE_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
 #define PERF_FUNC_GUARD(idx, user) PerfTimeGuard<> __perf_func_guard(idx, user)
 #else
 #define PERF_INIT() 
@@ -1110,6 +1128,7 @@ private:
 #define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) 
 #define PERF_CALL_ONCE_CPU(idx, perf_time, add) 
 #define PERF_CALL_ONCE_MEM(idx, mem) 
+#define PERF_CALL_ONCE_TIMER(idx, stamp)
 #define PERF_FUNC_GUARD(idx, user)
 #endif
 

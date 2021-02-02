@@ -20,6 +20,9 @@
 #include "test.h"
                          
 
+
+
+
 int main(int argc, char *argv[])
 {
     PerfInst.init_perf();
@@ -135,6 +138,20 @@ int main(int argc, char *argv[])
     }
 
 
+    if (true)
+    {
+        PerfDynLine<> line("call timer 10ms ");
+        for (int i = 0; i < 100; i++)
+        {
+            line.begin_track();
+            PERF_CALL_ONCE_TIMER(line.track_id(), line.perf_time().begin());
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        line.begin_track();
+        PERF_CALL_ONCE_TIMER(line.track_id(), line.perf_time().begin());
+    }
+
+
     PerfInst.reset_childs(ENUM_ENTRY);
     entry_mem_test();
     PerfInst.update_merge();
@@ -146,6 +163,15 @@ int main(int argc, char *argv[])
     PERF_SERIALIZE_FN_LOG();
 
     
+
+
+
+
+
+
+
+
+
 
 
     LogInfo() << "all test finish .";
