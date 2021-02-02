@@ -28,7 +28,7 @@ void entry_mem_test()
         char* ptr = new char[100];
         delete[] ptr;
     }
-    PERF_CALL_MULTI_CPU_REAL(ENUM_BAT_ALLOC_FREE, 10000, perf_time);
+    PERF_CALL_CPU_G_REALTIME_WITH_C(ENUM_BAT_ALLOC_FREE, 10000, perf_time);
 
     PERF_TIME_GUARD(guard, ENUM_ENTRY);
 
@@ -36,12 +36,12 @@ void entry_mem_test()
     {
         PERF_BEGIN_STAMP(perf_time);
         char* ptr = new char[10];
-        PERF_CALL_ONCE_CPU_REAL(ENUM_ALLOC, perf_time);
-        PERF_CALL_ONCE_MEM(ENUM_ALLOC, 10);
+        PERF_CALL_CPU_G_REALTIME(ENUM_ALLOC, perf_time);
+        PERF_CALL_MEM(ENUM_ALLOC, 10);
         PERF_BEGIN_STAMP(perf_time);
         delete[] ptr;
-        PERF_CALL_ONCE_CPU_REAL(ENUM_FREE, perf_time);
-        PERF_CALL_ONCE_MEM(ENUM_FREE, 10);
+        PERF_CALL_CPU_G_REALTIME(ENUM_FREE, perf_time);
+        PERF_CALL_MEM(ENUM_FREE, 10);
     }
 
 }
