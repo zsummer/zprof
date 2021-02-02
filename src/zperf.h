@@ -97,7 +97,7 @@
 #define ZPERF_H
 
 #define PERF_MAX_TRACK_SIZE 300
-#define PERF_RESERVE_TRACK_BEGIN 0
+#define PERF_RESERVE_TRACK_BEGIN 1
 #define PERF_USER_TRACK_BEGIN 100
 #define PERF_DYN_TRACK_BEGIN 200
 
@@ -135,12 +135,17 @@ struct PerfCPU
     long long dv; 
     long long sm;
     long long val;  
+    long long t_c;
+    long long t_u;
+    long long t_v;
 };
 
 struct PerfMEM
 {
     long long c;  
     long long use;
+    long long t_c;
+    long long t_u;
 };
 
 struct PerfTrack
@@ -149,6 +154,7 @@ struct PerfTrack
     bool is_child;  
     std::array<unsigned int, PERF_MAX_TRACK_CHILD_COUNT> child_ids; 
     int child_count; 
+    int merge_to;
     PerfDesc desc; 
     PerfCPU cpu; 
     PerfMEM mem; 
@@ -206,6 +212,7 @@ public:
         memset(tracks_, 0, sizeof(tracks_));
         desc_[0] = '\0';
         state_ = 0;
+        merge_to_size_ = 0;
     };
     static PerfRecord& instance()
     {
@@ -215,7 +222,8 @@ public:
     inline int init_perf();
     inline int regist_track(int idx, const char* desc, unsigned int perf_time, bool overwrite);
     inline int add_track_child(int idx, int child);
-    
+    inline int add_merge_to(int idx, int to);
+
     void reset_cpu(int idx)
     {
         PerfTrack& track = tracks_[idx];
@@ -227,26 +235,32 @@ public:
         memset(&track.mem, 0, sizeof(track.mem));
     }
     inline void reset_childs(int idx, int depth = 0);
-    void call_cpu(int idx, long long c, long long use_time, long long add_val)
+    void call_cpu(int idx, long long c, long long use, long long add_val)
     {
-        long long dis = use_time / c;
+        long long dis = use / c;
         PerfTrack& track = tracks_[idx];
         track.cpu.c += c;
-        track.cpu.use += use_time;
+        track.cpu.use += use;
         track.cpu.val += add_val;
         track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
         track.cpu.sm = (track.cpu.sm * 8 + dis * 2) / 10;
         track.cpu.dv += abs(dis - track.cpu.sm);
+        track.cpu.t_c += c;
+        track.cpu.t_u += use;
+        track.cpu.t_v = add_val;
     }
-    void call_cpu(int idx, long long use_time, long long add_val)
+    void call_cpu(int idx, long long use, long long add_val)
     {
         PerfTrack& track = tracks_[idx];
         track.cpu.c += 1;
-        track.cpu.use += use_time;
+        track.cpu.use += use;
         track.cpu.val += add_val;
-        track.cpu.sm = track.cpu.sm == 0 ? use_time : track.cpu.sm;
-        track.cpu.sm = (track.cpu.sm * 8 + use_time * 2) / 10;
-        track.cpu.dv += abs(use_time - track.cpu.sm);
+        track.cpu.sm = track.cpu.sm == 0 ? use : track.cpu.sm;
+        track.cpu.sm = (track.cpu.sm * 8 + use * 2) / 10;
+        track.cpu.dv += abs(use - track.cpu.sm);
+        track.cpu.t_c += 1;
+        track.cpu.t_u += use;
+        track.cpu.t_v = add_val;
     }
 
     void call_mem(int idx, long long c, long long use)
@@ -254,9 +268,36 @@ public:
         PerfTrack& track = tracks_[idx];
         track.mem.c += c;
         track.mem.use += use;
+        track.mem.t_c += c;
+        track.cpu.t_u += use;
     }
     
+    void merge_to(int idx, int to)
+    {
+        PerfTrack& track = tracks_[idx];
+        if (track.cpu.t_c > 0)
+        {
+            call_cpu(to, track.cpu.t_u, track.cpu.t_v);
+            track.cpu.t_c = 0;
+            track.cpu.t_u = 0;
+            track.cpu.t_v = 0;
+        }
+        if (track.mem.t_c > 0)
+        {
+            call_mem(to, 1, track.mem.t_u);
+            track.mem.t_c = 0;
+            track.mem.t_u = 0;
+        }
+    }
 
+    void update_merge()
+    {
+        for (int i = 0; i < merge_to_size_; i++)
+        {
+            PerfTrack& track = tracks_[merge_to_[i]];
+            merge_to(merge_to_[i], track.merge_to);
+        }
+    }
     int serialize(int entry_idx, int depth, char* org_buff, int buff_len);
     const char* serialize(int entry_idx);
 
@@ -270,6 +311,8 @@ public:
 private:
     PerfTrack tracks_[S];
     char desc_[PERF_MAX_TRACK_NAME_SIZE];
+    std::array<int, S> merge_to_;
+    int merge_to_size_;
     unsigned int state_;
 };
 
@@ -564,6 +607,32 @@ int PerfRecord<T, S>::add_track_child(int idx, int cidx)
 
 
 
+template<int T, int S>
+int PerfRecord<T, S>::add_merge_to(int idx, int to)
+{
+    if (idx < 0 || idx >= TRACK_COUNT || to < 0 || to >= TRACK_COUNT)
+    {
+        return -1;
+    }
+
+    if (idx == to)
+    {
+        return -2;  
+    }
+    if (merge_to_size_ >= TRACK_COUNT)
+    {
+        return -3;
+    }
+    PerfTrack& track = tracks_[idx];
+    PerfTrack& to_track = tracks_[to];
+    if (!track.active || !to_track.active)
+    {
+        return -3; //regist method has memset all info ; 
+    }
+    track.merge_to = to;
+    merge_to_[merge_to_size_++] = idx;
+    return 0;
+}
 
 template<int T, int S>
 int PerfRecord<T, S>::init_perf()
@@ -910,7 +979,7 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 #define REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
 #define REGIST_TRACK_AUTO(id)  PerfInst.regist_track(id, #id, PERF_TIME_DEFAULT, false)
 #define BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
-
+#define BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
 
 
 
@@ -951,17 +1020,6 @@ public:
         {
             this_id_ = dyn_id++;
             PerfInst.regist_track(this_id_, desc, T, false);
-            perf_time_.begin_track();
-        }
-    }
-    PerfDynLine(const char* desc, long long tick) : perf_time_((long long)tick)
-    {
-        this_id_ = 0;
-        int& dyn_id = perf_static_dyn_id();
-        if (dyn_id + 1 < PERF_MAX_TRACK_SIZE)
-        {
-            this_id_ = dyn_id++;
-            PerfInst.regist_track(this_id_, desc, T, false);
         }
     }
 
@@ -980,6 +1038,15 @@ public:
     {
         PerfInst.call_cpu(this_id_, count, perf_time_.end_track().duration(), val);
     }
+
+
+    void call_mem(long long mem)
+    {
+        PerfInst.call_mem(this_id_, 1, mem);
+    }
+
+    int track_id() { return this_id_; }
+
 
     const char* show()
     {
@@ -1000,8 +1067,13 @@ template <PerfTimeStamp T = PERF_TIME_DEFAULT>
 class PerfDynLineGuard
 {
 public:
+    PerfDynLineGuard(const char* desc) :dyn_line_(desc), count_(1), val_(0)
+    {
+        dyn_line_.begin_track();
+    }
     PerfDynLineGuard(const char* desc, long long count, long long val):dyn_line_(desc), count_(count), val_(val)
     {
+        dyn_line_.begin_track();
     }
     ~PerfDynLineGuard()
     {

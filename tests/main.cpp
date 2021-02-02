@@ -23,12 +23,29 @@
 int main(int argc, char *argv[])
 {
     PerfInst.init_perf();
-    PerfTime<> log_start_use;
-    FNLog::FastStartDebugLogger();
-    LogDebug() << " main begin test. use time:" << human_time_format(log_start_use.end_track().duration());
-    LogDebug() << "perf record track size:" << human_mem_format(sizeof(PerfInst));
-
     regist_perf();
+
+    if (true)
+    {
+        PerfDynLineGuard<> guard("start fnlog use");
+        FNLog::FastStartDebugLogger();
+    }
+
+    LogDebug() << " main begin test. ";
+
+    if (true)
+    {
+        PerfDynLine<> line("self use mem");
+        line.call_mem(perf_self_memory_use());
+    }
+
+    if (true)
+    {
+        PerfDynLine<> line("PerfInst use mem");
+        line.call_mem(sizeof(PerfInst));
+    }
+
+
     double time = 0.0f;
     if (true)
     {
@@ -90,12 +107,14 @@ int main(int argc, char *argv[])
         PerfDynLineGuard<PERF_TIME_CLOCK> guard("sleep 300ms clock ", 1, 0);
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
+
+
     if (true)
     {
         PerfDynLineGuard<> guard("call cpu 1000w", 1, 0);
         for (int i = 0; i < 10000000; i++)
         {
-            PerfInst.call_cpu(ENUM_EMPTY, 10, 1000, 0);
+            PerfInst.call_cpu(ENUM_PERF_TEST, 10, 1000, 0);
         }
     }
     if (true)
@@ -103,7 +122,7 @@ int main(int argc, char *argv[])
         PerfDynLineGuard<> guard("call cpu 1000w (without count)", 1, 0);
         for (int i = 0; i < 10000000; i++)
         {
-            PerfInst.call_cpu(ENUM_EMPTY, 1000, 0);
+            PerfInst.call_cpu(ENUM_PERF_TEST, 1000, 0);
         }
     }
     if (true)
@@ -111,22 +130,22 @@ int main(int argc, char *argv[])
         PerfDynLineGuard<> guard("call mem 1000w ", 1, 0);
         for (int i = 0; i < 10000000; i++)
         {
-            PerfInst.call_mem(ENUM_EMPTY, 1, 1000);
+            PerfInst.call_mem(ENUM_PERF_TEST, 1, 1000);
         }
     }
 
-    PerfInst.reset_childs(ENUM_EMPTY);
+
+    PerfInst.reset_childs(ENUM_ENTRY);
     entry_mem_test();
-    PerfInst.call_mem(ENUM_EMPTY, 1, perf_self_memory_use());
+    PerfInst.update_merge();
     PERF_SERIALIZE_FN_LOG();
 
-    PerfInst.reset_childs(ENUM_EMPTY);
+    PerfInst.reset_childs(ENUM_ENTRY);
     entry_mem_test();
-    PerfInst.call_mem(ENUM_EMPTY, 1, perf_self_memory_use());
-
+    PerfInst.update_merge();
     PERF_SERIALIZE_FN_LOG();
 
-
+    
 
 
     LogInfo() << "all test finish .";
