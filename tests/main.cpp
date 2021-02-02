@@ -57,16 +57,6 @@ int main(int argc, char *argv[])
             time += perf_now_sys();
         }
     }
-    if (true)
-    {
-        PERF_DEFINE_DYN_STAMP(dyn_time, "perf_now_sys dis 1000w");
-        for (size_t i = 0; i < 1000 * 10000; i++)
-        {
-            PERF_DYN_BEGIN_STAMP(dyn_time);
-            time += perf_now_sys();
-            PERF_DYN_END_STAMP(dyn_time);
-        }
-    }
 
     if (true)
     {
@@ -82,6 +72,36 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             time += perf_now_rdtsc();
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_DYN_STAMP(dyn_time, "perf_now_sys dis 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_DYN_BEGIN_STAMP(dyn_time);
+            time += perf_now_sys();
+            PERF_DYN_END_STAMP(dyn_time);
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_DYN_STAMP(dyn_time, "perf_now_clock dis 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_DYN_BEGIN_STAMP(dyn_time);
+            time += perf_now_clock();
+            PERF_DYN_END_STAMP(dyn_time);
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_DYN_STAMP(dyn_time, "perf_now_rdtsc dis 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_DYN_BEGIN_STAMP(dyn_time);
+            time += perf_now_rdtsc();
+            PERF_DYN_END_STAMP(dyn_time);
         }
     }
 
