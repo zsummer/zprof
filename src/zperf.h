@@ -96,7 +96,7 @@
 #ifndef ZPERF_H
 #define ZPERF_H
 
-#define PERF_MAX_TRACK_SIZE 300
+#define PERF_MAX_TRACK_SIZE 400
 #define PERF_RESERVE_TRACK_BEGIN 1
 #define PERF_USER_TRACK_BEGIN 100
 #define PERF_DYN_TRACK_BEGIN 200
@@ -117,7 +117,7 @@ enum PerfTimeStamp
     PERF_TIME_DEFAULT,
     PERF_TIME_SYS,
     PERF_TIME_CLOCK,
-    PERF_TIME_RDTSCP,
+    PERF_TIME_RDTSC,
     PERF_TIME_MAX,
 };
 
@@ -327,36 +327,34 @@ private:
 
 
 
-#define PERF_RDTSC
+//#define PERF_RDTSCP
+#define PERF_RDTSC_INTEL
 
 
-inline long long perf_now_rdtscp()
+
+
+inline long long perf_now_rdtsc()
 {
 #ifdef WIN32
     long long count = 0;
     QueryPerformanceCounter((LARGE_INTEGER*)&count);
     return count;
     //return (long long)__rdtsc();
-    //#elif (defined PERF_RDTSC_FLUSH)
-    //    asm("XOR %eax, %eax\n\t"
-    //        "CPUID\n\t"
-    //        "RDTSC");
-    //    // * 1. use CPUID instruction to enforce flush cpu cache, maybe penalty, and inject extra 200 cycles
-    //    // *2. bind to cpu
-#elif (defined PERF_RDTSC)
-    unsigned int lo, hi;
-    __asm__ __volatile__("mfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
-    uint64_t val = ((uint64_t)hi << 32) | lo;
-    return (long long)val;
-#else
+#elif (defined PERF_RDTSCP)
     unsigned long hi, lo;
     asm volatile("rdtscp" : "=a"(lo), "=d"(hi));
     uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
     return (long long)val;
-    //    cpu_set_t set;
-    //    CPU_ZERO(&set);
-    //    CPU_SET(2, &set);
-    //    sched_setaffinity(0, sizeof(set), &set);
+#elif (defined PERF_RDTSC_INTEL)
+    unsigned int lo, hi;
+    __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
+    uint64_t val = ((uint64_t)hi << 32) | lo;
+    return (long long)val;
+#else
+    unsigned int lo, hi;
+    __asm__ __volatile__("mfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
+    uint64_t val = ((uint64_t)hi << 32) | lo;
+    return (long long)val;
 #endif
 }
 
@@ -506,15 +504,15 @@ template<>
 inline long long perf_now(const PerfTimeEmpty<PERF_TIME_DEFAULT>* ptr)
 {
     (void)ptr;
-    return perf_now_rdtscp();
+    return perf_now_rdtsc();
 }
 
 
 template<>
-inline long long perf_now(const PerfTimeEmpty<PERF_TIME_RDTSCP>* ptr)
+inline long long perf_now(const PerfTimeEmpty<PERF_TIME_RDTSC>* ptr)
 {
     (void)ptr;
-    return perf_now_rdtscp();
+    return perf_now_rdtsc();
 }
 
 template<>
@@ -656,7 +654,7 @@ int PerfRecord<T, S>::init_perf()
     rate = 1.0 / win_freq;
     rate *= 1000.0 * 1000 * 1000;
     perf_time_set_hz(PERF_TIME_DEFAULT, rate);
-    perf_time_set_hz(PERF_TIME_RDTSCP, rate);
+    perf_time_set_hz(PERF_TIME_RDTSC, rate);
     perf_time_set_hz(PERF_TIME_CLOCK, rate);
     perf_time_set_hz(PERF_TIME_SYS, 1.0);
 #else
@@ -670,7 +668,7 @@ int PerfRecord<T, S>::init_perf()
     mhz = 1.0 / mhz;
     mhz *= 1000 * 1000 * 1000;
     perf_time_set_hz(PERF_TIME_DEFAULT, mhz);
-    perf_time_set_hz(PERF_TIME_RDTSCP, mhz);
+    perf_time_set_hz(PERF_TIME_RDTSC, mhz);
     perf_time_set_hz(PERF_TIME_CLOCK, 1.0);
     perf_time_set_hz(PERF_TIME_SYS, 1.0);
 
@@ -1095,13 +1093,25 @@ private:
 };
 
 
-
-#ifndef OPEN_ZPERF
+#define OPEN_ZPERF
+#ifdef OPEN_ZPERF
 #define PERF_INIT() PerfInst.init_perf()
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
-#define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time) PerfInst.call_cpu(idx, count, perf_time.end_track().duration())
-#define PERF_CALL_MULTI_CPU(idx, count, perf_time) PerfInst.call_cpu(idx, count, perf_time.duration())
-#define PERF_CALL_MULTI_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
+#define PERF_UPDATE_MERGE() PerfInst.update_merge()
+
+#define PERF_CALL_CPU_G_REALTIME_WITH_C(idx, count, perf_time) PerfInst.call_cpu(idx, count, perf_time.end_track().duration())
+#define PERF_CALL_CPU_G_WITH_C(idx, count, perf_time) PerfInst.call_cpu(idx, count, perf_time.duration())
+#define PERF_CALL_CPU_G_REALTIME(idx, perf_time) PerfInst.call_cpu(idx, perf_time.end_track().duration())
+#define PERF_CALL_CPU_G(idx, perf_time) PerfInst.call_cpu(idx, perf_time.duration())
+#define PERF_CALL_CPU(idx, use) PerfInst.call_cpu(idx, use)
+#define PERF_CALL_CPU_WITH_C(idx, c, use) PerfInst.call_cpu(idx, c, use)
+
+
+#define PERF_CALL_MEM_WITH_C(idx, count, mem) PerfInst.call_mem(idx, count, mem)
+#define PERF_CALL_MEM(idx, mem) PerfInst.call_mem(idx, 1, mem)
+
+#define PERF_CALL_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
+
 
 #define PERF_DEFINE_STAMP(name)  PerfTime<> name
 #define PERF_DEFINE_STAMP_REF(name, ref)  PerfTime<> name(ref.begin())
@@ -1110,23 +1120,32 @@ private:
 #define PERF_END_STAMP(pf) pf.end_track()
 
 #define PERF_DEFINE_DYN_STAMP(dyn, desc) PerfDynTime<> dyn(desc);  
-#define PERF_DEFINE_DYN_STAMP_GUARD(dyn, desc, c) PerfDynTimeGuard<> dyn(desc, c);  
+#define PERF_DEFINE_DYN_STAMP_GUARD(dyn, desc) PerfDynTimeGuard<> dyn(desc);  
+#define PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(dyn, desc, c) PerfDynTimeGuard<> dyn(desc, c);  
 #define PERF_DYN_BEGIN_STAMP(dyn) dyn.begin_track()
+#define PERF_DYN_END_STAMP(dyn) dyn.end_track()
+
 #define PERF_DYN_CALL_MEM(dyn, use) dyn.call_mem(use)
 
 
-#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time) PerfInst.call_cpu(idx, perf_time.end_track().duration())
-#define PERF_CALL_ONCE_CPU(idx, perf_time) PerfInst.call_cpu(idx, perf_time.duration())
-#define PERF_CALL_ONCE_MEM(idx, mem) PerfInst.call_mem(idx, 1, mem)
-#define PERF_CALL_ONCE_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
+
 #define PERF_TIME_GUARD(name, idx) PerfTimeGuard<> name(idx)
 
 #else
 #define PERF_INIT() 
 #define PERF_RESET_CHILD(idx) 
-#define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) 
-#define PERF_CALL_MULTI_CPU(idx, count, perf_time, add) 
-#define PERF_CALL_MULTI_MEM(idx, count, mem) 
+#define PERF_UPDATE_MERGE()
+
+#define PERF_CALL_CPU_G_REALTIME_WITH_C(idx, count, perf_time) 
+#define PERF_CALL_CPU_G_WITH_C(idx, count, perf_time) 
+#define PERF_CALL_MEM_WITH_C(idx, count, mem) 
+#define PERF_CALL_CPU_G_REALTIME(idx, perf_time) 
+#define PERF_CALL_CPU_G(idx, perf_time) 
+#define PERF_CALL_CPU(idx, use) 
+#define PERF_CALL_CPU_WITH_C(idx, c, use) 
+
+#define PERF_CALL_MEM(idx, mem) 
+#define PERF_CALL_TIMER(idx, stamp)
 
 #define PERF_DEFINE_STAMP(name)  
 #define PERF_DEFINE_STAMP_REF(name, ref)  
@@ -1134,14 +1153,13 @@ private:
 #define PERF_BEGIN_STAMP(pf) 
 #define PERF_END_STAMP(pf) 
 #define PERF_DEFINE_DYN_STAMP(dyn, desc)
-#define PERF_DEFINE_DYN_STAMP_GUARD(dyn, desc, c, v)
+#define PERF_DEFINE_DYN_STAMP_GUARD(dyn, desc)
+#define PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(dyn, desc, c)
 #define PERF_DYN_BEGIN_STAMP(dyn) 
+#define PERF_DYN_END_STAMP(dyn) 
 #define PERF_DYN_CALL_MEM(dyn, use)
-#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) 
-#define PERF_CALL_ONCE_CPU(idx, perf_time, add) 
-#define PERF_CALL_ONCE_MEM(idx, mem) 
-#define PERF_CALL_ONCE_TIMER(idx, stamp)
-#define PERF_TIME_GUARD(name, idx, user)
+
+#define PERF_TIME_GUARD(name, idx)
 #endif
 
 

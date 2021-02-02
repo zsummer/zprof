@@ -16,7 +16,6 @@
 */
 
 #include "fn_log.h"
-#include "zperf.h"
 #include "test.h"
                          
 
@@ -25,12 +24,12 @@
 
 int main(int argc, char *argv[])
 {
-    PerfInst.init_perf();
+    PERF_INIT();
     regist_perf();
 
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD(guard, "start fnlog use", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
 
@@ -52,7 +51,7 @@ int main(int argc, char *argv[])
     double time = 0.0f;
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD(guard, "perf_now_sys bat 1000w", 1000*10000);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "perf_now_sys bat 1000w", 1000*10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             time += perf_now_sys();
@@ -60,18 +59,18 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PerfDynTime<> dyn_time("perf_now_sys dis 1000w");
+        PERF_DEFINE_DYN_STAMP(dyn_time, "perf_now_sys dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            dyn_time.begin_track();
+            PERF_DYN_BEGIN_STAMP(dyn_time);
             time += perf_now_sys();
-            dyn_time.end_track();
+            PERF_DYN_END_STAMP(dyn_time);
         }
     }
 
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD(guard, "perf_now_clock bat 1000w", 1000 * 10000);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "perf_now_clock bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             time += perf_now_clock();
@@ -79,16 +78,16 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD(guard, "perf_now_rdtscp bat 1000w", 1000 * 10000);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "perf_now_rdtsc bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            time += perf_now_rdtscp();
+            time += perf_now_rdtsc();
         }
     }
 
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD(guard, "perf_now_sys bat 1000w", 1000 * 10000);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "perf_now_sys bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             time += perf_now_sys();
@@ -97,45 +96,50 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PerfDynTimeGuard<PERF_TIME_SYS> guard("sleep 300ms: sys ", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "sleep 300ms: sys ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PerfDynTimeGuard<PERF_TIME_RDTSCP> guard("sleep 300ms rdtscp ", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "sleep 300ms rdtscp ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PerfDynTimeGuard<PERF_TIME_CLOCK> guard("sleep 300ms clock ", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "sleep 300ms clock ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 
 
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD(guard, "call cpu 1000w", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "call cpu 1000w", 1);
         for (int i = 0; i < 10000000; i++)
         {
-            PerfInst.call_cpu(ENUM_PERF_TEST, 10, 1000);
+            PERF_CALL_CPU_WITH_C(ENUM_PERF_TEST, 10, 1000);
         }
     }
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD(guard, "call cpu 1000w (without count)", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "call cpu 1000w (without count)", 1);
         for (int i = 0; i < 10000000; i++)
         {
-            PerfInst.call_cpu(ENUM_PERF_TEST, 1000);
+            PERF_CALL_CPU(ENUM_PERF_TEST, 1000);
         }
     }
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD(guard, "call mem 1000w ", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "call mem 1000w ", 1);
         for (int i = 0; i < 10000000; i++)
         {
-            PerfInst.call_mem(ENUM_PERF_TEST, 1, 1000);
+            PERF_CALL_MEM(ENUM_PERF_TEST, 1000);
         }
     }
+
+
+ 
+
+
 
 
     if (true)
@@ -144,27 +148,45 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 100; i++)
         {
             PERF_DYN_BEGIN_STAMP(dyn);
-            PERF_CALL_ONCE_TIMER(dyn.track_id(), dyn.perf_time().begin());
+            PERF_CALL_TIMER(dyn.track_id(), dyn.perf_time().begin());
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         PERF_DYN_BEGIN_STAMP(dyn);
-        PERF_CALL_ONCE_TIMER(dyn.track_id(), dyn.perf_time().begin());
+        PERF_CALL_TIMER(dyn.track_id(), dyn.perf_time().begin());
     }
 
-
-    PerfInst.reset_childs(ENUM_ENTRY);
+    PERF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
-    PerfInst.update_merge();
+    PERF_UPDATE_MERGE();
     PERF_SERIALIZE_FN_LOG();
 
-    PerfInst.reset_childs(ENUM_ENTRY);
+    PERF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
     PerfInst.update_merge();
     PERF_SERIALIZE_FN_LOG();
 
     
+    if (true)
+    {
+        PerfTime<PERF_TIME_RDTSC> rdtsc;
+        PerfTime<PERF_TIME_SYS> sys;
+        PerfTime<PERF_TIME_CLOCK> clock;
+        rdtsc.begin_track();
+        sys.begin_track();
+        clock.begin_track();
+        for (int i = 0; i < 1000*10000; i++)
+        {
+            rdtsc.end_track();
+        }
+        rdtsc.end_track();
+        sys.end_track();
+        clock.end_track();
+        LogDebug() << "rdtsc stamp use:" << human_time_format(rdtsc.duration_ns()) << ", inner count:" << human_count_format(rdtsc.duration());
+        LogDebug() << "sys stamp use:" << human_time_format(sys.duration_ns()) << ", inner count:" << human_count_format(sys.duration());
+        LogDebug() << "clock stamp use:" << human_time_format(clock.duration_ns()) << ", inner count:" << human_count_format(clock.duration());
 
-
+    }
+    
 
 
 
