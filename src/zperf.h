@@ -318,6 +318,7 @@ private:
 
 
 
+#define PERF_RDTSC
 
 inline long long perf_now_rdtscp()
 {
@@ -333,9 +334,10 @@ inline long long perf_now_rdtscp()
     //    // * 1. use CPUID instruction to enforce flush cpu cache, maybe penalty, and inject extra 200 cycles
     //    // *2. bind to cpu
 #elif (defined PERF_RDTSC)
-    unsigned long long a;
-    asm volatile("rdtsc" : "=a" (a) :: "memory");
-    return a;
+    unsigned int lo, hi;
+    __asm__ __volatile__("mfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
+    uint64_t val = ((uint64_t)hi << 32) | lo;
+    return (long long)val;
 #else
     unsigned long hi, lo;
     asm volatile("rdtscp" : "=a"(lo), "=d"(hi));
@@ -358,7 +360,7 @@ inline long long perf_now_clock()
     return count;
 #else
     struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    clock_gettime(CLOCK_REALTIME, &ts);
     return ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec;
 #endif
 }
@@ -1089,6 +1091,7 @@ private:
 
 
 #ifndef OPEN_ZPERF
+#define PERF_INIT() PerfInst.init_perf()
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.end_track().duration(), add)
 #define PERF_CALL_MULTI_CPU(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.duration(), add)
@@ -1099,6 +1102,7 @@ private:
 #define PERF_CALL_ONCE_MEM(idx, mem) PerfInst.call_mem(idx, 1, mem)
 #define PERF_FUNC_GUARD(idx, user) PerfTimeGuard<> __perf_func_guard(idx, user)
 #else
+#define PERF_INIT() 
 #define PERF_RESET_CHILD(idx) 
 #define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) 
 #define PERF_CALL_MULTI_CPU(idx, count, perf_time, add) 
