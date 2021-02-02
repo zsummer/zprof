@@ -1,6 +1,6 @@
 /*
-* breeze License
-* Copyright (C) 2014-2017 YaweiZhang <yawei.zhang@foxmail.com>.
+* zperf License
+* Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "call cpu 1000w", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "call cpu 1000w", 10000000);
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU_WITH_C(ENUM_PERF_TEST, 10, 1000);
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "call cpu 1000w (without count)", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "call cpu 1000w (without count)", 10000000);
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU(ENUM_PERF_TEST, 1000);
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "call mem 1000w ", 1);
+        PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(guard, "call mem 1000w ", 10000000);
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_MEM(ENUM_PERF_TEST, 1000);
