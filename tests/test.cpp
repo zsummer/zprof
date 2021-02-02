@@ -22,26 +22,25 @@
 
 void entry_mem_test()
 {
-    PerfTime<> perf_time;
-    perf_time.begin_track();
+    PERF_DEFINE_STAMP(perf_time);
     for (size_t i = 0; i < 10000; i++)
     {
         char* ptr = new char[100];
         delete[] ptr;
     }
-    PERF_CALL_MULTI_CPU_REAL(ENUM_BAT_ALLOC_FREE, 10000, perf_time, 0);
+    PERF_CALL_MULTI_CPU_REAL(ENUM_BAT_ALLOC_FREE, 10000, perf_time);
 
-    PERF_FUNC_GUARD(ENUM_ENTRY, 0);
+    PERF_TIME_GUARD(guard, ENUM_ENTRY);
 
     for (size_t i = 0; i < 10000; i++)
     {
-        perf_time.begin_track();
+        PERF_BEGIN_STAMP(perf_time);
         char* ptr = new char[10];
-        PERF_CALL_ONCE_CPU_REAL(ENUM_ALLOC, perf_time, 10);
+        PERF_CALL_ONCE_CPU_REAL(ENUM_ALLOC, perf_time);
         PERF_CALL_ONCE_MEM(ENUM_ALLOC, 10);
-        perf_time.begin_track();
+        PERF_BEGIN_STAMP(perf_time);
         delete[] ptr;
-        PERF_CALL_ONCE_CPU_REAL(ENUM_FREE, perf_time, 10);
+        PERF_CALL_ONCE_CPU_REAL(ENUM_FREE, perf_time);
         PERF_CALL_ONCE_MEM(ENUM_FREE, 10);
     }
 

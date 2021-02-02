@@ -134,10 +134,8 @@ struct PerfCPU
     long long use;  
     long long dv; 
     long long sm;
-    long long val;  
     long long t_c;
     long long t_u;
-    long long t_v;
 };
 struct PerfTimer
 {
@@ -240,32 +238,28 @@ public:
         memset(&track.mem, 0, sizeof(track.mem));
     }
     inline void reset_childs(int idx, int depth = 0);
-    void call_cpu(int idx, long long c, long long use, long long add_val)
+    void call_cpu(int idx, long long c, long long use)
     {
         long long dis = use / c;
         PerfTrack& track = tracks_[idx];
         track.cpu.c += c;
         track.cpu.use += use;
-        track.cpu.val += add_val;
         track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
         track.cpu.sm = (track.cpu.sm * 8 + dis * 2) / 10;
         track.cpu.dv += abs(dis - track.cpu.sm);
         track.cpu.t_c += c;
         track.cpu.t_u += use;
-        track.cpu.t_v = add_val;
     }
-    void call_cpu(int idx, long long use, long long add_val)
+    void call_cpu(int idx, long long use)
     {
         PerfTrack& track = tracks_[idx];
         track.cpu.c += 1;
         track.cpu.use += use;
-        track.cpu.val += add_val;
         track.cpu.sm = track.cpu.sm == 0 ? use : track.cpu.sm;
         track.cpu.sm = (track.cpu.sm * 8 + use * 2) / 10;
         track.cpu.dv += abs(use - track.cpu.sm);
         track.cpu.t_c += 1;
         track.cpu.t_u += use;
-        track.cpu.t_v = add_val;
     }
     void call_timer(int idx, long long stamp)
     {
@@ -275,7 +269,7 @@ public:
             track.timer.last = stamp;
             return;
         }
-        call_cpu(idx, stamp - track.timer.last, 0);
+        call_cpu(idx, stamp - track.timer.last);
         track.timer.last = stamp;
     }
 
@@ -293,10 +287,9 @@ public:
         PerfTrack& track = tracks_[idx];
         if (track.cpu.t_c > 0)
         {
-            call_cpu(to, track.cpu.t_u, track.cpu.t_v);
+            call_cpu(to, track.cpu.t_u);
             track.cpu.t_c = 0;
             track.cpu.t_u = 0;
-            track.cpu.t_v = 0;
         }
         if (track.mem.t_c > 0)
         {
@@ -871,11 +864,10 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         human_time_format(buff_dv, (long long)(track.cpu.dv * perf_time_hz(track.desc.perf_time) / track.cpu.c));
         char buff_sum[50];
         human_time_format(buff_sum, (long long)(track.cpu.use * perf_time_hz(track.desc.perf_time)));
-        char buff_val[50];
-        human_count_format(buff_val, track.cpu.val);
 
-        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s sm: %s dv:%s sum: %s  user:%s  \n",
-            track.desc.track_name, buff_call, buff_avg, buff_sm, buff_dv, buff_sum, buff_val);
+
+        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s sm: %s dv:%s sum: %s  \n",
+            track.desc.track_name, buff_call, buff_avg, buff_sm, buff_dv, buff_sum);
 
         if (ret < 0)
         {
@@ -1007,31 +999,29 @@ template <PerfTimeStamp T = PERF_TIME_DEFAULT>
 class PerfTimeGuard
 {
 public:
-    PerfTimeGuard(int idx, int user)
+    PerfTimeGuard(int idx)
     {
         idx_ = idx;
-        user_ = user;
     }
     ~PerfTimeGuard()
     {
         if (idx_ >= 0 && idx_ < PERF_MAX_TRACK_SIZE)
         {
-            PerfInst.call_cpu(idx_, 1, create_time_.end_track().duration(), user_);
+            PerfInst.call_cpu(idx_, 1, create_time_.end_track().duration());
         }
     }
 
 private:
     PerfTime<T> create_time_;
     int idx_;
-    int user_;
 };
 
 
 template <PerfTimeStamp T = PERF_TIME_DEFAULT>
-class PerfDynLine
+class PerfDynTime
 {
 public:
-    PerfDynLine(const char* desc) : perf_time_((long long)0)
+    PerfDynTime(const char* desc) : perf_time_((long long)0)
     {
         this_id_ = 0;
         int& dyn_id = perf_static_dyn_id();
@@ -1049,13 +1039,13 @@ public:
 
     void end_track()
     {
-        PerfInst.call_cpu(this_id_, perf_time_.end_track().duration(), 0);
+        PerfInst.call_cpu(this_id_, perf_time_.end_track().duration());
     }
 
 
-    void end_track(long long count, long long val)
+    void end_track(long long count)
     {
-        PerfInst.call_cpu(this_id_, count, perf_time_.end_track().duration(), val);
+        PerfInst.call_cpu(this_id_, count, perf_time_.end_track().duration());
     }
 
 
@@ -1072,7 +1062,7 @@ public:
         return PerfInst.serialize(this_id_);
     }
 
-    ~PerfDynLine()
+    ~PerfDynTime()
     {
 
     }
@@ -1083,26 +1073,25 @@ private:
 };
 
 template <PerfTimeStamp T = PERF_TIME_DEFAULT>
-class PerfDynLineGuard
+class PerfDynTimeGuard
 {
 public:
-    PerfDynLineGuard(const char* desc) :dyn_line_(desc), count_(1), val_(0)
+    PerfDynTimeGuard(const char* desc) :dyn_(desc), count_(1)
     {
-        dyn_line_.begin_track();
+        dyn_.begin_track();
     }
-    PerfDynLineGuard(const char* desc, long long count, long long val):dyn_line_(desc), count_(count), val_(val)
+    PerfDynTimeGuard(const char* desc, long long count):dyn_(desc), count_(count)
     {
-        dyn_line_.begin_track();
+        dyn_.begin_track();
     }
-    ~PerfDynLineGuard()
+    ~PerfDynTimeGuard()
     {
-        dyn_line_.end_track(count_, val_);
+        dyn_.end_track(count_);
     }
-    PerfDynLine<T>& dyn_line() { return dyn_line_; }
+    PerfDynTime<T>& dyn_line() { return dyn_; }
 private:
-    PerfDynLine<T> dyn_line_;
+    PerfDynTime<T> dyn_;
     long long count_;
-    long long val_;
 };
 
 
@@ -1110,26 +1099,49 @@ private:
 #ifndef OPEN_ZPERF
 #define PERF_INIT() PerfInst.init_perf()
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
-#define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.end_track().duration(), add)
-#define PERF_CALL_MULTI_CPU(idx, count, perf_time, add) PerfInst.call_cpu(idx, count, perf_time.duration(), add)
+#define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time) PerfInst.call_cpu(idx, count, perf_time.end_track().duration())
+#define PERF_CALL_MULTI_CPU(idx, count, perf_time) PerfInst.call_cpu(idx, count, perf_time.duration())
 #define PERF_CALL_MULTI_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
 
-#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) PerfInst.call_cpu(idx, perf_time.end_track().duration(), add)
-#define PERF_CALL_ONCE_CPU(idx, perf_time, add) PerfInst.call_cpu(idx, perf_time.duration(), add)
+#define PERF_DEFINE_STAMP(name)  PerfTime<> name
+#define PERF_DEFINE_STAMP_REF(name, ref)  PerfTime<> name(ref.begin())
+#define PERF_DEFINE_STAMP_EMPTY(name)  PerfTime<> name(0)
+#define PERF_BEGIN_STAMP(pf) pf.begin_track()
+#define PERF_END_STAMP(pf) pf.end_track()
+
+#define PERF_DEFINE_DYN_STAMP(dyn, desc) PerfDynTime<> dyn(desc);  
+#define PERF_DEFINE_DYN_STAMP_GUARD(dyn, desc, c) PerfDynTimeGuard<> dyn(desc, c);  
+#define PERF_DYN_BEGIN_STAMP(dyn) dyn.begin_track()
+#define PERF_DYN_CALL_MEM(dyn, use) dyn.call_mem(use)
+
+
+#define PERF_CALL_ONCE_CPU_REAL(idx, perf_time) PerfInst.call_cpu(idx, perf_time.end_track().duration())
+#define PERF_CALL_ONCE_CPU(idx, perf_time) PerfInst.call_cpu(idx, perf_time.duration())
 #define PERF_CALL_ONCE_MEM(idx, mem) PerfInst.call_mem(idx, 1, mem)
 #define PERF_CALL_ONCE_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
-#define PERF_FUNC_GUARD(idx, user) PerfTimeGuard<> __perf_func_guard(idx, user)
+#define PERF_TIME_GUARD(name, idx) PerfTimeGuard<> name(idx)
+
 #else
 #define PERF_INIT() 
 #define PERF_RESET_CHILD(idx) 
 #define PERF_CALL_MULTI_CPU_REAL(idx, count, perf_time, add) 
 #define PERF_CALL_MULTI_CPU(idx, count, perf_time, add) 
 #define PERF_CALL_MULTI_MEM(idx, count, mem) 
+
+#define PERF_DEFINE_STAMP(name)  
+#define PERF_DEFINE_STAMP_REF(name, ref)  
+#define PERF_DEFINE_STAMP_EMPTY(name) 
+#define PERF_BEGIN_STAMP(pf) 
+#define PERF_END_STAMP(pf) 
+#define PERF_DEFINE_DYN_STAMP(dyn, desc)
+#define PERF_DEFINE_DYN_STAMP_GUARD(dyn, desc, c, v)
+#define PERF_DYN_BEGIN_STAMP(dyn) 
+#define PERF_DYN_CALL_MEM(dyn, use)
 #define PERF_CALL_ONCE_CPU_REAL(idx, perf_time, add) 
 #define PERF_CALL_ONCE_CPU(idx, perf_time, add) 
 #define PERF_CALL_ONCE_MEM(idx, mem) 
 #define PERF_CALL_ONCE_TIMER(idx, stamp)
-#define PERF_FUNC_GUARD(idx, user)
+#define PERF_TIME_GUARD(name, idx, user)
 #endif
 
 
