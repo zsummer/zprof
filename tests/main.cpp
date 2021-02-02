@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PerfDynLineGuard<> guard("start fnlog use");
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "start fnlog use", 1);
         FNLog::FastStartDebugLogger();
     }
 
@@ -38,21 +38,21 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PerfDynLine<> line("self use mem");
-        line.call_mem(perf_self_memory_use());
+       PERF_DEFINE_DYN_STAMP(dyn, "self use mem");
+       PERF_DYN_CALL_MEM(dyn, perf_self_memory_use());
     }
 
     if (true)
     {
-        PerfDynLine<> line("PerfInst use mem");
-        line.call_mem(sizeof(PerfInst));
+       PERF_DEFINE_DYN_STAMP(dyn, "PerfInst use mem");
+       PERF_DYN_CALL_MEM(dyn, sizeof(PerfInst));
     }
 
 
     double time = 0.0f;
     if (true)
     {
-        PerfDynLineGuard<> guard("perf_now_sys bat 1000w", 1000*10000, 0);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "perf_now_sys bat 1000w", 1000*10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             time += perf_now_sys();
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PerfDynLine<> dyn_time("perf_now_sys dis 1000w");
+        PerfDynTime<> dyn_time("perf_now_sys dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             dyn_time.begin_track();
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PerfDynLineGuard<> guard("perf_now_clock bat 1000w", 1000 * 10000, 0);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "perf_now_clock bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             time += perf_now_clock();
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PerfDynLineGuard<> guard("perf_now_rdtscp bat 1000w", 1000 * 10000, 0);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "perf_now_rdtscp bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             time += perf_now_rdtscp();
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PerfDynLineGuard<> guard("perf_now_sys bat 1000w", 1000 * 10000, 0);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "perf_now_sys bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             time += perf_now_sys();
@@ -97,40 +97,40 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PerfDynLineGuard<PERF_TIME_SYS> guard("sleep 300ms: sys ", 1, 0);
+        PerfDynTimeGuard<PERF_TIME_SYS> guard("sleep 300ms: sys ", 1);
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PerfDynLineGuard<PERF_TIME_RDTSCP> guard("sleep 300ms rdtscp ", 1, 0);
+        PerfDynTimeGuard<PERF_TIME_RDTSCP> guard("sleep 300ms rdtscp ", 1);
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PerfDynLineGuard<PERF_TIME_CLOCK> guard("sleep 300ms clock ", 1, 0);
+        PerfDynTimeGuard<PERF_TIME_CLOCK> guard("sleep 300ms clock ", 1);
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 
 
     if (true)
     {
-        PerfDynLineGuard<> guard("call cpu 1000w", 1, 0);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "call cpu 1000w", 1);
         for (int i = 0; i < 10000000; i++)
         {
-            PerfInst.call_cpu(ENUM_PERF_TEST, 10, 1000, 0);
+            PerfInst.call_cpu(ENUM_PERF_TEST, 10, 1000);
         }
     }
     if (true)
     {
-        PerfDynLineGuard<> guard("call cpu 1000w (without count)", 1, 0);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "call cpu 1000w (without count)", 1);
         for (int i = 0; i < 10000000; i++)
         {
-            PerfInst.call_cpu(ENUM_PERF_TEST, 1000, 0);
+            PerfInst.call_cpu(ENUM_PERF_TEST, 1000);
         }
     }
     if (true)
     {
-        PerfDynLineGuard<> guard("call mem 1000w ", 1, 0);
+        PERF_DEFINE_DYN_STAMP_GUARD(guard, "call mem 1000w ", 1);
         for (int i = 0; i < 10000000; i++)
         {
             PerfInst.call_mem(ENUM_PERF_TEST, 1, 1000);
@@ -140,15 +140,15 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PerfDynLine<> line("call timer 10ms ");
+       PERF_DEFINE_DYN_STAMP(dyn, "call timer 10ms ");
         for (int i = 0; i < 100; i++)
         {
-            line.begin_track();
-            PERF_CALL_ONCE_TIMER(line.track_id(), line.perf_time().begin());
+            PERF_DYN_BEGIN_STAMP(dyn);
+            PERF_CALL_ONCE_TIMER(dyn.track_id(), dyn.perf_time().begin());
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        line.begin_track();
-        PERF_CALL_ONCE_TIMER(line.track_id(), line.perf_time().begin());
+        PERF_DYN_BEGIN_STAMP(dyn);
+        PERF_CALL_ONCE_TIMER(dyn.track_id(), dyn.perf_time().begin());
     }
 
 
