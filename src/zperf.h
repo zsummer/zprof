@@ -112,20 +112,20 @@ static_assert(PERF_RESERVE_TRACK_BEGIN < PERF_USER_TRACK_BEGIN, "");
 static_assert(PERF_USER_TRACK_BEGIN < PERF_DYN_TRACK_BEGIN, "");
 static_assert(PERF_DYN_TRACK_BEGIN < PERF_MAX_TRACK_SIZE, "");
 
-enum PerfTimeStamp
+enum PerfCycleCounter
 {
-    PERF_TIME_DEFAULT,
-    PERF_TIME_SYS,
-    PERF_TIME_CLOCK,
-    PERF_TIME_RDTSC,
-    PERF_TIME_MAX,
+    PERF_CYCLE_COUNTER_DEFAULT,
+    PERF_CYCLE_COUNTER_SYS,
+    PERF_CYCLE_COUNTER_CLOCK,
+    PERF_CYCLE_COUNTER_RDTSC,
+    PERF_CYCLE_COUNTER_MAX,
 };
 
 struct PerfDesc
 {
     char track_name[PERF_MAX_TRACK_NAME_SIZE];
     int track_name_len;
-    int perf_time;
+    int counter_type;
 };
 
 struct PerfCPU
@@ -178,27 +178,27 @@ static inline int& perf_static_dyn_id()
     return dyn_id;
 }
 
-static inline double* perf_time_hz_table()
+static inline double* perf_inverse_hz_table()
 {
-    static double table[PERF_TIME_MAX];
+    static double table[PERF_CYCLE_COUNTER_MAX];
     return table;
 }
 
-static inline double perf_time_hz(unsigned int t)
+static inline double perf_inverse_hz(unsigned int t)
 {
-    if (t >= PERF_TIME_MAX)
+    if (t >= PERF_CYCLE_COUNTER_MAX)
     {
         return 1.0;
     }
-    return perf_time_hz_table()[t];
+    return perf_inverse_hz_table()[t];
 }
-static inline void perf_time_set_hz(unsigned int t, double hz)
+static inline void perf_set_inverse_hz(unsigned int t, double hz)
 {
-    if (t >= PERF_TIME_MAX)
+    if (t >= PERF_CYCLE_COUNTER_MAX)
     {
         return ;
     }
-    perf_time_hz_table()[t] = hz;
+    perf_inverse_hz_table()[t] = hz;
 }
 
 
@@ -209,7 +209,7 @@ class PerfRecord
 {
 public:
     static const int TRACK_COUNT = S;
-    static const int PERF_TYPE = T;
+    static const int PERF_RECORD_TYPE = T;
     PerfRecord() 
     {
         memset(tracks_, 0, sizeof(tracks_));
@@ -223,7 +223,7 @@ public:
         return inst;
     }
     inline int init_perf();
-    inline int regist_track(int idx, const char* desc, unsigned int perf_time, bool overwrite);
+    inline int regist_track(int idx, const char* desc, unsigned int counter, bool overwrite);
     inline int add_track_child(int idx, int child);
     inline int add_merge_to(int idx, int to);
 
@@ -333,7 +333,9 @@ private:
 
 
 
-inline long long perf_now_rdtsc()
+
+
+inline long long perf_tsc_rdtsc()
 {
 #ifdef WIN32
     long long count = 0;
@@ -350,6 +352,7 @@ inline long long perf_now_rdtsc()
     __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
     uint64_t val = ((uint64_t)hi << 32) | lo;
     return (long long)val;
+
 #else
     unsigned int lo, hi;
     __asm__ __volatile__("mfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
@@ -360,7 +363,7 @@ inline long long perf_now_rdtsc()
 
 
 
-inline long long perf_now_clock()
+inline long long perf_tsc_clock()
 {
 #if (defined WIN32)
     long long count = 0;
@@ -374,7 +377,7 @@ inline long long perf_now_clock()
 }
 
 
-inline long long perf_now_clock_thread()
+inline long long perf_tsc_clock_thread()
 {
 #if (defined WIN32)
     long long count = 0;
@@ -388,17 +391,17 @@ inline long long perf_now_clock_thread()
 }
 
 
-inline long long perf_now_sys()
+inline long long perf_tsc_sys()
 {
 #if (defined WIN32)
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
-    unsigned long long now = ft.dwHighDateTime;
-    now <<= 32;
-    now |= ft.dwLowDateTime;
-    now /= 10;
-    now -= 11644473600000000ULL;
-    return (long long)now * 1000; //ns
+    unsigned long long tsc = ft.dwHighDateTime;
+    tsc <<= 32;
+    tsc |= ft.dwLowDateTime;
+    tsc /= 10;
+    tsc -= 11644473600000000ULL;
+    return (long long)tsc * 1000; //ns
 #else
     struct timeval tm;
     gettimeofday(&tm, nullptr);
@@ -488,97 +491,85 @@ inline double perf_self_cpu_mhz()
 }
 
 
-template<PerfTimeStamp T>
-struct PerfTimeEmpty
+template<PerfCycleCounter T>
+struct PerfCycleCounterClass
 {
 };
 
-template<PerfTimeStamp T>
-inline long long perf_now(const PerfTimeEmpty<T>* ptr)
+template<PerfCycleCounter T>
+inline long long perf_tsc(const PerfCycleCounterClass<T>* ptr)
 {
     (void)ptr;
-    return perf_now_clock();
+    return perf_tsc_clock();
 }
 
 template<>
-inline long long perf_now(const PerfTimeEmpty<PERF_TIME_DEFAULT>* ptr)
+inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_COUNTER_DEFAULT>* ptr)
 {
     (void)ptr;
-    return perf_now_rdtsc();
+    return perf_tsc_rdtsc();
 }
 
 
 template<>
-inline long long perf_now(const PerfTimeEmpty<PERF_TIME_RDTSC>* ptr)
+inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_COUNTER_RDTSC>* ptr)
 {
     (void)ptr;
-    return perf_now_rdtsc();
+    return perf_tsc_rdtsc();
 }
 
 template<>
-inline long long perf_now(const PerfTimeEmpty<PERF_TIME_CLOCK>* ptr)
+inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_COUNTER_CLOCK>* ptr)
 {
     (void)ptr;
-    return perf_now_clock();
+    return perf_tsc_clock();
 }
 
 template<>
-inline long long perf_now(const PerfTimeEmpty<PERF_TIME_SYS>* ptr)
+inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_COUNTER_SYS>* ptr)
 {
     (void)ptr;
-    return perf_now_sys();
+    return perf_tsc_sys();
 }
 
-template<PerfTimeStamp T = PERF_TIME_DEFAULT>
-class PerfTime
+template<PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
+class PerfCounter
 {
 public:
-    PerfTime()
+    PerfCounter()
     {
-        begin_track();
+        start();
     }
-    PerfTime(long long begin)
+    PerfCounter(long long init_val)
     {
-        last_time_ = begin;
-        duration_ = 0;
-    }
-
-    void begin_track()
-    {
-        last_time_ = perf_now<T>((PerfTimeEmpty<T>*)NULL);
-        duration_ = 0;
+        start_val_ = init_val;
+        cycles_ = 0;
     }
 
-    PerfTime& end_track()
+    void start()
     {
-        long long elapse = perf_now<T>((PerfTimeEmpty<T>*)NULL) - last_time_;
-        duration_ = elapse > 0 ? elapse : 0;
+        start_val_ = perf_tsc<T>((PerfCycleCounterClass<T>*)NULL);
+        cycles_ = 0;
+    }
+
+    PerfCounter& save()
+    {
+        long long elapse = perf_tsc<T>((PerfCycleCounterClass<T>*)NULL) - start_val_;
+        cycles_ = elapse > 0 ? elapse : 0;
         return *this;
     }
+    PerfCounter& stop_and_save() { return save(); }
 
-    long long duration() { return duration_; }
-    long long duration_ns()
-    {
-        return (long long)(duration_ * perf_time_hz(T));
-    }
+    long long cycles() { return cycles_; }
+    long long duration_ns(){ return (long long)(cycles_ * perf_inverse_hz(T));}
     double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
-    long long end() { return last_time_ + duration_; }
-    long long begin() { return last_time_; }
+    long long stop_val() { return start_val_ + cycles_; }
+    long long start_val() { return start_val_; }
 
 private:
-    long long last_time_;
-    long long duration_;
+    long long start_val_;
+    long long cycles_;
 };
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -653,24 +644,25 @@ int PerfRecord<T, S>::init_perf()
     QueryPerformanceFrequency((LARGE_INTEGER*)&win_freq);
     rate = 1.0 / win_freq;
     rate *= 1000.0 * 1000 * 1000;
-    perf_time_set_hz(PERF_TIME_DEFAULT, rate);
-    perf_time_set_hz(PERF_TIME_RDTSC, rate);
-    perf_time_set_hz(PERF_TIME_CLOCK, rate);
-    perf_time_set_hz(PERF_TIME_SYS, 1.0);
+    perf_set_inverse_hz(PERF_CYCLE_COUNTER_DEFAULT, rate);
+    perf_set_inverse_hz(PERF_CYCLE_COUNTER_RDTSC, rate);
+    perf_set_inverse_hz(PERF_CYCLE_COUNTER_CLOCK, rate);
+    perf_set_inverse_hz(PERF_CYCLE_COUNTER_SYS, 1.0);
 #else
-    cpu_set_t set;
-    CPU_ZERO(&set);
-    CPU_SET(2, &set);
-    sched_setaffinity(0, sizeof(set), &set);
+    //cpu_set_t set;
+    //CPU_ZERO(&set);
+    //CPU_SET(2, &set);
+    //sched_setaffinity(0, sizeof(set), &set);
+    //cat /proc/cpuinfo |grep constant_tsc  
 
     double mhz = perf_self_cpu_mhz();
     mhz *= 1000 * 1000;
     mhz = 1.0 / mhz;
     mhz *= 1000 * 1000 * 1000;
-    perf_time_set_hz(PERF_TIME_DEFAULT, mhz);
-    perf_time_set_hz(PERF_TIME_RDTSC, mhz);
-    perf_time_set_hz(PERF_TIME_CLOCK, 1.0);
-    perf_time_set_hz(PERF_TIME_SYS, 1.0);
+    perf_set_inverse_hz(PERF_CYCLE_COUNTER_DEFAULT, mhz);
+    perf_set_inverse_hz(PERF_CYCLE_COUNTER_RDTSC, mhz);
+    perf_set_inverse_hz(PERF_CYCLE_COUNTER_CLOCK, 1.0);
+    perf_set_inverse_hz(PERF_CYCLE_COUNTER_SYS, 1.0);
 
 #endif
     return 0;
@@ -682,7 +674,7 @@ int PerfRecord<T, S>::init_perf()
 
 
 template<int T, int S>
-int PerfRecord<T, S>::regist_track(int idx, const char* desc, unsigned int perf_time, bool overwrite)
+int PerfRecord<T, S>::regist_track(int idx, const char* desc, unsigned int counter_type, bool overwrite)
 {
     if (idx < 0)
     {
@@ -714,7 +706,7 @@ int PerfRecord<T, S>::regist_track(int idx, const char* desc, unsigned int perf_
     memcpy(track.desc.track_name, desc, len+1);
     track.desc.track_name_len = len;
     track.active = true;
-    track.desc.perf_time = perf_time;
+    track.desc.counter_type = counter_type;
     return 0;
 }
 
@@ -855,13 +847,13 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         char buff_call[50];
         human_count_format(buff_call, track.cpu.c);
         char buff_avg[50];
-        human_time_format(buff_avg, (long long)(track.cpu.use * perf_time_hz(track.desc.perf_time)) / track.cpu.c);
+        human_time_format(buff_avg, (long long)(track.cpu.use * perf_inverse_hz(track.desc.counter_type)) / track.cpu.c);
         char buff_sm[50];
-        human_time_format(buff_sm, (long long)(track.cpu.sm * perf_time_hz(track.desc.perf_time)));
+        human_time_format(buff_sm, (long long)(track.cpu.sm * perf_inverse_hz(track.desc.counter_type)));
         char buff_dv[50];
-        human_time_format(buff_dv, (long long)(track.cpu.dv * perf_time_hz(track.desc.perf_time) / track.cpu.c));
+        human_time_format(buff_dv, (long long)(track.cpu.dv * perf_inverse_hz(track.desc.counter_type) / track.cpu.c));
         char buff_sum[50];
-        human_time_format(buff_sum, (long long)(track.cpu.use * perf_time_hz(track.desc.perf_time)));
+        human_time_format(buff_sum, (long long)(track.cpu.use * perf_inverse_hz(track.desc.counter_type)));
 
 
         int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s sm: %s dv:%s sum: %s  \n",
@@ -986,40 +978,40 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 
 #define PerfInst PerfRecord<0, PERF_MAX_TRACK_SIZE>::instance()
 #define REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
-#define REGIST_TRACK_AUTO(id)  PerfInst.regist_track(id, #id, PERF_TIME_DEFAULT, false)
+#define REGIST_TRACK_AUTO(id)  PerfInst.regist_track(id, #id, PERF_CYCLE_COUNTER_DEFAULT, false)
 #define BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
 #define BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
 
 
 
 
-template <PerfTimeStamp T = PERF_TIME_DEFAULT>
-class PerfTimeGuard
+template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
+class PerfCounterGuard
 {
 public:
-    PerfTimeGuard(int idx)
+    PerfCounterGuard(int idx)
     {
         idx_ = idx;
     }
-    ~PerfTimeGuard()
+    ~PerfCounterGuard()
     {
         if (idx_ >= 0 && idx_ < PERF_MAX_TRACK_SIZE)
         {
-            PerfInst.call_cpu(idx_, 1, create_time_.end_track().duration());
+            PerfInst.call_cpu(idx_, 1, counter_.save().cycles());
         }
     }
 
 private:
-    PerfTime<T> create_time_;
+    PerfCounter<T> counter_;
     int idx_;
 };
 
 
-template <PerfTimeStamp T = PERF_TIME_DEFAULT>
-class PerfDynTime
+template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
+class PerfOTCycleCounter
 {
 public:
-    PerfDynTime(const char* desc) : perf_time_((long long)0)
+    PerfOTCycleCounter(const char* desc) : counter_((long long)0)
     {
         this_id_ = 0;
         int& dyn_id = perf_static_dyn_id();
@@ -1030,20 +1022,20 @@ public:
         }
     }
 
-    void begin_track()
+    void start()
     {
-        perf_time_.begin_track();
+        counter_.start();
     }
 
-    void end_track()
+    void save()
     {
-        PerfInst.call_cpu(this_id_, perf_time_.end_track().duration());
+        PerfInst.call_cpu(this_id_, counter_.save().cycles());
     }
 
 
-    void end_track(long long count)
+    void save(long long count)
     {
-        PerfInst.call_cpu(this_id_, count, perf_time_.end_track().duration());
+        PerfInst.call_cpu(this_id_, count, counter_.save().cycles());
     }
 
 
@@ -1053,42 +1045,42 @@ public:
     }
 
     int track_id() { return this_id_; }
-    PerfTime<T>& perf_time() { return perf_time_; }
+    PerfCounter<T>& counter() { return counter_; }
 
     const char* show()
     {
         return PerfInst.serialize(this_id_);
     }
 
-    ~PerfDynTime()
+    ~PerfOTCycleCounter()
     {
 
     }
 
 private:
     int this_id_;
-    PerfTime<T> perf_time_;
+    PerfCounter<T> counter_;
 };
 
-template <PerfTimeStamp T = PERF_TIME_DEFAULT>
+template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
 class PerfDynTimeGuard
 {
 public:
     PerfDynTimeGuard(const char* desc) :dyn_(desc), count_(1)
     {
-        dyn_.begin_track();
+        dyn_.start();
     }
     PerfDynTimeGuard(const char* desc, long long count):dyn_(desc), count_(count)
     {
-        dyn_.begin_track();
+        dyn_.start();
     }
     ~PerfDynTimeGuard()
     {
-        dyn_.end_track(count_);
+        dyn_.save(count_);
     }
-    PerfDynTime<T>& dyn_line() { return dyn_; }
+    PerfOTCycleCounter<T>& dyn_line() { return dyn_; }
 private:
-    PerfDynTime<T> dyn_;
+    PerfOTCycleCounter<T> dyn_;
     long long count_;
 };
 
@@ -1099,10 +1091,10 @@ private:
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
 
-#define PERF_CALL_CPU_G_REALTIME_WITH_C(idx, count, perf_time) PerfInst.call_cpu(idx, count, perf_time.end_track().duration())
-#define PERF_CALL_CPU_G_WITH_C(idx, count, perf_time) PerfInst.call_cpu(idx, count, perf_time.duration())
-#define PERF_CALL_CPU_G_REALTIME(idx, perf_time) PerfInst.call_cpu(idx, perf_time.end_track().duration())
-#define PERF_CALL_CPU_G(idx, perf_time) PerfInst.call_cpu(idx, perf_time.duration())
+#define PERF_CALL_CPU_G_REALTIME_WITH_C(idx, count, counter) PerfInst.call_cpu(idx, count, counter.save().cycles())
+#define PERF_CALL_CPU_G_WITH_C(idx, count, counter) PerfInst.call_cpu(idx, count, counter.cycles())
+#define PERF_CALL_CPU_G_REALTIME(idx, counter) PerfInst.call_cpu(idx, counter.save().cycles())
+#define PERF_CALL_CPU_G(idx, counter) PerfInst.call_cpu(idx, counter.cycles())
 #define PERF_CALL_CPU(idx, use) PerfInst.call_cpu(idx, use)
 #define PERF_CALL_CPU_WITH_C(idx, c, use) PerfInst.call_cpu(idx, c, use)
 
@@ -1113,53 +1105,51 @@ private:
 #define PERF_CALL_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
 
 
-#define PERF_DEFINE_STAMP(name)  PerfTime<> name
-#define PERF_DEFINE_STAMP_REF(name, ref)  PerfTime<> name(ref.begin())
-#define PERF_DEFINE_STAMP_EMPTY(name)  PerfTime<> name(0)
-#define PERF_BEGIN_STAMP(pf) pf.begin_track()
-#define PERF_END_STAMP(pf) pf.end_track()
+#define PERF_DEFINE_COUNTER(tc)  PerfCounter<> tc
+#define PERF_DEFINE_COUNTER_REF(tc, ref)  PerfCounter<> tc(ref.begin())
+#define PERF_DEFINE_COUNTER_EMPTY(tc)  PerfCounter<> tc(0)
+#define PERF_BEGIN_COUNTER(pf) pf.start()
+#define PERF_END_COUNTER(pf) pf.save()
 
-#define PERF_DEFINE_DYN_STAMP(dyn, desc) PerfDynTime<> dyn(desc);  
-#define PERF_DEFINE_DYN_STAMP_GUARD(dyn, desc) PerfDynTimeGuard<> dyn(desc);  
-#define PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(dyn, desc, c) PerfDynTimeGuard<> dyn(desc, c);  
-#define PERF_DYN_BEGIN_STAMP(dyn) dyn.begin_track()
-#define PERF_DYN_END_STAMP(dyn) dyn.end_track()
+#define PERF_DEFINE_OT_COUNTER(otc, desc) PerfOTCycleCounter<> otc(desc);  
+#define PERF_DEFINE_OT_COUNTER_GUARD(otc, desc) PerfDynTimeGuard<> otc(desc);  
+#define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(otc, desc, c) PerfDynTimeGuard<> otc(desc, c);  
+#define PERF_BEGIN_OT_COUNTER(otc) otc.start()
+#define PERF_END_OT_COUNTER(otc) otc.save()
 
-#define PERF_DYN_CALL_MEM(dyn, use) dyn.call_mem(use)
+#define PERF_OT_COUNTER_CALL_MEM(otc, use) otc.call_mem(use)
 
-
-
-#define PERF_TIME_GUARD(name, idx) PerfTimeGuard<> name(idx)
+#define PERF_DEFINE_COUNTER_GUARD(tc, idx) PerfCounterGuard<> tc(idx)
 
 #else
 #define PERF_INIT() 
 #define PERF_RESET_CHILD(idx) 
 #define PERF_UPDATE_MERGE()
 
-#define PERF_CALL_CPU_G_REALTIME_WITH_C(idx, count, perf_time) 
-#define PERF_CALL_CPU_G_WITH_C(idx, count, perf_time) 
+#define PERF_CALL_CPU_G_REALTIME_WITH_C(idx, count, counter) 
+#define PERF_CALL_CPU_G_WITH_C(idx, count, counter) 
 #define PERF_CALL_MEM_WITH_C(idx, count, mem) 
-#define PERF_CALL_CPU_G_REALTIME(idx, perf_time) 
-#define PERF_CALL_CPU_G(idx, perf_time) 
+#define PERF_CALL_CPU_G_REALTIME(idx, counter) 
+#define PERF_CALL_CPU_G(idx, counter) 
 #define PERF_CALL_CPU(idx, use) 
 #define PERF_CALL_CPU_WITH_C(idx, c, use) 
 
 #define PERF_CALL_MEM(idx, mem) 
 #define PERF_CALL_TIMER(idx, stamp)
 
-#define PERF_DEFINE_STAMP(name)  
-#define PERF_DEFINE_STAMP_REF(name, ref)  
-#define PERF_DEFINE_STAMP_EMPTY(name) 
-#define PERF_BEGIN_STAMP(pf) 
-#define PERF_END_STAMP(pf) 
-#define PERF_DEFINE_DYN_STAMP(dyn, desc)
-#define PERF_DEFINE_DYN_STAMP_GUARD(dyn, desc)
-#define PERF_DEFINE_DYN_STAMP_GUARD_WITH_C(dyn, desc, c)
-#define PERF_DYN_BEGIN_STAMP(dyn) 
-#define PERF_DYN_END_STAMP(dyn) 
-#define PERF_DYN_CALL_MEM(dyn, use)
+#define PERF_DEFINE_COUNTER(tc)  
+#define PERF_DEFINE_COUNTER_REF(tc, ref)  
+#define PERF_DEFINE_COUNTER_EMPTY(tc) 
+#define PERF_BEGIN_COUNTER(pf) 
+#define PERF_END_COUNTER(pf) 
+#define PERF_DEFINE_OT_COUNTER(otc, desc)
+#define PERF_DEFINE_OT_COUNTER_GUARD(otc, desc)
+#define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(otc, desc, c)
+#define PERF_BEGIN_OT_COUNTER(otc) 
+#define PERF_END_OT_COUNTER(otc) 
+#define PERF_OT_COUNTER_CALL_MEM(otc, use)
 
-#define PERF_TIME_GUARD(name, idx)
+#define PERF_DEFINE_COUNTER_GUARD(tc, idx)
 #endif
 
 
