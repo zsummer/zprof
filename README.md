@@ -7,12 +7,12 @@
   * clock 统计消耗总偏差30ns以下   
   * WIN32下精度100ns   
   * 系统时钟精度1us  
-
+* 被检测代码段外无额外性能损耗  
 * 可用于判定定时器的周期稳定性和平均偏离度  
 * 可用于判定函数性能消耗  
 * 可用于系统内存监控统计  
 * 可用于内存分配器消耗统计  
-* 使用方便   
+
 
 ### ref  
 
@@ -56,6 +56,14 @@ __asm__ __volatile__("sfence" : :: "memory")  //store
     * 多核心的调度带来的cpu切换问题 需要查看CPU手册确认tsc寄存器是否跨内核同步 以及提供的解决方式   
   * 最终性能   
     * 不同的CPU上, 以及不同的虚拟化下, 可用的clock类型和rdtsc有截然不同的性能表现  需要实际测试选择  
+
+### other perf tools   
+* pstack  
+* perf 
+* strace
+* trace-cmd record -P -p 
+* valgrind 
+* gperf & gperftools (need compile)
 
 ### **About The Author**  
 **Author**: YaweiZhang  
