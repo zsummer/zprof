@@ -17,26 +17,33 @@
 ### ref  
 
 
-* INTEL RDTSC  
-this struction returns the tsc in edx:eax  and clear higher 32bits of rax and rdx;   
+* invariant TSC support| `cat /proc/cpuinfo |grep constant_tsc`
+  * INTEL Nehalem from 2008 has invariant TSC support and no TSC SYNC problem
+  * INTEL 17.15.1 
+  ```
+  The time stamp counter in newer processors may support an enhancement, referred to as invariant TSC. 
+  Processor’s support for invariant TSC is indicated by CPUID.80000007H:EDX[8]. 
+  The invariant TSC will run at a constant rate in all ACPI P-, C-. and T-states. This is the architectural behavior 
+  moving forward. On processors with invariant TSC support, the OS may use the TSC for wall clock timer services 
+  (instead of ACPI or HPET timers). TSC reads are much more efficient and do not incur the overhead associated with 
+  a ring transition or access to a platform resource.
+  ```
 
+  * AMD K8 (10H Bacelona)  FROM 2003 has invariant TSC support  from K10 no TSC drift  
 
-* INTEL 17.15.1 Invariant TSC  | `cat /proc/cpuinfo |grep constant_tsc`
-```
-The time stamp counter in newer processors may support an enhancement, referred to as invariant TSC. 
-Processor’s support for invariant TSC is indicated by CPUID.80000007H:EDX[8]. 
-The invariant TSC will run at a constant rate in all ACPI P-, C-. and T-states. This is the architectural behavior 
-moving forward. On processors with invariant TSC support, the OS may use the TSC for wall clock timer services 
-(instead of ACPI or HPET timers). TSC reads are much more efficient and do not incur the overhead associated with 
-a ring transition or access to a platform resource.
-```
+  * ARM V7 V8 has invariant PMCCNTR_EL0 support (need enable PMU)
 
-* fense  
+  * PowerPC TBR
+  
+
+* intel fence;  amd has lfence from 0Fh/11h(K8&K10 hybrid 2008) but same mfence 
 ```
 __asm__ __volatile__("mfence" : :: "memory")  //memory == l&s
 __asm__ __volatile__("lfence" : :: "memory")  //load   
 __asm__ __volatile__("sfence" : :: "memory")  //store
 ```
+
+
 
 * 解决的问题  
   * 指令支持问题  是否支持rdtsc 不同的CPU体系有不同的指令 并且需要注意一下几个问题  
