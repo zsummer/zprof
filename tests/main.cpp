@@ -24,7 +24,7 @@
 
 int main(int argc, char *argv[])
 {
-    PERF_INIT();
+    PERF_INIT("inner perf");
     regist_perf();
 
     if (true)

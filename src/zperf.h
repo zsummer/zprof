@@ -102,7 +102,7 @@
 #define PERF_DYN_TRACK_BEGIN 200
 
 
-#define PERF_MAX_TRACK_NAME_SIZE 100
+#define PERF_MAX_TRACK_NAME_SIZE 128
 #define PERF_MAX_TRACK_LINE_SIZE (PERF_MAX_TRACK_NAME_SIZE + 200)
 #define PERF_MAX_TRACK_CHILD_COUNT 10
 #define PERF_MAX_TRACK_CHILD_DEPTH 5
@@ -222,7 +222,7 @@ public:
         static PerfRecord inst;
         return inst;
     }
-    inline int init_perf();
+    inline int init_perf(const char* desc);
     inline int regist_track(int idx, const char* desc, unsigned int counter, bool overwrite);
     inline int add_track_child(int idx, int child);
     inline int add_merge_to(int idx, int to);
@@ -636,8 +636,9 @@ int PerfRecord<T, S>::add_merge_to(int idx, int to)
 }
 
 template<int T, int S>
-int PerfRecord<T, S>::init_perf()
+int PerfRecord<T, S>::init_perf(const char* desc)
 {
+    sprintf(desc_, "%s", desc);
 #ifdef WIN32
     double rate = 0;
     long long win_freq = 0;
@@ -977,10 +978,7 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 
 
 #define PerfInst PerfRecord<0, PERF_MAX_TRACK_SIZE>::instance()
-#define REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
-#define REGIST_TRACK_AUTO(id)  PerfInst.regist_track(id, #id, PERF_CYCLE_COUNTER_DEFAULT, false)
-#define BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
-#define BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
+
 
 
 
@@ -1087,7 +1085,13 @@ private:
 
 #define OPEN_ZPERF
 #ifdef OPEN_ZPERF
-#define PERF_INIT() PerfInst.init_perf()
+
+#define REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
+#define REGIST_TRACK_AUTO(id)  PerfInst.regist_track(id, #id, PERF_CYCLE_COUNTER_DEFAULT, false)
+#define BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
+#define BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
+
+#define PERF_INIT(desc) PerfInst.init_perf(desc)
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
 

@@ -37,8 +37,6 @@ enum MyEnum
 
 inline void regist_perf()
 {
-    sprintf(PerfInst.mutable_desc(), "test");
-
     REGIST_TRACK_AUTO(ENUM_PERF_TEST);
     REGIST_TRACK_AUTO(ENUM_ONE_TICK);
     REGIST_TRACK_AUTO(ENUM_BAT_ALLOC_FREE);
