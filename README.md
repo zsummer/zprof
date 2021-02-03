@@ -14,6 +14,40 @@
 * 可用于内存分配器消耗统计  
 * 使用方便   
 
+### ref  
+
+
+* INTEL RDTSC  
+this struction returns the tsc in edx:eax  and clear higher 32bits of rax and rdx;   
+
+
+* INTEL 17.15.1 Invariant TSC  | `cat /proc/cpuinfo |grep constant_tsc`
+```
+The time stamp counter in newer processors may support an enhancement, referred to as invariant TSC. 
+Processor’s support for invariant TSC is indicated by CPUID.80000007H:EDX[8]. 
+The invariant TSC will run at a constant rate in all ACPI P-, C-. and T-states. This is the architectural behavior 
+moving forward. On processors with invariant TSC support, the OS may use the TSC for wall clock timer services 
+(instead of ACPI or HPET timers). TSC reads are much more efficient and do not incur the overhead associated with 
+a ring transition or access to a platform resource.
+```
+
+* fense  
+```
+__asm__ __volatile__("mfence" : :: "memory")  //memory == l&s
+__asm__ __volatile__("lfence" : :: "memory")  //load   
+__asm__ __volatile__("sfence" : :: "memory")  //store
+```
+
+* 解决的问题  
+  * 指令支持问题  是否支持rdtsc 不同的CPU体系有不同的指令 并且需要注意一下几个问题  
+  * 指令乱序和预读问题
+    * 通过内存屏障解决 需要查看CPU手册确认内存屏障的粒度  
+  * 变频问题  
+    * CPU睿频以及节能带来的主频动态变化  需要查看CPU手册确认tsc寄存器是否以恒定频率执行    
+  * 多核同步问题  
+    * 多核心的调度带来的cpu切换问题 需要查看CPU手册确认tsc寄存器是否跨内核同步 以及提供的解决方式   
+  * 最终性能   
+    * 不同的CPU上, 以及不同的虚拟化下, 可用的clock类型和rdtsc有截然不同的性能表现  需要实际测试选择  
 
 ### **About The Author**  
 **Author**: YaweiZhang  
