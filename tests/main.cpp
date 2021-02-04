@@ -201,6 +201,7 @@ int main(int argc, char *argv[])
         rdtsc.save();
         sys.save();
         clock.save();
+
         LogDebug() << "rdtsc stamp use:" << human_time_format(rdtsc.duration_ns()) << ", inner count:" << human_count_format(rdtsc.cycles());
         LogDebug() << "sys stamp use:" << human_time_format(sys.duration_ns()) << ", inner count:" << human_count_format(sys.cycles());
         LogDebug() << "clock stamp use:" << human_time_format(clock.duration_ns()) << ", inner count:" << human_count_format(clock.cycles());
