@@ -176,41 +176,7 @@ struct PerfTrack
 
 
 
-static const int perf_serialize_len = PERF_MAX_TRACK_CHILD_DEPTH * PERF_MAX_TRACK_CHILD_COUNT * PERF_MAX_TRACK_LINE_SIZE * 2;
-static inline char* perf_serialize_buff()
-{
-    static char buff[perf_serialize_len];
-    return buff;
-}
-static inline int& perf_static_dyn_id()
-{
-    static_assert(PERF_DYN_TRACK_BEGIN > 0, "0 is invalid begin.");
-    static int dyn_id = PERF_DYN_TRACK_BEGIN;
-    return dyn_id;
-}
 
-static inline double* perf_inverse_hz_table()
-{
-    static double table[PERF_CYCLE_COUNTER_MAX];
-    return table;
-}
-
-static inline double perf_inverse_hz(unsigned int t)
-{
-    if (t >= PERF_CYCLE_COUNTER_MAX)
-    {
-        return 1.0;
-    }
-    return perf_inverse_hz_table()[t];
-}
-static inline void perf_set_inverse_hz(unsigned int t, double hz)
-{
-    if (t >= PERF_CYCLE_COUNTER_MAX)
-    {
-        return ;
-    }
-    perf_inverse_hz_table()[t] = hz;
-}
 
 
 
@@ -506,12 +472,16 @@ class PerfRecord
 public:
     static const int TRACK_COUNT = S;
     static const int PERF_RECORD_TYPE = T;
+    static const int SERIALIZE_BUFF_LEN = PERF_MAX_TRACK_CHILD_DEPTH* PERF_MAX_TRACK_CHILD_COUNT* PERF_MAX_TRACK_LINE_SIZE * 2;
     PerfRecord() 
     {
         memset(tracks_, 0, sizeof(tracks_));
         desc_[0] = '\0';
         state_ = 0;
         merge_to_size_ = 0;
+        memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
+        global_track_id_ = 0;
+        serialize_buff_[0] = '\0';
     };
     static PerfRecord& instance()
     {
@@ -613,12 +583,24 @@ public:
     char* mutable_desc() { return desc_; }
     const unsigned int state() const { return state_; }
     void set_state(unsigned int state) { state_ = state; }
+    double circles_per_ns(int t) { return circles_per_ns_[t]; }
+    int new_dyn_track_id() 
+    { 
+        if (global_track_id_ >= TRACK_COUNT)
+        {
+            return 0;
+        }
+        return ++global_track_id_; 
+    }
 private:
     PerfTrack tracks_[S];
     char desc_[PERF_MAX_TRACK_NAME_SIZE];
     std::array<int, S> merge_to_;
     int merge_to_size_;
     unsigned int state_;
+    double circles_per_ns_[PERF_CYCLE_COUNTER_MAX];
+    int global_track_id_;
+    char serialize_buff_[SERIALIZE_BUFF_LEN];
 };
 
 
@@ -695,10 +677,11 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     QueryPerformanceFrequency((LARGE_INTEGER*)&win_freq);
     rate = 1.0 / win_freq;
     rate *= 1000.0 * 1000 * 1000;
-    perf_set_inverse_hz(PERF_CYCLE_COUNTER_DEFAULT, rate);
-    perf_set_inverse_hz(PERF_CYCLE_COUNTER_RDTSC, rate);
-    perf_set_inverse_hz(PERF_CYCLE_COUNTER_CLOCK, rate);
-    perf_set_inverse_hz(PERF_CYCLE_COUNTER_SYS, 1.0);
+    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
+
 #else
     //cpu_set_t set;
     //CPU_ZERO(&set);
@@ -710,6 +693,11 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     mhz *= 1000 * 1000;
     mhz = 1.0 / mhz;
     mhz *= 1000 * 1000 * 1000;
+    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = mhz;
+    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = mhz;
+    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
+    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
+
     perf_set_inverse_hz(PERF_CYCLE_COUNTER_DEFAULT, mhz);
     perf_set_inverse_hz(PERF_CYCLE_COUNTER_RDTSC, mhz);
     perf_set_inverse_hz(PERF_CYCLE_COUNTER_CLOCK, 1.0);
@@ -821,13 +809,13 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         char buff_call[50];
         human_count_format(buff_call, track.cpu.c);
         char buff_avg[50];
-        human_time_format(buff_avg, (long long)(track.cpu.sum * perf_inverse_hz(track.desc.counter_type)) / track.cpu.c);
+        human_time_format(buff_avg, (long long)(track.cpu.sum * circles_per_ns_[track.desc.counter_type]) / track.cpu.c);
         char buff_sm[50];
-        human_time_format(buff_sm, (long long)(track.cpu.sm * perf_inverse_hz(track.desc.counter_type)));
+        human_time_format(buff_sm, (long long)(track.cpu.sm * circles_per_ns_[track.desc.counter_type]));
         char buff_dv[50];
-        human_time_format(buff_dv, (long long)(track.cpu.dv * perf_inverse_hz(track.desc.counter_type) / track.cpu.c));
+        human_time_format(buff_dv, (long long)(track.cpu.dv * circles_per_ns_[track.desc.counter_type] / track.cpu.c));
         char buff_sum[50];
-        human_time_format(buff_sum, (long long)(track.cpu.sum * perf_inverse_hz(track.desc.counter_type)));
+        human_time_format(buff_sum, (long long)(track.cpu.sum * circles_per_ns_[track.desc.counter_type]));
 
 
         int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s sm: %s dv:%s sum: %s  \n",
@@ -939,9 +927,9 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
 template<int T, int S>
 const char* PerfRecord<T, S>::serialize(int entry_idx)
 {
-    char* buff = perf_serialize_buff();
-    int remaind = perf_serialize_len;
-    int ret = serialize(entry_idx, 0, buff + (perf_serialize_len - remaind), remaind);
+    char* buff = serialize_buff_;
+    int remaind = SERIALIZE_BUFF_LEN;
+    int ret = serialize(entry_idx, 0, buff, remaind);
     if (ret < 0)
     {
         sprintf(buff, "serialize idx:<%d> has error:<%d>\n", entry_idx, ret);
@@ -985,7 +973,7 @@ public:
     PerfCounter& stop_and_save() { return save(); }
 
     long long cycles() { return cycles_; }
-    long long duration_ns() { return (long long)(cycles_ * perf_inverse_hz(T)); }
+    long long duration_ns() { return (long long)(cycles_ * PerfInst.circles_per_ns(T)); }
     double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
     long long stop_val() { return start_val_ + cycles_; }
     long long start_val() { return start_val_; }
@@ -1028,13 +1016,8 @@ class PerfTrackReg
 public:
     PerfTrackReg(const char* desc)
     {
-        this_id_ = 0;
-        int& dyn_id = perf_static_dyn_id();
-        if (dyn_id + 1 < PERF_MAX_TRACK_SIZE)
-        {
-            this_id_ = dyn_id++;
-            PerfInst.regist_track(this_id_, desc, T, false);
-        }
+        this_id_ = PerfInst.new_dyn_track_id();
+        PerfInst.regist_track(this_id_, desc, T, false);
     }
     int track_id() { return this_id_; }
     
