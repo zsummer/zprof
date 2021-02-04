@@ -96,11 +96,21 @@
 #ifndef ZPERF_H
 #define ZPERF_H
 
-#define PERF_MAX_TRACK_SIZE 400
-#define PERF_RESERVE_TRACK_BEGIN 1
-#define PERF_USER_TRACK_BEGIN 100
-#define PERF_DYN_TRACK_BEGIN 200
+#ifndef PERF_DEFAULT_INST_ID 
+#define PERF_DEFAULT_INST_ID 0
+#endif
 
+#define PERF_RESERVE_TRACK_BEGIN 1
+
+#ifndef PERF_DYN_TRACK_BEGIN
+#define PERF_DYN_TRACK_BEGIN 200
+#endif 
+
+#ifndef PERF_DYN_TRACK_COUNT
+#define PERF_DYN_TRACK_COUNT 200
+#endif
+
+#define PERF_MAX_TRACK_SIZE (PERF_DYN_TRACK_BEGIN+PERF_DYN_TRACK_COUNT)
 
 #define PERF_MAX_TRACK_NAME_SIZE 128
 #define PERF_MAX_TRACK_LINE_SIZE (PERF_MAX_TRACK_NAME_SIZE + 200)
@@ -108,9 +118,10 @@
 #define PERF_MAX_TRACK_CHILD_DEPTH 5
 
 
-static_assert(PERF_RESERVE_TRACK_BEGIN < PERF_USER_TRACK_BEGIN, "");
-static_assert(PERF_USER_TRACK_BEGIN < PERF_DYN_TRACK_BEGIN, "");
-static_assert(PERF_DYN_TRACK_BEGIN < PERF_MAX_TRACK_SIZE, "");
+static_assert(PERF_RESERVE_TRACK_BEGIN > 0, "");
+static_assert(PERF_RESERVE_TRACK_BEGIN < PERF_DYN_TRACK_BEGIN, "");
+static_assert(PERF_DYN_TRACK_COUNT > 0, "");
+
 
 enum PerfCycleCounter
 {
@@ -131,7 +142,7 @@ struct PerfDesc
 struct PerfCPU
 {
     long long c; 
-    long long use;  
+    long long sum;  
     long long dv; 
     long long sm;
     long long t_c;
@@ -145,7 +156,7 @@ struct PerfTimer
 struct PerfMEM
 {
     long long c;  
-    long long use;
+    long long sum;
     long long t_c;
     long long t_u;
 };
@@ -238,28 +249,28 @@ public:
         memset(&track.mem, 0, sizeof(track.mem));
     }
     inline void reset_childs(int idx, int depth = 0);
-    void call_cpu(int idx, long long c, long long use)
+    void call_cpu(int idx, long long c, long long cost)
     {
-        long long dis = use / c;
+        long long dis = cost / c;
         PerfTrack& track = tracks_[idx];
         track.cpu.c += c;
-        track.cpu.use += use;
+        track.cpu.sum += cost;
         track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
         track.cpu.sm = (track.cpu.sm * 8 + dis * 2) / 10;
         track.cpu.dv += abs(dis - track.cpu.sm);
         track.cpu.t_c += c;
-        track.cpu.t_u += use;
+        track.cpu.t_u += cost;
     }
-    void call_cpu(int idx, long long use)
+    void call_cpu(int idx, long long cost)
     {
         PerfTrack& track = tracks_[idx];
         track.cpu.c += 1;
-        track.cpu.use += use;
-        track.cpu.sm = track.cpu.sm == 0 ? use : track.cpu.sm;
-        track.cpu.sm = (track.cpu.sm * 8 + use * 2) / 10;
-        track.cpu.dv += abs(use - track.cpu.sm);
+        track.cpu.sum += cost;
+        track.cpu.sm = track.cpu.sm == 0 ? cost : track.cpu.sm;
+        track.cpu.sm = (track.cpu.sm * 8 + cost * 2) / 10;
+        track.cpu.dv += abs(cost - track.cpu.sm);
         track.cpu.t_c += 1;
-        track.cpu.t_u += use;
+        track.cpu.t_u += cost;
     }
     void call_timer(int idx, long long stamp)
     {
@@ -273,13 +284,13 @@ public:
         track.timer.last = stamp;
     }
 
-    void call_mem(int idx, long long c, long long use)
+    void call_mem(int idx, long long c, long long add)
     {
         PerfTrack& track = tracks_[idx];
         track.mem.c += c;
-        track.mem.use += use;
+        track.mem.sum += add;
         track.mem.t_c += c;
-        track.cpu.t_u += use;
+        track.cpu.t_u += add;
     }
     
     void merge_to(int idx, int to)
@@ -848,13 +859,13 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         char buff_call[50];
         human_count_format(buff_call, track.cpu.c);
         char buff_avg[50];
-        human_time_format(buff_avg, (long long)(track.cpu.use * perf_inverse_hz(track.desc.counter_type)) / track.cpu.c);
+        human_time_format(buff_avg, (long long)(track.cpu.sum * perf_inverse_hz(track.desc.counter_type)) / track.cpu.c);
         char buff_sm[50];
         human_time_format(buff_sm, (long long)(track.cpu.sm * perf_inverse_hz(track.desc.counter_type)));
         char buff_dv[50];
         human_time_format(buff_dv, (long long)(track.cpu.dv * perf_inverse_hz(track.desc.counter_type) / track.cpu.c));
         char buff_sum[50];
-        human_time_format(buff_sum, (long long)(track.cpu.use * perf_inverse_hz(track.desc.counter_type)));
+        human_time_format(buff_sum, (long long)(track.cpu.sum * perf_inverse_hz(track.desc.counter_type)));
 
 
         int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s sm: %s dv:%s sum: %s  \n",
@@ -891,11 +902,11 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         char buff_call[50];
         human_count_format(buff_call, track.mem.c);
         char buff_avg[50];
-        human_mem_format(buff_avg, track.mem.use / track.mem.c);
+        human_mem_format(buff_avg, track.mem.sum / track.mem.c);
         char buff_use[50];
-        human_mem_format(buff_use, track.mem.use);
+        human_mem_format(buff_use, track.mem.sum);
 
-        int ret = sprintf(buff, "[[ %s ]] mem: call:%s  avg: %s  use: %s \n",
+        int ret = sprintf(buff, "[[ %s ]] mem: call:%s  avg: %s  sum: %s \n",
             track.desc.track_name, buff_call, buff_avg, buff_use);
 
         if (ret < 0)
@@ -977,7 +988,7 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 }
 
 
-#define PerfInst PerfRecord<0, PERF_MAX_TRACK_SIZE>::instance()
+#define PerfInst PerfRecord<PERF_DEFAULT_INST_ID, PERF_MAX_TRACK_SIZE>::instance()
 
 
 
@@ -1083,7 +1094,7 @@ private:
 };
 
 
-#define OPEN_ZPERF
+
 #ifdef OPEN_ZPERF
 
 #define REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
@@ -1099,8 +1110,8 @@ private:
 #define PERF_CALL_CPU_G_WITH_C(idx, count, counter) PerfInst.call_cpu(idx, count, counter.cycles())
 #define PERF_CALL_CPU_G_REALTIME(idx, counter) PerfInst.call_cpu(idx, counter.save().cycles())
 #define PERF_CALL_CPU_G(idx, counter) PerfInst.call_cpu(idx, counter.cycles())
-#define PERF_CALL_CPU(idx, use) PerfInst.call_cpu(idx, use)
-#define PERF_CALL_CPU_WITH_C(idx, c, use) PerfInst.call_cpu(idx, c, use)
+#define PERF_CALL_CPU(idx, cost) PerfInst.call_cpu(idx, cost)
+#define PERF_CALL_CPU_WITH_C(idx, c, cost) PerfInst.call_cpu(idx, c, cost)
 
 
 #define PERF_CALL_MEM_WITH_C(idx, count, mem) PerfInst.call_mem(idx, count, mem)
@@ -1121,7 +1132,7 @@ private:
 #define PERF_BEGIN_OT_COUNTER(otc) otc.start()
 #define PERF_END_OT_COUNTER(otc) otc.save()
 
-#define PERF_OT_COUNTER_CALL_MEM(otc, use) otc.call_mem(use)
+#define PERF_OT_COUNTER_CALL_MEM(otc, cost) otc.call_mem(cost)
 
 #define PERF_DEFINE_COUNTER_GUARD(tc, idx) PerfCounterGuard<> tc(idx)
 
@@ -1135,8 +1146,8 @@ private:
 #define PERF_CALL_MEM_WITH_C(idx, count, mem) 
 #define PERF_CALL_CPU_G_REALTIME(idx, counter) 
 #define PERF_CALL_CPU_G(idx, counter) 
-#define PERF_CALL_CPU(idx, use) 
-#define PERF_CALL_CPU_WITH_C(idx, c, use) 
+#define PERF_CALL_CPU(idx, cost) 
+#define PERF_CALL_CPU_WITH_C(idx, c, cost) 
 
 #define PERF_CALL_MEM(idx, mem) 
 #define PERF_CALL_TIMER(idx, stamp)
@@ -1151,7 +1162,7 @@ private:
 #define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(otc, desc, c)
 #define PERF_BEGIN_OT_COUNTER(otc) 
 #define PERF_END_OT_COUNTER(otc) 
-#define PERF_OT_COUNTER_CALL_MEM(otc, use)
+#define PERF_OT_COUNTER_CALL_MEM(otc, cost)
 
 #define PERF_DEFINE_COUNTER_GUARD(tc, idx)
 #endif
