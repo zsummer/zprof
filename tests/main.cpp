@@ -79,9 +79,9 @@ int main(int argc, char *argv[])
         PERF_DEFINE_OT_COUNTER(dyn_time, "perf_tsc_sys dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_BEGIN_OT_COUNTER(dyn_time);
+            PERF_START_OT_COUNTER(dyn_time);
             cycles += perf_tsc_sys();
-            PERF_END_OT_COUNTER(dyn_time);
+            PERF_STOP_OT_COUNTER(dyn_time);
         }
     }
     if (true)
@@ -89,9 +89,9 @@ int main(int argc, char *argv[])
         PERF_DEFINE_OT_COUNTER(dyn_time, "perf_tsc_clock dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_BEGIN_OT_COUNTER(dyn_time);
+            PERF_START_OT_COUNTER(dyn_time);
             cycles += perf_tsc_clock();
-            PERF_END_OT_COUNTER(dyn_time);
+            PERF_STOP_OT_COUNTER(dyn_time);
         }
     }
     if (true)
@@ -99,9 +99,9 @@ int main(int argc, char *argv[])
         PERF_DEFINE_OT_COUNTER(dyn_time, "perf_tsc_rdtsc dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_BEGIN_OT_COUNTER(dyn_time);
+            PERF_START_OT_COUNTER(dyn_time);
             cycles += perf_tsc_rdtsc();
-            PERF_END_OT_COUNTER(dyn_time);
+            PERF_STOP_OT_COUNTER(dyn_time);
         }
     }
 
@@ -167,11 +167,11 @@ int main(int argc, char *argv[])
        PERF_DEFINE_OT_COUNTER(ot, "call timer 10ms ");
         for (int i = 0; i < 100; i++)
         {
-            PERF_BEGIN_OT_COUNTER(ot);
+            PERF_START_OT_COUNTER(ot);
             PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        PERF_BEGIN_OT_COUNTER(ot);
+        PERF_START_OT_COUNTER(ot);
         PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
     }
 

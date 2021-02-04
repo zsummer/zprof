@@ -23,6 +23,8 @@
 void entry_mem_test()
 {
     PERF_DEFINE_COUNTER(counter);
+    PERF_START_COUNTER(counter);
+
     for (size_t i = 0; i < 10000; i++)
     {
         char* ptr = new char[100];
@@ -34,11 +36,11 @@ void entry_mem_test()
 
     for (size_t i = 0; i < 10000; i++)
     {
-        PERF_BEGIN_COUNTER(counter);
+        PERF_START_COUNTER(counter);
         char* ptr = new char[10];
         PERF_CALL_CPU_G_REALTIME(ENUM_ALLOC, counter);
         PERF_CALL_MEM(ENUM_ALLOC, 10);
-        PERF_BEGIN_COUNTER(counter);
+        PERF_START_COUNTER(counter);
         delete[] ptr;
         PERF_CALL_CPU_G_REALTIME(ENUM_FREE, counter);
         PERF_CALL_MEM(ENUM_FREE, 10);

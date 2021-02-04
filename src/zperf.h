@@ -543,44 +543,6 @@ inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_COUNTER_SYS>* p
     return perf_tsc_sys();
 }
 
-template<PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
-class PerfCounter
-{
-public:
-    PerfCounter()
-    {
-        start();
-    }
-    PerfCounter(long long init_val)
-    {
-        start_val_ = init_val;
-        cycles_ = 0;
-    }
-
-    void start()
-    {
-        start_val_ = perf_tsc<T>((PerfCycleCounterClass<T>*)NULL);
-        cycles_ = 0;
-    }
-
-    PerfCounter& save()
-    {
-        long long elapse = perf_tsc<T>((PerfCycleCounterClass<T>*)NULL) - start_val_;
-        cycles_ = elapse > 0 ? elapse : 0;
-        return *this;
-    }
-    PerfCounter& stop_and_save() { return save(); }
-
-    long long cycles() { return cycles_; }
-    long long duration_ns(){ return (long long)(cycles_ * perf_inverse_hz(T));}
-    double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
-    long long stop_val() { return start_val_ + cycles_; }
-    long long start_val() { return start_val_; }
-
-private:
-    long long start_val_;
-    long long cycles_;
-};
 
 
 
@@ -994,33 +956,77 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 
 
 
-template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
-class PerfCounterGuard
+template<PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
+class PerfCounter
 {
 public:
-    PerfCounterGuard(int idx)
+    PerfCounter()
+    {
+        start_val_ = 0;
+        cycles_ = 0;
+    }
+    PerfCounter(long long val)
+    {
+        start_val_ = val;
+        cycles_ = 0;
+    }
+    void start()
+    {
+        start_val_ = perf_tsc<T>((PerfCycleCounterClass<T>*)NULL);
+        cycles_ = 0;
+    }
+
+    PerfCounter& save()
+    {
+        long long elapse = perf_tsc<T>((PerfCycleCounterClass<T>*)NULL) - start_val_;
+        cycles_ = elapse > 0 ? elapse : 0;
+        return *this;
+    }
+    PerfCounter& stop_and_save() { return save(); }
+
+    long long cycles() { return cycles_; }
+    long long duration_ns() { return (long long)(cycles_ * perf_inverse_hz(T)); }
+    double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
+    long long stop_val() { return start_val_ + cycles_; }
+    long long start_val() { return start_val_; }
+
+private:
+    long long start_val_;
+    long long cycles_;
+};
+
+
+
+template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
+class PerfAutoRecord
+{
+public:
+    PerfAutoRecord(int idx)
     {
         idx_ = idx;
+        counter_.start();
     }
-    ~PerfCounterGuard()
+    ~PerfAutoRecord()
     {
         if (idx_ >= 0 && idx_ < PERF_MAX_TRACK_SIZE)
         {
             PerfInst.call_cpu(idx_, 1, counter_.save().cycles());
         }
     }
-
+    PerfCounter<T>& counter() { return counter_; }
 private:
     PerfCounter<T> counter_;
     int idx_;
 };
 
 
+
+
 template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
-class PerfOTCycleCounter
+class PerfOTReg
 {
 public:
-    PerfOTCycleCounter(const char* desc) : counter_((long long)0)
+    PerfOTReg(const char* desc)
     {
         this_id_ = 0;
         int& dyn_id = perf_static_dyn_id();
@@ -1061,7 +1067,7 @@ public:
         return PerfInst.serialize(this_id_);
     }
 
-    ~PerfOTCycleCounter()
+    ~PerfOTReg()
     {
 
     }
@@ -1072,24 +1078,24 @@ private:
 };
 
 template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
-class PerfDynTimeGuard
+class PerfAutoOTRecord
 {
 public:
-    PerfDynTimeGuard(const char* desc) :dyn_(desc), count_(1)
+    PerfAutoOTRecord(const char* desc) :dyn_(desc), count_(1)
     {
         dyn_.start();
     }
-    PerfDynTimeGuard(const char* desc, long long count):dyn_(desc), count_(count)
+    PerfAutoOTRecord(const char* desc, long long count):dyn_(desc), count_(count)
     {
         dyn_.start();
     }
-    ~PerfDynTimeGuard()
+    ~PerfAutoOTRecord()
     {
         dyn_.save(count_);
     }
-    PerfOTCycleCounter<T>& dyn_line() { return dyn_; }
+    PerfOTReg<T>& dyn_line() { return dyn_; }
 private:
-    PerfOTCycleCounter<T> dyn_;
+    PerfOTReg<T> dyn_;
     long long count_;
 };
 
@@ -1123,18 +1129,18 @@ private:
 #define PERF_DEFINE_COUNTER(tc)  PerfCounter<> tc
 #define PERF_DEFINE_COUNTER_REF(tc, ref)  PerfCounter<> tc(ref.begin())
 #define PERF_DEFINE_COUNTER_EMPTY(tc)  PerfCounter<> tc(0)
-#define PERF_BEGIN_COUNTER(pf) pf.start()
-#define PERF_END_COUNTER(pf) pf.save()
+#define PERF_START_COUNTER(pf) pf.start()
+#define PERF_STOP_COUNTER(pf) pf.save()
 
-#define PERF_DEFINE_OT_COUNTER(otc, desc) PerfOTCycleCounter<> otc(desc);  
-#define PERF_DEFINE_OT_COUNTER_GUARD(otc, desc) PerfDynTimeGuard<> otc(desc);  
-#define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(otc, desc, c) PerfDynTimeGuard<> otc(desc, c);  
-#define PERF_BEGIN_OT_COUNTER(otc) otc.start()
-#define PERF_END_OT_COUNTER(otc) otc.save()
+#define PERF_DEFINE_OT_COUNTER(otc, desc) PerfOTReg<> otc(desc);  
+#define PERF_DEFINE_OT_COUNTER_GUARD(otc, desc) PerfAutoOTRecord<> otc(desc);  
+#define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(otc, desc, c) PerfAutoOTRecord<> otc(desc, c);  
+#define PERF_START_OT_COUNTER(otc) otc.start()
+#define PERF_STOP_OT_COUNTER(otc) otc.save()
 
 #define PERF_OT_COUNTER_CALL_MEM(otc, cost) otc.call_mem(cost)
 
-#define PERF_DEFINE_COUNTER_GUARD(tc, idx) PerfCounterGuard<> tc(idx)
+#define PERF_DEFINE_COUNTER_GUARD(tc, idx) PerfAutoRecord<> tc(idx)
 
 #else
 #define PERF_INIT() 
@@ -1155,13 +1161,13 @@ private:
 #define PERF_DEFINE_COUNTER(tc)  
 #define PERF_DEFINE_COUNTER_REF(tc, ref)  
 #define PERF_DEFINE_COUNTER_EMPTY(tc) 
-#define PERF_BEGIN_COUNTER(pf) 
-#define PERF_END_COUNTER(pf) 
+#define PERF_START_COUNTER(pf) 
+#define PERF_STOP_COUNTER(pf) 
 #define PERF_DEFINE_OT_COUNTER(otc, desc)
 #define PERF_DEFINE_OT_COUNTER_GUARD(otc, desc)
 #define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(otc, desc, c)
-#define PERF_BEGIN_OT_COUNTER(otc) 
-#define PERF_END_OT_COUNTER(otc) 
+#define PERF_START_OT_COUNTER(otc) 
+#define PERF_STOP_OT_COUNTER(otc) 
 #define PERF_OT_COUNTER_CALL_MEM(otc, cost)
 
 #define PERF_DEFINE_COUNTER_GUARD(tc, idx)
