@@ -214,130 +214,6 @@ static inline void perf_set_inverse_hz(unsigned int t, double hz)
 
 
 
-
-template<int T, int S>
-class PerfRecord 
-{
-public:
-    static const int TRACK_COUNT = S;
-    static const int PERF_RECORD_TYPE = T;
-    PerfRecord() 
-    {
-        memset(tracks_, 0, sizeof(tracks_));
-        desc_[0] = '\0';
-        state_ = 0;
-        merge_to_size_ = 0;
-    };
-    static PerfRecord& instance()
-    {
-        static PerfRecord inst;
-        return inst;
-    }
-    inline int init_perf(const char* desc);
-    inline int regist_track(int idx, const char* desc, unsigned int counter, bool overwrite);
-    inline int add_track_child(int idx, int child);
-    inline int add_merge_to(int idx, int to);
-
-    void reset_cpu(int idx)
-    {
-        PerfTrack& track = tracks_[idx];
-        memset(&track.cpu, 0, sizeof(track.cpu));
-    }
-    void reset_mem(int idx)
-    {
-        PerfTrack& track = tracks_[idx];
-        memset(&track.mem, 0, sizeof(track.mem));
-    }
-    inline void reset_childs(int idx, int depth = 0);
-    void call_cpu(int idx, long long c, long long cost)
-    {
-        long long dis = cost / c;
-        PerfTrack& track = tracks_[idx];
-        track.cpu.c += c;
-        track.cpu.sum += cost;
-        track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
-        track.cpu.sm = (track.cpu.sm * 8 + dis * 2) / 10;
-        track.cpu.dv += abs(dis - track.cpu.sm);
-        track.cpu.t_c += c;
-        track.cpu.t_u += cost;
-    }
-    void call_cpu(int idx, long long cost)
-    {
-        PerfTrack& track = tracks_[idx];
-        track.cpu.c += 1;
-        track.cpu.sum += cost;
-        track.cpu.sm = track.cpu.sm == 0 ? cost : track.cpu.sm;
-        track.cpu.sm = (track.cpu.sm * 8 + cost * 2) / 10;
-        track.cpu.dv += abs(cost - track.cpu.sm);
-        track.cpu.t_c += 1;
-        track.cpu.t_u += cost;
-    }
-    void call_timer(int idx, long long stamp)
-    {
-        PerfTrack& track = tracks_[idx];
-        if (track.timer.last == 0)
-        {
-            track.timer.last = stamp;
-            return;
-        }
-        call_cpu(idx, stamp - track.timer.last);
-        track.timer.last = stamp;
-    }
-
-    void call_mem(int idx, long long c, long long add)
-    {
-        PerfTrack& track = tracks_[idx];
-        track.mem.c += c;
-        track.mem.sum += add;
-        track.mem.t_c += c;
-        track.cpu.t_u += add;
-    }
-    
-    void merge_to(int idx, int to)
-    {
-        PerfTrack& track = tracks_[idx];
-        if (track.cpu.t_c > 0)
-        {
-            call_cpu(to, track.cpu.t_u);
-            track.cpu.t_c = 0;
-            track.cpu.t_u = 0;
-        }
-        if (track.mem.t_c > 0)
-        {
-            call_mem(to, 1, track.mem.t_u);
-            track.mem.t_c = 0;
-            track.mem.t_u = 0;
-        }
-    }
-
-    void update_merge()
-    {
-        for (int i = 0; i < merge_to_size_; i++)
-        {
-            PerfTrack& track = tracks_[merge_to_[i]];
-            merge_to(merge_to_[i], track.merge_to);
-        }
-    }
-    int serialize(int entry_idx, int depth, char* org_buff, int buff_len);
-    const char* serialize(int entry_idx);
-
-
-    PerfTrack& track(int idx) { return tracks_[idx]; }
-    int track_count()const { return TRACK_COUNT; }
-    const char* desc() const { return desc_; }
-    char* mutable_desc() { return desc_; }
-    const unsigned int state() const { return state_; }
-    void set_state(unsigned int state) { state_ = state; }
-private:
-    PerfTrack tracks_[S];
-    char desc_[PERF_MAX_TRACK_NAME_SIZE];
-    std::array<int, S> merge_to_;
-    int merge_to_size_;
-    unsigned int state_;
-};
-
-
-
 //#define PERF_RDTSCP
 #define PERF_RDTSC_INTEL
 
@@ -546,6 +422,207 @@ inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_COUNTER_SYS>* p
 
 
 
+static inline const char* human_count_format(char* buff, long long count)
+{
+    if (count > 1000 * 1000)
+    {
+        sprintf(buff, "%lld,%03lld,%03lld", count / 1000 / 1000, (count / 1000) % 1000, count % 1000);
+        return buff;
+    }
+    else if (count > 1000)
+    {
+        sprintf(buff, "%lld,%03lld", count / 1000, count % 1000);
+        return buff;
+    }
+    sprintf(buff, "%lld", count);
+    return buff;
+}
+
+static inline const char* human_count_format(long long count)
+{
+    static char buff[100] = { 0 };
+    return human_count_format(buff, count);
+}
+
+static inline const char* human_time_format(char* buff, long long ns)
+{
+    if (ns > 1000 * 1000 * 1000)
+    {
+        sprintf(buff, "%.4lfs", ns / 1000.0 / 1000.0 / 1000.0);
+        return buff;
+    }
+    else if (ns > 1000 * 1000)
+    {
+        sprintf(buff, "%.4lfms", ns / 1000.0 / 1000.0);
+        return buff;
+    }
+    else if (ns > 1000)
+    {
+        sprintf(buff, "%.4lfus", ns / 1000.0);
+        return buff;
+    }
+    sprintf(buff, "%lldns", ns);
+    return buff;
+}
+
+static inline const char* human_time_format(long long ns)
+{
+    static char buff[100] = { 0 };
+    return human_time_format(buff, ns);
+}
+
+static inline const char* human_mem_format(char* buff, long long bytes)
+{
+    if (bytes > 1024 * 1024 * 1024)
+    {
+        sprintf(buff, "%.4lfg", bytes / 1024.0 / 1024.0 / 1024.0);
+        return buff;
+    }
+    else if (bytes > 1024 * 1024)
+    {
+        sprintf(buff, "%.4lfm", bytes / 1024.0 / 1024.0);
+        return buff;
+    }
+    else if (bytes > 1024)
+    {
+        sprintf(buff, "%.4lfk", bytes / 1024.0);
+        return buff;
+    }
+    sprintf(buff, "%lldb", bytes);
+    return buff;
+}
+
+static inline const char* human_mem_format(long long bytes)
+{
+    static char buff[100] = { 0 };
+    return human_mem_format(buff, bytes);
+}
+
+
+
+template<int T, int S>
+class PerfRecord 
+{
+public:
+    static const int TRACK_COUNT = S;
+    static const int PERF_RECORD_TYPE = T;
+    PerfRecord() 
+    {
+        memset(tracks_, 0, sizeof(tracks_));
+        desc_[0] = '\0';
+        state_ = 0;
+        merge_to_size_ = 0;
+    };
+    static PerfRecord& instance()
+    {
+        static PerfRecord inst;
+        return inst;
+    }
+    inline int init_perf(const char* desc);
+    inline int regist_track(int idx, const char* desc, unsigned int counter, bool overwrite);
+    inline int add_track_child(int idx, int child);
+    inline int add_merge_to(int idx, int to);
+
+    void reset_cpu(int idx)
+    {
+        PerfTrack& track = tracks_[idx];
+        memset(&track.cpu, 0, sizeof(track.cpu));
+    }
+    void reset_mem(int idx)
+    {
+        PerfTrack& track = tracks_[idx];
+        memset(&track.mem, 0, sizeof(track.mem));
+    }
+    inline void reset_childs(int idx, int depth = 0);
+    void call_cpu(int idx, long long c, long long cost)
+    {
+        long long dis = cost / c;
+        PerfTrack& track = tracks_[idx];
+        track.cpu.c += c;
+        track.cpu.sum += cost;
+        track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
+        track.cpu.sm = (track.cpu.sm * 8 + dis * 2) / 10;
+        track.cpu.dv += abs(dis - track.cpu.sm);
+        track.cpu.t_c += c;
+        track.cpu.t_u += cost;
+    }
+    void call_cpu(int idx, long long cost)
+    {
+        PerfTrack& track = tracks_[idx];
+        track.cpu.c += 1;
+        track.cpu.sum += cost;
+        track.cpu.sm = track.cpu.sm == 0 ? cost : track.cpu.sm;
+        track.cpu.sm = (track.cpu.sm * 8 + cost * 2) / 10;
+        track.cpu.dv += abs(cost - track.cpu.sm);
+        track.cpu.t_c += 1;
+        track.cpu.t_u += cost;
+    }
+    void call_timer(int idx, long long stamp)
+    {
+        PerfTrack& track = tracks_[idx];
+        if (track.timer.last == 0)
+        {
+            track.timer.last = stamp;
+            return;
+        }
+        call_cpu(idx, stamp - track.timer.last);
+        track.timer.last = stamp;
+    }
+
+    void call_mem(int idx, long long c, long long add)
+    {
+        PerfTrack& track = tracks_[idx];
+        track.mem.c += c;
+        track.mem.sum += add;
+        track.mem.t_c += c;
+        track.cpu.t_u += add;
+    }
+    
+    void merge_to(int idx, int to)
+    {
+        PerfTrack& track = tracks_[idx];
+        if (track.cpu.t_c > 0)
+        {
+            call_cpu(to, track.cpu.t_u);
+            track.cpu.t_c = 0;
+            track.cpu.t_u = 0;
+        }
+        if (track.mem.t_c > 0)
+        {
+            call_mem(to, 1, track.mem.t_u);
+            track.mem.t_c = 0;
+            track.mem.t_u = 0;
+        }
+    }
+
+    void update_merge()
+    {
+        for (int i = 0; i < merge_to_size_; i++)
+        {
+            PerfTrack& track = tracks_[merge_to_[i]];
+            merge_to(merge_to_[i], track.merge_to);
+        }
+    }
+    int serialize(int entry_idx, int depth, char* org_buff, int buff_len);
+    const char* serialize(int entry_idx);
+
+
+    PerfTrack& track(int idx) { return tracks_[idx]; }
+    int track_count()const { return TRACK_COUNT; }
+    const char* desc() const { return desc_; }
+    char* mutable_desc() { return desc_; }
+    const unsigned int state() const { return state_; }
+    void set_state(unsigned int state) { state_ = state; }
+private:
+    PerfTrack tracks_[S];
+    char desc_[PERF_MAX_TRACK_NAME_SIZE];
+    std::array<int, S> merge_to_;
+    int merge_to_size_;
+    unsigned int state_;
+};
+
+
+
 template<int T, int S>
 int PerfRecord<T, S>::add_track_child(int idx, int cidx)
 {
@@ -708,83 +785,6 @@ void PerfRecord<T, S>::reset_childs(int idx, int depth)
     }
 }
 
-
-
-static inline const char* human_count_format(char *buff, long long count)
-{
-    if (count > 1000 * 1000)
-    {
-        sprintf(buff, "%lld,%03lld,%03lld", count / 1000 / 1000, (count / 1000) % 1000, count % 1000);
-        return buff;
-    }
-    else if (count > 1000)
-    {
-        sprintf(buff, "%lld,%03lld", count / 1000, count % 1000);
-        return buff;
-    }
-    sprintf(buff, "%lld", count);
-    return buff;
-}
-
-static inline const char* human_count_format(long long count)
-{
-    static char buff[100] = { 0 };
-    return human_count_format(buff, count);
-}
-
-static inline const char* human_time_format(char* buff, long long ns)
-{
-    if (ns > 1000*1000*1000)
-    {
-        sprintf(buff, "%.4lfs", ns / 1000.0 / 1000.0 / 1000.0);
-        return buff;
-    }
-    else if (ns > 1000*1000)
-    {
-        sprintf(buff, "%.4lfms", ns / 1000.0 / 1000.0);
-        return buff;
-    }
-    else if (ns > 1000)
-    {
-        sprintf(buff, "%.4lfus", ns / 1000.0 );
-        return buff;
-    }
-    sprintf(buff, "%lldns", ns);
-    return buff;
-}
-
-static inline const char* human_time_format(long long ns)
-{
-    static char buff[100] = { 0 };
-    return human_time_format(buff, ns);
-}
-
-static inline const char* human_mem_format(char* buff, long long bytes)
-{
-    if (bytes > 1024 * 1024 * 1024)
-    {
-        sprintf(buff, "%.4lfg", bytes / 1024.0 / 1024.0 / 1024.0);
-        return buff;
-    }
-    else if (bytes > 1024 * 1024)
-    {
-        sprintf(buff, "%.4lfm", bytes / 1024.0 / 1024.0);
-        return buff;
-    }
-    else if (bytes > 1024)
-    {
-        sprintf(buff, "%.4lfk", bytes / 1024.0);
-        return buff;
-    }
-    sprintf(buff, "%lldb", bytes);
-    return buff;
-}
-
-static inline const char* human_mem_format(long long bytes)
-{
-    static char buff[100] = { 0 };
-    return human_mem_format(buff, bytes);
-}
 
 
 template<int T, int S>
@@ -1023,10 +1023,10 @@ private:
 
 
 template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
-class PerfOTReg
+class PerfTrackReg
 {
 public:
-    PerfOTReg(const char* desc)
+    PerfTrackReg(const char* desc)
     {
         this_id_ = 0;
         int& dyn_id = perf_static_dyn_id();
@@ -1036,6 +1036,33 @@ public:
             PerfInst.regist_track(this_id_, desc, T, false);
         }
     }
+    int track_id() { return this_id_; }
+    
+    ~PerfTrackReg()
+    {
+
+    }
+
+private:
+    int this_id_;
+};
+
+template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
+class PerfAutoOTRecord
+{
+public:
+    PerfAutoOTRecord(const char* desc) :reg_(desc), count_(1)
+    {
+        counter_.start();
+    }
+    PerfAutoOTRecord(const char* desc, long long count):reg_(desc), count_(count)
+    {
+        counter_.start();
+    }
+    ~PerfAutoOTRecord()
+    {
+        PerfInst.call_cpu(reg_.track_id(), counter_.save().cycles());
+    }
 
     void start()
     {
@@ -1044,58 +1071,24 @@ public:
 
     void save()
     {
-        PerfInst.call_cpu(this_id_, counter_.save().cycles());
+        PerfInst.call_cpu(reg_.track_id(), counter_.save().cycles());
     }
-
 
     void save(long long count)
     {
-        PerfInst.call_cpu(this_id_, count, counter_.save().cycles());
+        PerfInst.call_cpu(reg_.track_id(), count, counter_.save().cycles());
     }
-
 
     void call_mem(long long mem)
     {
-        PerfInst.call_mem(this_id_, 1, mem);
+        PerfInst.call_mem(reg_.track_id(), 1, mem);
     }
 
-    int track_id() { return this_id_; }
+    int track_id() { return reg_.track_id(); }
     PerfCounter<T>& counter() { return counter_; }
-
-    const char* show()
-    {
-        return PerfInst.serialize(this_id_);
-    }
-
-    ~PerfOTReg()
-    {
-
-    }
-
 private:
-    int this_id_;
+    PerfTrackReg<T> reg_;
     PerfCounter<T> counter_;
-};
-
-template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
-class PerfAutoOTRecord
-{
-public:
-    PerfAutoOTRecord(const char* desc) :dyn_(desc), count_(1)
-    {
-        dyn_.start();
-    }
-    PerfAutoOTRecord(const char* desc, long long count):dyn_(desc), count_(count)
-    {
-        dyn_.start();
-    }
-    ~PerfAutoOTRecord()
-    {
-        dyn_.save(count_);
-    }
-    PerfOTReg<T>& dyn_line() { return dyn_; }
-private:
-    PerfOTReg<T> dyn_;
     long long count_;
 };
 
@@ -1132,13 +1125,13 @@ private:
 #define PERF_START_COUNTER(pf) pf.start()
 #define PERF_STOP_COUNTER(pf) pf.save()
 
-#define PERF_DEFINE_OT_COUNTER(otc, desc) PerfOTReg<> otc(desc);  
-#define PERF_DEFINE_OT_COUNTER_GUARD(otc, desc) PerfAutoOTRecord<> otc(desc);  
-#define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(otc, desc, c) PerfAutoOTRecord<> otc(desc, c);  
-#define PERF_START_OT_COUNTER(otc) otc.start()
-#define PERF_STOP_OT_COUNTER(otc) otc.save()
+#define PERF_DEFINE_AUTO_REG(reg, desc) PerfTrackReg<> reg(desc);  
+#define PERF_DEFINE_AUTO_OT_RECORD(rec, desc) PerfAutoOTRecord<> rec(desc);  
+#define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(rec, desc, c) PerfAutoOTRecord<> rec(desc, c);  
+#define PERF_START_OT_COUNTER(rec) rec.start()
+#define PERF_STOP_OT_COUNTER(rec) rec.save()
 
-#define PERF_OT_COUNTER_CALL_MEM(otc, cost) otc.call_mem(cost)
+#define PERF_OT_COUNTER_CALL_MEM(rec, add) rec.call_mem(add)
 
 #define PERF_DEFINE_COUNTER_GUARD(tc, idx) PerfAutoRecord<> tc(idx)
 
@@ -1163,8 +1156,8 @@ private:
 #define PERF_DEFINE_COUNTER_EMPTY(tc) 
 #define PERF_START_COUNTER(pf) 
 #define PERF_STOP_COUNTER(pf) 
-#define PERF_DEFINE_OT_COUNTER(otc, desc)
-#define PERF_DEFINE_OT_COUNTER_GUARD(otc, desc)
+#define PERF_DEFINE_AUTO_REG(otc, desc)
+#define PERF_DEFINE_AUTO_OT_RECORD(otc, desc)
 #define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(otc, desc, c)
 #define PERF_START_OT_COUNTER(otc) 
 #define PERF_STOP_OT_COUNTER(otc) 
