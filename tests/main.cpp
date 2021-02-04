@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD(guard, "start fnlog use");
+        PERF_DEFINE_AUTO_OT_RECORD(guard, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
 
@@ -37,13 +37,13 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-       PERF_DEFINE_OT_COUNTER(ot, "self use mem");
+        PERF_DEFINE_AUTO_OT_RECORD(ot, "self use mem");
        PERF_OT_COUNTER_CALL_MEM(ot, perf_self_memory_use());
     }
 
     if (true)
     {
-       PERF_DEFINE_OT_COUNTER(ot, "PerfInst use mem");
+       PERF_DEFINE_AUTO_OT_RECORD(ot, "PerfInst use mem");
        PERF_OT_COUNTER_CALL_MEM(ot, sizeof(PerfInst));
     }
 
@@ -76,32 +76,32 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER(dyn_time, "perf_tsc_sys dis 1000w");
+        PERF_DEFINE_AUTO_OT_RECORD(rec, "perf_tsc_sys dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_START_OT_COUNTER(dyn_time);
+            PERF_START_OT_COUNTER(rec);
             cycles += perf_tsc_sys();
-            PERF_STOP_OT_COUNTER(dyn_time);
+            PERF_STOP_OT_COUNTER(rec);
         }
     }
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER(dyn_time, "perf_tsc_clock dis 1000w");
+        PERF_DEFINE_AUTO_OT_RECORD(rec, "perf_tsc_clock dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_START_OT_COUNTER(dyn_time);
+            PERF_START_OT_COUNTER(rec);
             cycles += perf_tsc_clock();
-            PERF_STOP_OT_COUNTER(dyn_time);
+            PERF_STOP_OT_COUNTER(rec);
         }
     }
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER(dyn_time, "perf_tsc_rdtsc dis 1000w");
+        PERF_DEFINE_AUTO_OT_RECORD(rec, "perf_tsc_rdtsc dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_START_OT_COUNTER(dyn_time);
+            PERF_START_OT_COUNTER(rec);
             cycles += perf_tsc_rdtsc();
-            PERF_STOP_OT_COUNTER(dyn_time);
+            PERF_STOP_OT_COUNTER(rec);
         }
     }
 
@@ -116,17 +116,17 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD(guard, "sleep 300ms: sys ");
+        PERF_DEFINE_AUTO_OT_RECORD(guard, "sleep 300ms: sys ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD(guard, "sleep 300ms rdtscp ");
+        PERF_DEFINE_AUTO_OT_RECORD(guard, "sleep 300ms rdtscp ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD(guard, "sleep 300ms clock ");
+        PERF_DEFINE_AUTO_OT_RECORD(guard, "sleep 300ms clock ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-       PERF_DEFINE_OT_COUNTER(ot, "call timer 10ms ");
+        PERF_DEFINE_AUTO_OT_RECORD(ot, "call timer 10ms ");
         for (int i = 0; i < 100; i++)
         {
             PERF_START_OT_COUNTER(ot);
