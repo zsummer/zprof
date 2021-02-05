@@ -74,6 +74,38 @@ int main(int argc, char *argv[])
             cycles += perf_tsc_rdtsc();
         }
     }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c clock bat 1000w", 1000 * 10000);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += clock();
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c++ system_clock bat 1000w", 1000 * 10000);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += std::chrono::system_clock().now().time_since_epoch().count();
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c++ steady_clock bat 1000w", 1000 * 10000);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += std::chrono::steady_clock().now().time_since_epoch().count();
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c time bat 1000w", 1000 * 10000);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += time(NULL);
+        }
+    }
 
     if (true)
     {
@@ -183,21 +215,30 @@ int main(int argc, char *argv[])
     {
         PerfCounter<PERF_CYCLE_COUNTER_RDTSC> rdtsc;
         PerfCounter<PERF_CYCLE_COUNTER_SYS> sys;
-        PerfCounter<PERF_CYCLE_COUNTER_CLOCK> clock;
+        PerfCounter<PERF_CYCLE_COUNTER_CLOCK> linux_clock;
         rdtsc.start();
         sys.start();
-        clock.start();
+        linux_clock.start();
+        clock_t c_clock = clock();
+        long long steady_clock = std::chrono::steady_clock().now().time_since_epoch().count();
+        long long sys_clock = std::chrono::system_clock().now().time_since_epoch().count();
         for (int i = 0; i < 1000*10000; i++)
         {
             rdtsc.save();
         }
         rdtsc.save();
         sys.save();
-        clock.save();
+        linux_clock.save();
+        c_clock = clock() - c_clock;
+        steady_clock = std::chrono::steady_clock().now().time_since_epoch().count() - steady_clock;
+        sys_clock = std::chrono::system_clock().now().time_since_epoch().count() - sys_clock;
 
         LogDebug() << "rdtsc stamp use:" << human_time_format(rdtsc.duration_ns()) << ", inner count:" << human_count_format(rdtsc.cycles());
         LogDebug() << "sys stamp use:" << human_time_format(sys.duration_ns()) << ", inner count:" << human_count_format(sys.cycles());
-        LogDebug() << "clock stamp use:" << human_time_format(clock.duration_ns()) << ", inner count:" << human_count_format(clock.cycles());
+        LogDebug() << "clock stamp use:" << human_time_format(linux_clock.duration_ns()) << ", inner count:" << human_count_format(linux_clock.cycles());
+        LogDebug() << "c clock stamp use:" << (c_clock * 1.0 / CLOCKS_PER_SEC * 1000) << "ms" << ", inner count:" << human_count_format(c_clock);
+        LogDebug() << "steady_clock stamp use:" << steady_clock * 1.0 << "c" << ", inner count:" << human_count_format(steady_clock);
+        LogDebug() << "sys_clock stamp use:" << sys_clock * 1.0 << "c" << ", inner count:" << human_count_format(sys_clock);
 
     }
     
