@@ -74,6 +74,7 @@ int main(int argc, char *argv[])
             cycles += perf_tsc_rdtsc();
         }
     }
+
     if (true)
     {
         PERF_DEFINE_AUTO_REG(rec, "perf_tsc_sys dis 1000w");
