@@ -38,20 +38,20 @@ int main(int argc, char *argv[])
     if (true)
     {
         PERF_DEFINE_AUTO_OT_RECORD(ot, "self use mem");
-       PERF_OT_COUNTER_CALL_MEM(ot, perf_self_memory_use());
+        PERF_AUTO_REG_REC_MEM(ot.reg(), perf_self_memory_use());
     }
 
     if (true)
     {
        PERF_DEFINE_AUTO_OT_RECORD(ot, "PerfInst use mem");
-       PERF_OT_COUNTER_CALL_MEM(ot, sizeof(PerfInst));
+       PERF_AUTO_REG_REC_MEM(ot.reg(), sizeof(PerfInst));
     }
 
 
     double cycles = 0.0f;
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(guard, "perf_tsc_sys bat 1000w", 1000*10000);
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_sys bat 1000w", 1000*10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_sys();
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(guard, "perf_tsc_clock bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_clock bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_clock();
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(guard, "perf_tsc_rdtsc bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtsc bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_rdtsc();
@@ -76,43 +76,35 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD(rec, "perf_tsc_sys dis 1000w");
+        PERF_DEFINE_AUTO_REG(rec, "perf_tsc_sys dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_START_OT_COUNTER(rec);
+            PERF_AUTO_REG_START(rec);
             cycles += perf_tsc_sys();
-            PERF_STOP_OT_COUNTER(rec);
+            PERF_AUTO_REG_RECORD(rec);
         }
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD(rec, "perf_tsc_clock dis 1000w");
+        PERF_DEFINE_AUTO_REG(rec, "perf_tsc_clock dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_START_OT_COUNTER(rec);
+            PERF_AUTO_REG_START(rec);
             cycles += perf_tsc_clock();
-            PERF_STOP_OT_COUNTER(rec);
+            PERF_AUTO_REG_RECORD(rec);
         }
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD(rec, "perf_tsc_rdtsc dis 1000w");
+        PERF_DEFINE_AUTO_REG(rec, "perf_tsc_rdtsc dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_START_OT_COUNTER(rec);
+            PERF_AUTO_REG_START(rec);
             cycles += perf_tsc_rdtsc();
-            PERF_STOP_OT_COUNTER(rec);
+            PERF_AUTO_REG_RECORD(rec);
         }
     }
 
-    if (true)
-    {
-        PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(guard, "perf_tsc_sys bat 1000w", 1000 * 10000);
-        for (size_t i = 0; i < 1000 * 10000; i++)
-        {
-            cycles += perf_tsc_sys();
-        }
-    }
 
     if (true)
     {
@@ -133,7 +125,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(guard, "call cpu 1000w", 10000000);
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "call cpu 1000w", 10000000);
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU_WITH_C(ENUM_PERF_TEST, 10, 1000);
@@ -141,7 +133,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(guard, "call cpu 1000w (without count)", 10000000);
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "call cpu 1000w (without count)", 10000000);
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU(ENUM_PERF_TEST, 1000);
@@ -149,7 +141,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(guard, "call mem 1000w ", 10000000);
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "call mem 1000w ", 10000000);
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_MEM(ENUM_PERF_TEST, 1000);
@@ -164,14 +156,14 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD(ot, "call timer 10ms ");
+        PERF_DEFINE_AUTO_REG(ot, "call timer 10ms ");
         for (int i = 0; i < 100; i++)
         {
-            PERF_START_OT_COUNTER(ot);
+            PERF_AUTO_REG_START(ot);
             PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        PERF_START_OT_COUNTER(ot);
+        PERF_AUTO_REG_START(ot);
         PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
     }
 
