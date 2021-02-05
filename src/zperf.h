@@ -473,6 +473,7 @@ public:
     static const int TRACK_COUNT = S;
     static const int PERF_RECORD_TYPE = T;
     static const int SERIALIZE_BUFF_LEN = PERF_MAX_TRACK_CHILD_DEPTH* PERF_MAX_TRACK_CHILD_COUNT* PERF_MAX_TRACK_LINE_SIZE * 2;
+    static_assert(TRACK_COUNT <= PERF_MAX_TRACK_SIZE, "");
     PerfRecord() 
     {
         memset(tracks_, 0, sizeof(tracks_));
@@ -480,7 +481,7 @@ public:
         state_ = 0;
         merge_to_size_ = 0;
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
-        global_track_id_ = 0;
+        used_track_id_ = PERF_DYN_TRACK_BEGIN;
         serialize_buff_[0] = '\0';
     };
     static PerfRecord& instance()
@@ -586,11 +587,11 @@ public:
     double circles_per_ns(int t) { return circles_per_ns_[t]; }
     int new_dyn_track_id() 
     { 
-        if (global_track_id_ >= TRACK_COUNT)
+        if (used_track_id_ >= TRACK_COUNT)
         {
             return 0;
         }
-        return ++global_track_id_; 
+        return ++used_track_id_; 
     }
 private:
     PerfTrack tracks_[S];
@@ -599,7 +600,7 @@ private:
     int merge_to_size_;
     unsigned int state_;
     double circles_per_ns_[PERF_CYCLE_COUNTER_MAX];
-    int global_track_id_;
+    int used_track_id_;
     char serialize_buff_[SERIALIZE_BUFF_LEN];
 };
 
@@ -698,10 +699,6 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
 
-    perf_set_inverse_hz(PERF_CYCLE_COUNTER_DEFAULT, mhz);
-    perf_set_inverse_hz(PERF_CYCLE_COUNTER_RDTSC, mhz);
-    perf_set_inverse_hz(PERF_CYCLE_COUNTER_CLOCK, 1.0);
-    perf_set_inverse_hz(PERF_CYCLE_COUNTER_SYS, 1.0);
 
 #endif
     return 0;
@@ -1011,23 +1008,51 @@ private:
 
 
 template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
-class PerfTrackReg
+class PerfAutoReg
 {
 public:
-    PerfTrackReg(const char* desc)
+    PerfAutoReg(const char* desc)
     {
         this_id_ = PerfInst.new_dyn_track_id();
         PerfInst.regist_track(this_id_, desc, T, false);
     }
-    int track_id() { return this_id_; }
-    
-    ~PerfTrackReg()
+
+    ~PerfAutoReg()
     {
 
     }
 
+    void start()
+    {
+        counter_.start();
+    }
+
+    void restart()
+    {
+        counter_.start();
+    }
+
+    void record_current()
+    {
+        PerfInst.call_cpu(this_id_, counter_.save().cycles());
+    }
+
+    void record_current(long long count)
+    {
+        PerfInst.call_cpu(this_id_, count, counter_.save().cycles());
+    }
+
+    void record_mem(long long mem)
+    {
+        PerfInst.call_mem(this_id_, 1, mem);
+    }
+
+    int track_id() { return this_id_; }
+    PerfCounter<T>& counter() { return counter_; }
+
 private:
     int this_id_;
+    PerfCounter<T> counter_;
 };
 
 template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
@@ -1036,53 +1061,34 @@ class PerfAutoOTRecord
 public:
     PerfAutoOTRecord(const char* desc) :reg_(desc), count_(1)
     {
-        counter_.start();
+        reg_.start();
     }
     PerfAutoOTRecord(const char* desc, long long count):reg_(desc), count_(count)
     {
-        counter_.start();
+        reg_.start();
     }
     ~PerfAutoOTRecord()
     {
-        PerfInst.call_cpu(reg_.track_id(), counter_.save().cycles());
+        reg_.record_current(count_);
     }
 
-    void start()
-    {
-        counter_.start();
-    }
-
-    void save()
-    {
-        PerfInst.call_cpu(reg_.track_id(), counter_.save().cycles());
-    }
-
-    void save(long long count)
-    {
-        PerfInst.call_cpu(reg_.track_id(), count, counter_.save().cycles());
-    }
-
-    void call_mem(long long mem)
-    {
-        PerfInst.call_mem(reg_.track_id(), 1, mem);
-    }
-
-    int track_id() { return reg_.track_id(); }
-    PerfCounter<T>& counter() { return counter_; }
+    PerfAutoReg<T>& reg() { return reg_; }
 private:
-    PerfTrackReg<T> reg_;
-    PerfCounter<T> counter_;
+    PerfAutoReg<T> reg_;
     long long count_;
 };
 
 
 
+
+
+
 #ifdef OPEN_ZPERF
 
-#define REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
-#define REGIST_TRACK_AUTO(id)  PerfInst.regist_track(id, #id, PERF_CYCLE_COUNTER_DEFAULT, false)
-#define BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
-#define BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
+#define PERF_REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
+#define PERF_FAST_REGIST_TRACK(id)  PerfInst.regist_track(id, #id, PERF_CYCLE_COUNTER_DEFAULT, false)
+#define PERF_BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
+#define PERF_BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
 
 #define PERF_INIT(desc) PerfInst.init_perf(desc)
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
@@ -1104,22 +1110,34 @@ private:
 
 #define PERF_DEFINE_COUNTER(tc)  PerfCounter<> tc
 #define PERF_DEFINE_COUNTER_REF(tc, ref)  PerfCounter<> tc(ref.begin())
-#define PERF_DEFINE_COUNTER_EMPTY(tc)  PerfCounter<> tc(0)
+#define PERF_DEFINE_COUNTER_INIT(tc, start)  PerfCounter<> tc(start)
 #define PERF_START_COUNTER(pf) pf.start()
-#define PERF_STOP_COUNTER(pf) pf.save()
+#define PERF_RESTART_COUNTER(pf) pf.start()
+#define PERF_REC_COUNTER(pf) pf.save()
+#define PERF_DEFINE_AUTO_RECORD(tc, idx) PerfAutoRecord<> tc(idx)
 
-#define PERF_DEFINE_AUTO_REG(reg, desc) PerfTrackReg<> reg(desc);  
+
+
+#define PERF_DEFINE_AUTO_REG(reg, desc) PerfAutoReg<> reg(desc);  
+#define PERF_AUTO_REG_START(reg) reg.start()
+#define PERF_AUTO_REG_RECORD(reg) reg.record_current()
+#define PERF_AUTO_REG_REC_MEM(reg, add) reg.record_mem(add)
+
+
 #define PERF_DEFINE_AUTO_OT_RECORD(rec, desc) PerfAutoOTRecord<> rec(desc);  
-#define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(rec, desc, c) PerfAutoOTRecord<> rec(desc, c);  
-#define PERF_START_OT_COUNTER(rec) rec.start()
-#define PERF_STOP_OT_COUNTER(rec) rec.save()
+#define PERF_DEFINE_AUTO_OT_RECORD_WITH_C(rec, desc, c) PerfAutoOTRecord<> rec(desc, c);  
 
-#define PERF_OT_COUNTER_CALL_MEM(rec, add) rec.call_mem(add)
 
-#define PERF_DEFINE_COUNTER_GUARD(tc, idx) PerfAutoRecord<> tc(idx)
+
 
 #else
-#define PERF_INIT() 
+
+#define PERF_REGIST_TRACK(id, name, pt, force)  
+#define PERF_FAST_REGIST_TRACK(id)  
+#define PERF_BIND_CHILD(id, cid)  
+#define PERF_BIND_MERGE(id, tid) 
+
+#define PERF_INIT(desc) 
 #define PERF_RESET_CHILD(idx) 
 #define PERF_UPDATE_MERGE()
 
@@ -1138,15 +1156,16 @@ private:
 #define PERF_DEFINE_COUNTER_REF(tc, ref)  
 #define PERF_DEFINE_COUNTER_EMPTY(tc) 
 #define PERF_START_COUNTER(pf) 
-#define PERF_STOP_COUNTER(pf) 
+#define PERF_RESTART_COUNTER(pf) 
+#define PERF_REC_COUNTER(pf) 
 #define PERF_DEFINE_AUTO_REG(otc, desc)
 #define PERF_DEFINE_AUTO_OT_RECORD(otc, desc)
-#define PERF_DEFINE_OT_COUNTER_GUARD_WITH_C(otc, desc, c)
-#define PERF_START_OT_COUNTER(otc) 
-#define PERF_STOP_OT_COUNTER(otc) 
-#define PERF_OT_COUNTER_CALL_MEM(otc, cost)
+#define PERF_DEFINE_AUTO_OT_RECORD_WITH_C(otc, desc, c)
+#define PERF_AUTO_REG_START(otc) 
+#define PERF_AUTO_REG_RECORD(otc) 
+#define PERF_AUTO_REG_REC_MEM(otc, cost)
 
-#define PERF_DEFINE_COUNTER_GUARD(tc, idx)
+#define PERF_DEFINE_AUTO_RECORD(tc, idx)
 #endif
 
 

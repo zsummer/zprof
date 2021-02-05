@@ -32,7 +32,7 @@ void entry_mem_test()
     }
     PERF_CALL_CPU_G_REALTIME_WITH_C(ENUM_BAT_ALLOC_FREE, 10000, counter);
 
-    PERF_DEFINE_COUNTER_GUARD(guard, ENUM_ENTRY);
+    PERF_DEFINE_AUTO_RECORD(guard, ENUM_ENTRY);
 
     for (size_t i = 0; i < 10000; i++)
     {
