@@ -264,7 +264,7 @@ inline long long perf_tsc_sys()
 
 
 
-inline int perf_self_memory_use()
+inline long long perf_self_memory_use()
 {
     const char* file = "/proc/self/status";
     FILE* fp = fopen(file, "r");
@@ -1124,8 +1124,9 @@ private:
 #define PERF_AUTO_REG_REC_MEM(reg, add) reg.record_mem(add)
 
 
-#define PERF_DEFINE_AUTO_OT_RECORD(rec, desc) PerfAutoOTRecord<> rec(desc);  
-#define PERF_DEFINE_AUTO_OT_RECORD_WITH_C(rec, desc, c) PerfAutoOTRecord<> rec(desc, c);  
+#define PERF_DEFINE_AUTO_OT_RECORD(rec, desc) PerfAutoOTRecord<> rec(desc)
+#define PERF_DEFINE_AUTO_OT_RECORD_WITH_C(rec, desc, c) PerfAutoOTRecord<> rec(desc, c)
+#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ PerfAutoReg<> __temp_perf_record_mem__(desc); PERF_CALL_MEM(__temp_perf_record_mem__.track_id(), perf_self_memory_use()); }while(0)
 
 
 
@@ -1159,13 +1160,14 @@ private:
 #define PERF_RESTART_COUNTER(pf) 
 #define PERF_REC_COUNTER(pf) 
 #define PERF_DEFINE_AUTO_REG(otc, desc)
-#define PERF_DEFINE_AUTO_OT_RECORD(otc, desc)
-#define PERF_DEFINE_AUTO_OT_RECORD_WITH_C(otc, desc, c)
 #define PERF_AUTO_REG_START(otc) 
 #define PERF_AUTO_REG_RECORD(otc) 
 #define PERF_AUTO_REG_REC_MEM(otc, cost)
 
 #define PERF_DEFINE_AUTO_RECORD(tc, idx)
+#define PERF_DEFINE_AUTO_OT_RECORD(rec, desc) 
+#define PERF_DEFINE_AUTO_OT_RECORD_WITH_C(rec, desc, c) 
+#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc)
 #endif
 
 
