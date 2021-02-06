@@ -68,16 +68,45 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtsc bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtsc(lfence) bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_rdtsc();
         }
     }
+
+    
+    if (false)
+    {
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtscp bat 1000", 1000);
+        for (size_t i = 0; i < 1000; i++)
+        {
+            cycles += perf_tsc_rdtscp();
+        }
+    }
+
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c clock bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtsc_nofence bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += perf_tsc_rdtsc_nofence();
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_mfence bat 1000w", 1000 * 10000);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += perf_tsc_mfence();
+        }
+    }
+
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c clock bat 10w", 10 * 10000);
+        for (size_t i = 0; i < 10 * 10000; i++)
         {
             cycles += clock();
         }
@@ -138,6 +167,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    printf("%g", cycles);
 
     if (true)
     {

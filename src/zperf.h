@@ -55,9 +55,12 @@
 #include <io.h>
 #include <shlwapi.h>
 #include <process.h>
+#include <powerbase.h>
+#include <powrprof.h>
 #pragma comment(lib, "shlwapi")
 #pragma comment(lib, "User32.lib")
 #pragma comment(lib,"ws2_32.lib")
+#pragma comment(lib,"PowrProf.lib")
 #pragma warning(disable:4996)
 
 #else
@@ -191,21 +194,41 @@ struct PerfTrack
 inline long long perf_tsc_rdtsc()
 {
 #ifdef WIN32
-    long long count = 0;
-    QueryPerformanceCounter((LARGE_INTEGER*)&count);
-    return count;
-    //return (long long)__rdtsc();
-#elif (defined PERF_RDTSCP)
-    unsigned long hi, lo;
-    asm volatile("rdtscp" : "=a"(lo), "=d"(hi));
-    uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
-    return (long long)val;
-#elif (defined PERF_RDTSC_INTEL)
+    return (long long)__rdtsc();
+#else
     unsigned int lo, hi;
     __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
     uint64_t val = ((uint64_t)hi << 32) | lo;
     return (long long)val;
+#endif
+}
 
+inline long long perf_tsc_rdtsc_nofence()
+{
+#ifdef WIN32
+    return (long long)__rdtsc();
+#else
+    unsigned long hi, lo;
+    asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+    return (long long)val;
+#endif
+}
+inline long long perf_tsc_rdtscp()
+{
+#ifdef WIN32
+    return (long long)__rdtsc();
+#else
+    unsigned long hi, lo;
+    asm volatile("rdtscp" : "=a"(lo), "=d"(hi));
+    uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+    return (long long)val;
+#endif
+}
+inline long long perf_tsc_mfence()
+{
+#ifdef WIN32
+    return (long long)__rdtsc();
 #else
     unsigned int lo, hi;
     __asm__ __volatile__("mfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
@@ -213,8 +236,6 @@ inline long long perf_tsc_rdtsc()
     return (long long)val;
 #endif
 }
-
-
 
 inline long long perf_tsc_clock()
 {
@@ -667,22 +688,45 @@ int PerfRecord<T, S>::add_merge_to(int idx, int to)
     merge_to_[merge_to_size_++] = idx;
     return 0;
 }
-
+#ifdef WIN32
+struct PERF_PROCESSOR_POWER_INFORMATION
+{
+    ULONG  Number;
+    ULONG  MaxMhz;
+    ULONG  CurrentMhz;
+    ULONG  MhzLimit;
+    ULONG  MaxIdleState;
+    ULONG  CurrentIdleState;
+};
+#endif
 template<int T, int S>
 int PerfRecord<T, S>::init_perf(const char* desc)
 {
     sprintf(desc_, "%s", desc);
 #ifdef WIN32
-    double rate = 0;
+    double freq_rate = 0;
     long long win_freq = 0;
     QueryPerformanceFrequency((LARGE_INTEGER*)&win_freq);
-    rate = 1.0 / win_freq;
-    rate *= 1000.0 * 1000 * 1000;
-    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
+    freq_rate = 1.0 / win_freq;
+    freq_rate *= 1000.0 * 1000 * 1000;
 
+    SYSTEM_INFO si = { 0 };
+    GetSystemInfo(&si);
+    std::vector<PERF_PROCESSOR_POWER_INFORMATION> pppi(si.dwNumberOfProcessors);
+    DWORD dwSize = sizeof(PERF_PROCESSOR_POWER_INFORMATION) * si.dwNumberOfProcessors;
+    memset(&pppi[0], 0, dwSize);
+    long ret = CallNtPowerInformation(ProcessorInformation, NULL, 0, &pppi[0], dwSize);
+    if (ret != 0 || pppi[0].MaxMhz <= 0)
+    {
+        return -1;
+    }
+    double tsc_rate = 1.0 / pppi[0].MaxMhz * 1000;
+    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = tsc_rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = tsc_rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = freq_rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
+    PERF_PROCESSOR_POWER_INFORMATION ppi;
+    CallNtPowerInformation(ProcessorInformation, NULL, 0, &ppi, sizeof(ppi));
 #else
     //cpu_set_t set;
     //CPU_ZERO(&set);
