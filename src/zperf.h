@@ -131,6 +131,7 @@ enum PerfCycleCounter
     PERF_CYCLE_COUNTER_DEFAULT,
     PERF_CYCLE_COUNTER_SYS,
     PERF_CYCLE_COUNTER_CLOCK,
+    PERF_CYCLE_CONNTER_CHRONO,
     PERF_CYCLE_COUNTER_RDTSC,
     PERF_CYCLE_COUNTER_MAX,
 };
@@ -181,10 +182,6 @@ struct PerfTrack
 
 
 
-
-
-//#define PERF_RDTSCP
-#define PERF_RDTSC_INTEL
 
 
 
@@ -283,7 +280,11 @@ inline long long perf_tsc_sys()
 #endif
 }
 
-
+inline long long perf_tsc_chrono()
+{
+    
+    return std::chrono::high_resolution_clock().now().time_since_epoch().count();
+}
 
 inline long long perf_self_memory_use()
 {
@@ -406,6 +407,12 @@ inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_COUNTER_SYS>* p
     return perf_tsc_sys();
 }
 
+template<>
+inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_CONNTER_CHRONO>* ptr)
+{
+    (void)ptr;
+    return perf_tsc_chrono();
+}
 
 
 
@@ -745,6 +752,10 @@ int PerfRecord<T, S>::init_perf(const char* desc)
 
 
 #endif
+    double chrono_rate = (double)std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count();
+    chrono_rate /= 1000.0 * 1000.0 * 1000.0;
+    chrono_rate = 1.0 / chrono_rate;
+    circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO] = chrono_rate;
     return 0;
 
 }
