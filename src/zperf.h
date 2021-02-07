@@ -400,11 +400,7 @@ template<>
 inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_COUNTER_DEFAULT>* ptr)
 {
     (void)ptr;
-#ifdef __APPLE__
-    return perf_tsc_chrono();
-#else
     return perf_tsc_rdtsc();
-#endif
 }
 
 
@@ -765,10 +761,10 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     rdtsc_rate *= 1000 * 1000;
     rdtsc_rate = 1.0 / rdtsc_rate;
     rdtsc_rate *= 1000 * 1000 * 1000;
-    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
     circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rdtsc_rate;
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
+    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
 #else
     //cpu_set_t set;
     //CPU_ZERO(&set);
