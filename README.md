@@ -59,20 +59,23 @@ __asm__ __volatile__("sfence" : :: "memory")  //store
 
 ### 常用计时工具精度和耗时   
 
+
 * C库函数 time(NULL)
   * WIN32 计数精度为1s  获取消耗32ns  
   * linux 计数精度为1s  获取消耗2ns  
+  * MAC   计数精度为1s  获取消耗155ns  
 
 * C库函数 clock  
   * WIN32 计数精度为1ms  获取消耗38ns  
-  * linux 下计数精度为1us 获取消耗122ns(Intel X5650 下766ns)  实际测试精度准确度在100ms级别(误差有几十ms 唯一一个有误差)    
+  * linux 下计数精度为1us 获取消耗122ns(Intel X5650 下766ns, mac:476)  实际测试精度准确度在100ms级别(误差有几十ms 唯一一个有误差)    
 
-* C++ chrono
+* C++ chrono : high_resolution_clock是通常为steady clock(实现定义 最好指定为steady)  
   * WIN32 system_clock 计数精度为100ns    获取消耗25ns DEBUG 39ns
   * WIN32 steady_clock 计数精度为100ns    获取消耗18ns DEBUG 65ns
-  * linux system_clock 计数精度为1ns      获取消耗20ns DEBUG 25ns
+  * linux system_clock 计数精度为1ns      获取消耗20ns DEBUG 25ns  
   * linux steady_clock 计数精度为1ns      获取消耗19ns DEBUG 26ns
-
+  * linux system_clock 计数精度为1ns      获取消耗33ns DEBUG  
+  * linux steady_clock 计数精度为1ns      获取消耗45ns DEBUG  
 * QueryPerformanceCounter   
   * 计数精度为1ns    获取消耗28ns 
 * GetSystemTimeAsFileTime  
@@ -86,7 +89,7 @@ __asm__ __volatile__("sfence" : :: "memory")  //store
 * rdtscp  
     * 计数精度为0.4ns左右 取决于主频   获取消耗2.58us (X5650双路CPU下600us/2.28s)  
 * load fence rdtsc   
-  * 计数精度为0.4ns左右 取决于主频   获取消耗9ns  (24 CPU CIRCLE)  
+  * 计数精度为0.4ns左右 取决于主频   获取消耗9ns  (24 CPU CIRCLE)  (MAC 13ns)
 * load&store fence rdtsc   
   * 计数精度为0.4ns左右 取决于主频   获取消耗15ns 
   * 
@@ -100,15 +103,25 @@ __asm__ __volatile__("sfence" : :: "memory")  //store
   * 4次加法赋值 1.59ns  (大样本均摊)   
 
 * 小结   
-  *  一般CPU主频是2.5~4Ghz之间(对本文来说为标频, 睿频无意义),  标频通常代表着高精度计数的极限
-     *  计数极限为标频倒数 按照主流CPU的标频而言  通常最高精度在0.4~0.2ns左右;  
+  *  一般CPU主频是2.5\~4Ghz之间(对本文来说为标频, 睿频无意义),  标频通常代表着高精度计数的极限
+     *  计数极限为标频倒数 按照主流CPU的标频而言  通常最高精度在0.4\~0.2ns左右;  
      *  读取和使用计数也需要执行指令 执行指令需要CPU计算    
      *  读取和使用计数可能涉及到指令以及计数的缓存内存操作等     
      *  不加保护的rdtsc约7ns (本文I7 3.7g主频CPU)  
   
-  * std::chrono的稳定性和精度均为良好 如果要求不是特别高 可以采用该方案 
-    * rdtsc比chrono方案快2~3倍 从比例上来说未有大量级的变化, 但是在指令运行消耗上有不可替代的差异  
-    * 本文测试只是读取count而几乎未用到任何duration包装和cast转换, 在debug下还会有额外的开销   
+  * std::chrono的稳定性和精度均为良好 并且跨平台性最好(C++11标准)   
+    * 通常在20\~65ns左右(大概测试了3台windows 5台linux 1台mac (均是INTEL CPU))  
+    * 100ns以下的获取损耗 1ns精度   
+  
+  * rdtsc最快 兼容性为C++ + intel/AMD cpu(上市年份应该在07/08年以后的新CPU即可)   
+    * 通常稳定在10ns以下或者说在30个CPU周期之内, 和系统,编译选项关联不大,  不同CPU之间的差异也大;   
+    * 横向对比则相当于4次三元取值指令的性能开销   
+    * 对于指令级粒度的性能测试,  以及进行高频函数的性能统计采样中,  更小的性能开销和更高的精度具有不可取代的作用和价值.   
+  
+  * 其他 存在以下集中问题
+    * 性能开销太大或者不稳定  
+    * 精度不够或者不稳定  
+    * 不同编译选项或者平台差异过大  
 
 
 ### other perf tools   
