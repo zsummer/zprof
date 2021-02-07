@@ -84,6 +84,9 @@
 #ifdef __APPLE__
 #include "TargetConditionals.h"
 #include <dispatch/dispatch.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
 #if !TARGET_OS_IPHONE
 #define NFLOG_HAVE_LIBPROC
 #include <libproc.h>
@@ -328,6 +331,21 @@ inline long long perf_self_memory_use()
 
 inline double perf_self_cpu_mhz()
 {
+    double mhz = 1;
+#ifdef __APPLE__
+    int mib[2];
+    unsigned int freq;
+    size_t len;
+    mib[0] = CTL_HW;
+    mib[1] = HW_CPU_FREQ;
+    len = sizeof(freq);
+    sysctl(mib, 2, &freq, &len, NULL, 0);
+    mhz = freq;
+    mhz /= 1000 * 1000;
+#else
+
+
+
     const char* file = "/proc/cpuinfo";
     FILE* fp = fopen(file, "r");
     if (NULL == fp)
@@ -336,7 +354,7 @@ inline double perf_self_cpu_mhz()
     }
 
     char line_buff[256];
-    double mhz = 1;
+    
     while (fgets(line_buff, sizeof(line_buff), fp) != NULL)
     {
         if (strstr(line_buff, "cpu MHz") != NULL)
@@ -360,8 +378,8 @@ inline double perf_self_cpu_mhz()
             break;
         }
     }
-
     fclose(fp);
+#endif // __APPLE__
     return mhz;
 }
 
@@ -743,10 +761,14 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
 #elif (defined __APPLE__)
+    double rdtsc_rate = perf_self_cpu_mhz();
+    rdtsc_rate *= 1000 * 1000;
+    rdtsc_rate = 1.0 / mhz;
+    rdtsc_rate *= 1000 * 1000 * 1000;
     circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
-    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
-    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
-    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
+    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rdtsc_rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
+    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
 #else
     //cpu_set_t set;
     //CPU_ZERO(&set);
@@ -754,10 +776,10 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     //sched_setaffinity(0, sizeof(set), &set);
     //cat /proc/cpuinfo |grep constant_tsc  
 
-    double mhz = perf_self_cpu_mhz();
-    mhz *= 1000 * 1000;
-    mhz = 1.0 / mhz;
-    mhz *= 1000 * 1000 * 1000;
+    double rdtsc_rate = perf_self_cpu_mhz();
+    rdtsc_rate *= 1000 * 1000;
+    rdtsc_rate = 1.0 / mhz;
+    rdtsc_rate *= 1000 * 1000 * 1000;
     circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = mhz;
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
