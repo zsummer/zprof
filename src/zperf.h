@@ -763,7 +763,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
 #elif (defined __APPLE__)
     double rdtsc_rate = perf_self_cpu_mhz();
     rdtsc_rate *= 1000 * 1000;
-    rdtsc_rate = 1.0 / mhz;
+    rdtsc_rate = 1.0 / rdtsc_rate;
     rdtsc_rate *= 1000 * 1000 * 1000;
     circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
     circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rdtsc_rate;
@@ -778,7 +778,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
 
     double rdtsc_rate = perf_self_cpu_mhz();
     rdtsc_rate *= 1000 * 1000;
-    rdtsc_rate = 1.0 / mhz;
+    rdtsc_rate = 1.0 / rdtsc_rate;
     rdtsc_rate *= 1000 * 1000 * 1000;
     circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = mhz;
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
