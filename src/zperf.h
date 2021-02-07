@@ -382,7 +382,11 @@ template<>
 inline long long perf_tsc(const PerfCycleCounterClass<PERF_CYCLE_COUNTER_DEFAULT>* ptr)
 {
     (void)ptr;
+#ifdef __APPLE__
+    return perf_tsc_chrono();
+#else
     return perf_tsc_rdtsc();
+#endif
 }
 
 
@@ -710,6 +714,11 @@ template<int T, int S>
 int PerfRecord<T, S>::init_perf(const char* desc)
 {
     sprintf(desc_, "%s", desc);
+    double chrono_rate = (double)std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count();
+    chrono_rate /= 1000.0 * 1000.0 * 1000.0;
+    chrono_rate = 1.0 / chrono_rate;
+    circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO] = chrono_rate;
+
 #ifdef WIN32
     double freq_rate = 0;
     long long win_freq = 0;
@@ -728,12 +737,16 @@ int PerfRecord<T, S>::init_perf(const char* desc)
         return -1;
     }
     double tsc_rate = 1.0 / pppi[0].MaxMhz * 1000;
-    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = tsc_rate;
+    
     circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = tsc_rate;
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = freq_rate;
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
-    PERF_PROCESSOR_POWER_INFORMATION ppi;
-    CallNtPowerInformation(ProcessorInformation, NULL, 0, &ppi, sizeof(ppi));
+    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
+#elif (defined __APPLE__)
+    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
+    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
+    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
+    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO];
 #else
     //cpu_set_t set;
     //CPU_ZERO(&set);
@@ -745,17 +758,12 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     mhz *= 1000 * 1000;
     mhz = 1.0 / mhz;
     mhz *= 1000 * 1000 * 1000;
-    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = mhz;
     circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = mhz;
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
-
-
+    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
 #endif
-    double chrono_rate = (double)std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count();
-    chrono_rate /= 1000.0 * 1000.0 * 1000.0;
-    chrono_rate = 1.0 / chrono_rate;
-    circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO] = chrono_rate;
+
     return 0;
 
 }
