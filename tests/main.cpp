@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     }
 
 
-    double cycles = 0.0f;
+    volatile double cycles = 0.0f;
     if (true)
     {
         PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_sys bat 1000w", 1000*10000);
@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
             cycles += perf_tsc_clock();
         }
     }
+
     if (true)
     {
         PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtsc(lfence) bat 1000w", 1000 * 10000);
@@ -78,8 +79,8 @@ int main(int argc, char *argv[])
     
     if (false)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtscp bat 1000", 1000);
-        for (size_t i = 0; i < 1000; i++)
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtscp bat 1000", 1000 * 10000);
+        for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_rdtscp();
         }
@@ -129,6 +130,16 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
+        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_chrono 1000w", 1000 * 10000);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += perf_tsc_chrono();
+        }
+    }
+
+
+    if (true)
+    {
         PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c time bat 1000w", 1000 * 10000);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
@@ -167,7 +178,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("%g", cycles);
 
     if (true)
     {
@@ -230,6 +240,7 @@ int main(int argc, char *argv[])
         PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
     }
 
+
     PERF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
     PERF_UPDATE_MERGE();
@@ -246,12 +257,15 @@ int main(int argc, char *argv[])
         PerfCounter<PERF_CYCLE_COUNTER_RDTSC> rdtsc;
         PerfCounter<PERF_CYCLE_COUNTER_SYS> sys;
         PerfCounter<PERF_CYCLE_COUNTER_CLOCK> linux_clock;
+        PerfCounter<PERF_CYCLE_CONNTER_CHRONO> chrono_clock;
         rdtsc.start();
         sys.start();
         linux_clock.start();
+        chrono_clock.start();
         clock_t c_clock = clock();
         long long steady_clock = std::chrono::steady_clock().now().time_since_epoch().count();
         long long sys_clock = std::chrono::system_clock().now().time_since_epoch().count();
+        
         for (int i = 0; i < 1000*10000; i++)
         {
             rdtsc.save();
@@ -259,6 +273,7 @@ int main(int argc, char *argv[])
         rdtsc.save();
         sys.save();
         linux_clock.save();
+        chrono_clock.save();
         c_clock = clock() - c_clock;
         steady_clock = std::chrono::steady_clock().now().time_since_epoch().count() - steady_clock;
         sys_clock = std::chrono::system_clock().now().time_since_epoch().count() - sys_clock;
@@ -266,6 +281,7 @@ int main(int argc, char *argv[])
         LogDebug() << "rdtsc stamp use:" << human_time_format(rdtsc.duration_ns()) << ", inner count:" << human_count_format(rdtsc.cycles());
         LogDebug() << "sys stamp use:" << human_time_format(sys.duration_ns()) << ", inner count:" << human_count_format(sys.cycles());
         LogDebug() << "clock stamp use:" << human_time_format(linux_clock.duration_ns()) << ", inner count:" << human_count_format(linux_clock.cycles());
+        LogDebug() << "chrono high stamp use:" << human_time_format(chrono_clock.duration_ns()) << ", inner count:" << human_count_format(chrono_clock.cycles());
         LogDebug() << "c clock stamp use:" << (c_clock * 1.0 / CLOCKS_PER_SEC * 1000) << "ms" << ", inner count:" << human_count_format(c_clock);
         LogDebug() << "steady_clock stamp use:" << steady_clock * 1.0 << "c" << ", inner count:" << human_count_format(steady_clock);
         LogDebug() << "sys_clock stamp use:" << sys_clock * 1.0 << "c" << ", inner count:" << human_count_format(sys_clock);
