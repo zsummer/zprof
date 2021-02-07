@@ -780,7 +780,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     rdtsc_rate *= 1000 * 1000;
     rdtsc_rate = 1.0 / rdtsc_rate;
     rdtsc_rate *= 1000 * 1000 * 1000;
-    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = mhz;
+    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rdtsc_rate;
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
