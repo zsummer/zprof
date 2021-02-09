@@ -25,6 +25,7 @@
 int main(int argc, char *argv[])
 {
     PERF_INIT("inner perf");
+    //PerfInst.init_perf("inner perf");
     regist_perf();
 
     if (true)
@@ -187,7 +188,16 @@ int main(int argc, char *argv[])
             PERF_AUTO_REG_RECORD_FAST(rec);
         }
     }
-
+    if (true)
+    {
+        PERF_DEFINE_AUTO_REG_COUNTER(rec, "perf_tsc_rdtsc_nofence dis fast 1000w", PERF_CYCLE_COUNTER_RDTSC_NOFENCE);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_AUTO_REG_START(rec);
+            cycles += perf_tsc_rdtsc();
+            PERF_AUTO_REG_RECORD_FAST(rec);
+        }
+    }
     if (true)
     {
         PERF_DEFINE_AUTO_OT_RECORD(guard, "sleep 300ms: sys ");
@@ -277,7 +287,7 @@ int main(int argc, char *argv[])
         
         for (int i = 0; i < 1000*10000; i++)
         {
-            rdtsc.save();
+            cycles += rdtsc.save().cycles();
         }
         rdtsc.save();
         sys.save();

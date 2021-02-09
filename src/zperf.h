@@ -136,6 +136,7 @@ enum PerfCycleCounter
     PERF_CYCLE_COUNTER_CLOCK,
     PERF_CYCLE_CONNTER_CHRONO,
     PERF_CYCLE_COUNTER_RDTSC,
+    PERF_CYCLE_COUNTER_RDTSC_NOFENCE,
     PERF_CYCLE_COUNTER_MAX,
 };
 template<PerfCycleCounter T>
@@ -412,6 +413,13 @@ inline long long perf_tsc(const PerfCycleCounterTypeClass<PERF_CYCLE_COUNTER_RDT
 {
     (void)ptr;
     return perf_tsc_rdtsc();
+}
+
+template<>
+inline long long perf_tsc(const PerfCycleCounterTypeClass<PERF_CYCLE_COUNTER_RDTSC_NOFENCE>* ptr)
+{
+    (void)ptr;
+    return perf_tsc_rdtsc_nofence();
 }
 
 template<>
@@ -775,6 +783,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     double tsc_rate = 1.0 / pppi[0].MaxMhz * 1000;
     
     circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = tsc_rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC_NOFENCE] = tsc_rate;
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = freq_rate;
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
@@ -784,6 +793,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     rdtsc_rate = 1.0 / rdtsc_rate;
     rdtsc_rate *= 1000 * 1000 * 1000;
     circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rdtsc_rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
@@ -799,6 +809,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     rdtsc_rate = 1.0 / rdtsc_rate;
     rdtsc_rate *= 1000 * 1000 * 1000;
     circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rdtsc_rate;
+    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
     circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
     circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
@@ -1262,6 +1273,7 @@ private:
 
 
 #define PERF_DEFINE_AUTO_REG(reg, desc) PerfAutoReg<> reg(desc);  
+#define PERF_DEFINE_AUTO_REG_COUNTER(reg, desc, counter) PerfAutoReg<counter> reg(desc) 
 #define PERF_AUTO_REG_START(reg) reg.start()
 #define PERF_AUTO_REG_RECORD(reg) reg.record_current()
 #define PERF_AUTO_REG_RECORD_WITH_C(reg, c) reg.record_current<c>()
@@ -1307,6 +1319,7 @@ private:
 #define PERF_RESTART_COUNTER(pf) 
 #define PERF_REC_COUNTER(pf) 
 #define PERF_DEFINE_AUTO_REG(otc, desc)
+#define PERF_DEFINE_AUTO_REG_COUNTER(reg, desc, counter) 
 #define PERF_AUTO_REG_START(otc) 
 #define PERF_AUTO_REG_RECORD(otc) 
 #define PERF_AUTO_REG_RECORD_WITH_C(reg, c) 

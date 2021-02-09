@@ -1,34 +1,50 @@
 # zperf record 
 
 ### **特点**  
-* 纳秒级精度, 纳秒级性能损耗: 
-  * rdtsc intel平台下 计数有效精度1纳秒 计数消耗偏差10纳秒  统计消耗总偏差15ns以下(默认使用)  
-  * rdtsc amd  平台下 计数有效精度1纳秒 计数消耗偏差15纳秒  统计消耗总偏差20ns以下(默认使用)  
-  * clock 统计消耗总偏差30ns以下   
-  * WIN32下精度100ns   
-  * 系统时钟精度1us  
+* 纳秒级精度, 纳秒级性能损耗, 跨windows/mac/linux: 
+  * rdtsc intel平台下 计数有效精度小于1纳秒 计数消耗偏差10纳秒  统计消耗总偏差15ns以下(默认使用, 可根据实际环境选择更快的方案(统计总消耗小于10ns))  
+  * rdtsc amd  平台下 计数有效精度小于1纳秒 计数消耗偏差15纳秒  统计消耗总偏差20ns以下(默认使用)  
+  * 最快的方案中(需要保证CPU乱序边界或者从测试数据角度不影响的情况下) 离散统计15ns的消耗代码段总统计只有5ns的增量偏差(实际被测试场景一般在100ns或者1us以上 总偏差和误差非常微小)
+* 有丰富的其他备选计时方案以及数据对比     
 * 被检测代码段外无额外性能损耗  
 * 可用于判定定时器的周期稳定性和平均偏离度  
 * 可用于判定函数性能消耗  
 * 可用于系统内存监控统计  
 * 可用于内存分配器消耗统计  
-
+* 可嵌入现有大规模项目埋点测试和统计    
+* 可用于小项目和测试方案的的快速检测  
 
 ### ref  
 
 
 * invariant TSC support| `cat /proc/cpuinfo |grep constant_tsc`
   * INTEL Nehalem from 2008 has invariant TSC support and no TSC SYNC problem
-  * INTEL 17.15.1 
-  ```
-  The time stamp counter in newer processors may support an enhancement, referred to as invariant TSC. 
-  Processor’s support for invariant TSC is indicated by CPUID.80000007H:EDX[8]. 
-  The invariant TSC will run at a constant rate in all ACPI P-, C-. and T-states. This is the architectural behavior 
-  moving forward. On processors with invariant TSC support, the OS may use the TSC for wall clock timer services 
-  (instead of ACPI or HPET timers). TSC reads are much more efficient and do not incur the overhead associated with 
-  a ring transition or access to a platform resource.
-  ```
-
+  * INTEL 17.15
+    ```
+      The RDTSC instruction is not serializing or ordered with other instructions. It does not necessarily wait until all
+    previous instructions have been executed before reading the counter. Similarly, subsequent instructions may begin
+    execution before the RDTSC instruction operation is performed.
+    ```
+  * INTEL 17.15.1 Invariant TSC
+      ```
+      The time stamp counter in newer processors may support an enhancement, referred to as invariant TSC. 
+      Processor’s support for invariant TSC is indicated by CPUID.80000007H:EDX[8]. 
+      The invariant TSC will run at a constant rate in all ACPI P-, C-. and T-states. This is the architectural behavior 
+      moving forward. On processors with invariant TSC support, the OS may use the TSC for wall clock timer services 
+      (instead of ACPI or HPET timers). TSC reads are much more efficient and do not incur the overhead associated with 
+      a ring transition or access to a platform resource.
+      ```
+  * 17.15.4 Invariant Time-Keeping
+    ```
+    The invariant TSC is based on the invariant timekeeping hardware (called Always Running Timer or ART), that runs
+    at the core crystal clock frequency. The ratio defined by CPUID leaf 15H expresses the frequency relationship
+    between the ART hardware and TSC.
+    If CPUID.15H:EBX[31:0] != 0 and CPUID.80000007H:EDX[InvariantTSC] = 1, the following linearity relationship
+    holds between TSC and the ART hardware:
+    TSC_Value = (ART_Value * CPUID.15H:EBX[31:0] )/ CPUID.15H:EAX[31:0] + K
+    Where 'K' is an offset that can be adjusted by a privileged agent2.
+    When ART hardware is reset, both invariant TSC and K are also reset.
+    ```
   * AMD K8 (10H Bacelona)  FROM 2003 has invariant TSC support  from K10 no TSC drift  
 
   * ARM V7 V8 has invariant PMCCNTR_EL0 support (need enable PMU)
@@ -53,9 +69,9 @@ __asm__ __volatile__("sfence" : :: "memory")  //store
   * 变频问题  
     * CPU睿频以及节能带来的主频动态变化  需要查看CPU手册确认tsc寄存器是否以恒定频率执行    
   * 多核同步问题  
-    * 多核心的调度带来的cpu切换问题 需要查看CPU手册确认tsc寄存器是否跨内核同步 以及提供的解决方式   
+    * 多核心的调度带来的cpu切换问题 需要查看CPU手册确认tsc寄存器的实现方式或者是否有跨内核同步的解决方式   
   * 最终性能   
-    * 不同的CPU上, 以及不同的虚拟化下, 可用的clock类型和rdtsc有截然不同的性能表现  需要实际测试选择  
+    * 不同的CPU上, 以及不同的虚拟化下, 可用的clock类型和tsc相关获取指令有截然不同的性能表现  需要查找手册确认或者实际测试 
 
 ### 常用计时工具精度和耗时   
 
@@ -103,7 +119,7 @@ __asm__ __volatile__("sfence" : :: "memory")  //store
   * 4次加法赋值 1.59ns  (大样本均摊)   
 
 * 小结   
-  *  一般CPU主频是2.5\~4Ghz之间(对本文来说为标频, 睿频无意义),  标频通常代表着高精度计数的极限
+  *  一般CPU主频是2.5\~4Ghz之间(对本文来说为标频, 睿频无意义),  标频通常代表着高精度计数的极限(INTEL平台下和同时和ART硬件有关)
      *  计数极限为标频倒数 按照主流CPU的标频而言  通常最高精度在0.4\~0.2ns左右;  
      *  读取和使用计数也需要执行指令 执行指令需要CPU计算    
      *  读取和使用计数可能涉及到指令以及计数的缓存内存操作等     
@@ -111,14 +127,15 @@ __asm__ __volatile__("sfence" : :: "memory")  //store
   
   * std::chrono的稳定性和精度均为良好 并且跨平台性最好(C++11标准)   
     * 通常在20\~65ns左右(大概测试了3台windows 5台linux 1台mac (均是INTEL CPU))  
-    * 100ns以下的获取损耗 1ns精度   
+    * 100ns以下的获取损耗 以及1ns精度   
   
-  * rdtsc最快 兼容性为C++ + intel/AMD cpu(上市年份应该在07/08年以后的新CPU即可)   
-    * 通常稳定在10ns以下或者说在30个CPU周期之内, 和系统,编译选项关联不大,  不同CPU之间的差异也大;   
+  * rdtsc精度最高 速度最快 稳定性最好 但是需要确认CPU体系和版本保证可用(当前只针对INTEL/AMD上市年份在07/08年以后的新CPU)   
+    * 通常稳定在10ns以下或者说在30个CPU周期之内, 几乎不受编译选项和平台影响, 并且不同CPU损耗接近;
     * 横向对比则相当于4次三元取值指令的性能开销   
     * 对于指令级粒度的性能测试,  以及进行高频函数的性能统计采样中,  更小的性能开销和更高的精度具有不可取代的作用和价值.   
   
-  * 其他 存在以下集中问题
+  
+  * 该小结中未列举到的其他方案 存在以下问题不推荐使用 
     * 性能开销太大或者不稳定  
     * 精度不够或者不稳定  
     * 不同编译选项或者平台差异过大  
