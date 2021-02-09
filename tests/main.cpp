@@ -177,7 +177,16 @@ int main(int argc, char *argv[])
             PERF_AUTO_REG_RECORD(rec);
         }
     }
-
+    if (true)
+    {
+        PERF_DEFINE_AUTO_REG(rec, "perf_tsc_rdtsc dis fast 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_AUTO_REG_START(rec);
+            cycles += perf_tsc_rdtsc();
+            PERF_AUTO_REG_RECORD_FAST(rec);
+        }
+    }
 
     if (true)
     {
