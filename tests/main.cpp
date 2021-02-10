@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD(guard, "start fnlog use");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, false, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
 
@@ -38,21 +38,21 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD(ot, "self use mem");
-        PERF_AUTO_REG_REC_MEM(ot.reg(), perf_self_memory_use());
+        PERF_DEFINE_AUTO_SINGLE_RECORD(ot, 1, false, "self use mem");
+        PERF_REGISTER_REC_MEM(ot.reg(), perf_self_memory_use());
     }
 
     if (true)
     {
-       PERF_DEFINE_AUTO_OT_RECORD(ot, "PerfInst use mem");
-       PERF_AUTO_REG_REC_MEM(ot.reg(), sizeof(PerfInst));
+       PERF_DEFINE_AUTO_SINGLE_RECORD(ot, 1, false, "PerfInst use mem");
+       PERF_REGISTER_REC_MEM(ot.reg(), sizeof(PerfInst));
     }
 
 
     volatile double cycles = 0.0f;
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_sys bat 1000w", 1000*10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "perf_tsc_sys bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_sys();
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_clock bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "perf_tsc_clock bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_clock();
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtsc(lfence) bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "perf_tsc_rdtsc(lfence) bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_rdtsc();
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     
     if (false)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtscp bat 1000", 1000 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "perf_tsc_rdtscp bat 1000");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_rdtscp();
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_rdtsc_nofence bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "perf_tsc_rdtsc_nofence bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_rdtsc_nofence();
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_mfence bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "perf_tsc_mfence bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_mfence();
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c clock bat 10w", 10 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10 * 10000, false, "c clock bat 10w");
         for (size_t i = 0; i < 10 * 10000; i++)
         {
             cycles += clock();
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c++ system_clock bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "c++ system_clock bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += std::chrono::system_clock().now().time_since_epoch().count();
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c++ steady_clock bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "c++ steady_clock bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += std::chrono::steady_clock().now().time_since_epoch().count();
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "perf_tsc_chrono 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "perf_tsc_chrono 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += perf_tsc_chrono();
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "c time bat 1000w", 1000 * 10000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "c time bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += time(NULL);
@@ -150,82 +150,82 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_REG(rec, "perf_tsc_sys dis 1000w");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_sys dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_AUTO_REG_START(rec);
+            PERF_REGISTER_START(rec);
             cycles += perf_tsc_sys();
-            PERF_AUTO_REG_RECORD(rec);
+            PERF_REGISTER_RECORD(rec);
         }
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_REG(rec, "perf_tsc_clock dis 1000w");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_clock dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_AUTO_REG_START(rec);
+            PERF_REGISTER_START(rec);
             cycles += perf_tsc_clock();
-            PERF_AUTO_REG_RECORD(rec);
+            PERF_REGISTER_RECORD(rec);
         }
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_REG(rec, "perf_tsc_rdtsc dis 1000w");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_rdtsc dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_AUTO_REG_START(rec);
+            PERF_REGISTER_START(rec);
             cycles += perf_tsc_rdtsc();
-            PERF_AUTO_REG_RECORD(rec);
+            PERF_REGISTER_RECORD(rec);
         }
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_REG(rec, "perf_tsc_rdtsc dis fast 1000w");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_rdtsc | dis fast 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_AUTO_REG_START(rec);
+            PERF_REGISTER_START(rec);
             cycles += perf_tsc_rdtsc();
-            PERF_AUTO_REG_RECORD_FAST(rec);
+            PERF_REGISTER_RECORD_WRAP(rec, 1, true);
         }
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_REG_COUNTER(rec, "perf_tsc_rdtsc_nofence dis fast 1000w", PERF_CYCLE_COUNTER_RDTSC_NOFENCE);
+        PERF_DEFINE_REGISTER(rec, "perf_tsc_rdtsc | dis fast nofence 1000w", PERF_COUNTER_RDTSC_NOFENCE);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PERF_AUTO_REG_START(rec);
+            PERF_REGISTER_START(rec);
             cycles += perf_tsc_rdtsc();
-            PERF_AUTO_REG_RECORD_FAST(rec);
+            PERF_REGISTER_RECORD_WRAP(rec, 1, true);
         }
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD(guard, "sleep 300ms: sys ");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, false, "sleep 300ms: sys ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD(guard, "sleep 300ms rdtscp ");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, false, "sleep 300ms rdtscp ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD(guard, "sleep 300ms clock ");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, false, "sleep 300ms clock ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 
 
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "call cpu 1000w", 10000000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, false, "call cpu 1000w");
         for (int i = 0; i < 10000000; i++)
         {
-            PERF_CALL_CPU_WITH_C(ENUM_PERF_TEST, 10, 1000);
+            PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 10, 1000, false);
         }
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "call cpu 1000w (without count)", 10000000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, false, "call cpu 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU(ENUM_PERF_TEST, 1000);
@@ -233,10 +233,10 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_OT_RECORD_WITH_C(guard, "call mem 1000w ", 10000000);
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, false, "call mem 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
-            PERF_CALL_MEM(ENUM_PERF_TEST, 1000);
+            PERF_CALL_MEM(ENUM_PERF_TEST, 1, 1000);
         }
     }
 
@@ -248,14 +248,14 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_REG(ot, "call timer 10ms ");
+        PERF_DEFINE_REGISTER_DEFAULT(ot, "call timer 10ms ");
         for (int i = 0; i < 100; i++)
         {
-            PERF_AUTO_REG_START(ot);
+            PERF_REGISTER_START(ot);
             PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        PERF_AUTO_REG_START(ot);
+        PERF_REGISTER_START(ot);
         PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
     }
 
@@ -273,10 +273,10 @@ int main(int argc, char *argv[])
     
     if (true)
     {
-        PerfCounter<PERF_CYCLE_COUNTER_RDTSC> rdtsc;
-        PerfCounter<PERF_CYCLE_COUNTER_SYS> sys;
-        PerfCounter<PERF_CYCLE_COUNTER_CLOCK> linux_clock;
-        PerfCounter<PERF_CYCLE_CONNTER_CHRONO> chrono_clock;
+        PerfCounter<PERF_COUNTER_RDTSC> rdtsc;
+        PerfCounter<PERF_COUNTER_SYS> sys;
+        PerfCounter<PERF_COUNTER_CLOCK> linux_clock;
+        PerfCounter<PERF_CONNTER_CHRONO> chrono_clock;
         rdtsc.start();
         sys.start();
         linux_clock.start();

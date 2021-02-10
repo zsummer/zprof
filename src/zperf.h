@@ -129,18 +129,18 @@ static_assert(PERF_RESERVE_TRACK_BEGIN < PERF_DYN_TRACK_BEGIN, "");
 static_assert(PERF_DYN_TRACK_COUNT > 0, "");
 
 
-enum PerfCycleCounter
+enum PerfCounterType
 {
-    PERF_CYCLE_COUNTER_DEFAULT,
-    PERF_CYCLE_COUNTER_SYS,
-    PERF_CYCLE_COUNTER_CLOCK,
-    PERF_CYCLE_CONNTER_CHRONO,
-    PERF_CYCLE_COUNTER_RDTSC,
-    PERF_CYCLE_COUNTER_RDTSC_NOFENCE,
-    PERF_CYCLE_COUNTER_MAX,
+    PERF_COUNTER_DEFAULT,
+    PERF_COUNTER_SYS,
+    PERF_COUNTER_CLOCK,
+    PERF_CONNTER_CHRONO,
+    PERF_COUNTER_RDTSC,
+    PERF_COUNTER_RDTSC_NOFENCE,
+    PERF_COUNTER_MAX,
 };
-template<PerfCycleCounter T>
-struct PerfCycleCounterTypeClass
+template<PerfCounterType T>
+struct PerfCounterTypeClass
 {
 };
 
@@ -393,15 +393,15 @@ inline double perf_self_cpu_mhz()
 
 
 
-template<PerfCycleCounter T>
-inline long long perf_tsc(const PerfCycleCounterTypeClass<T>* ptr)
+template<PerfCounterType T>
+inline long long perf_tsc(const PerfCounterTypeClass<T>* ptr)
 {
     (void)ptr;
     return perf_tsc_clock();
 }
 
 template<>
-inline long long perf_tsc(const PerfCycleCounterTypeClass<PERF_CYCLE_COUNTER_DEFAULT>* ptr)
+inline long long perf_tsc(const PerfCounterTypeClass<PERF_COUNTER_DEFAULT>* ptr)
 {
     (void)ptr;
     return perf_tsc_rdtsc();
@@ -409,35 +409,35 @@ inline long long perf_tsc(const PerfCycleCounterTypeClass<PERF_CYCLE_COUNTER_DEF
 
 
 template<>
-inline long long perf_tsc(const PerfCycleCounterTypeClass<PERF_CYCLE_COUNTER_RDTSC>* ptr)
+inline long long perf_tsc(const PerfCounterTypeClass<PERF_COUNTER_RDTSC>* ptr)
 {
     (void)ptr;
     return perf_tsc_rdtsc();
 }
 
 template<>
-inline long long perf_tsc(const PerfCycleCounterTypeClass<PERF_CYCLE_COUNTER_RDTSC_NOFENCE>* ptr)
+inline long long perf_tsc(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>* ptr)
 {
     (void)ptr;
     return perf_tsc_rdtsc_nofence();
 }
 
 template<>
-inline long long perf_tsc(const PerfCycleCounterTypeClass<PERF_CYCLE_COUNTER_CLOCK>* ptr)
+inline long long perf_tsc(const PerfCounterTypeClass<PERF_COUNTER_CLOCK>* ptr)
 {
     (void)ptr;
     return perf_tsc_clock();
 }
 
 template<>
-inline long long perf_tsc(const PerfCycleCounterTypeClass<PERF_CYCLE_COUNTER_SYS>* ptr)
+inline long long perf_tsc(const PerfCounterTypeClass<PERF_COUNTER_SYS>* ptr)
 {
     (void)ptr;
     return perf_tsc_sys();
 }
 
 template<>
-inline long long perf_tsc(const PerfCycleCounterTypeClass<PERF_CYCLE_CONNTER_CHRONO>* ptr)
+inline long long perf_tsc(const PerfCounterTypeClass<PERF_CONNTER_CHRONO>* ptr)
 {
     (void)ptr;
     return perf_tsc_chrono();
@@ -675,7 +675,7 @@ private:
     std::array<int, S> merge_to_;
     int merge_to_size_;
     unsigned int state_;
-    double circles_per_ns_[PERF_CYCLE_COUNTER_MAX];
+    double circles_per_ns_[PERF_COUNTER_MAX];
     int used_track_id_;
     char serialize_buff_[SERIALIZE_BUFF_LEN];
 };
@@ -761,7 +761,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     double chrono_rate = (double)std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count();
     chrono_rate /= 1000.0 * 1000.0 * 1000.0;
     chrono_rate = 1.0 / chrono_rate;
-    circles_per_ns_[PERF_CYCLE_CONNTER_CHRONO] = chrono_rate;
+    circles_per_ns_[PERF_CONNTER_CHRONO] = chrono_rate;
 
 #ifdef WIN32
     double freq_rate = 0;
@@ -782,21 +782,21 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     }
     double tsc_rate = 1.0 / pppi[0].MaxMhz * 1000;
     
-    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = tsc_rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC_NOFENCE] = tsc_rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = freq_rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
-    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
+    circles_per_ns_[PERF_COUNTER_RDTSC] = tsc_rate;
+    circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = tsc_rate;
+    circles_per_ns_[PERF_COUNTER_CLOCK] = freq_rate;
+    circles_per_ns_[PERF_COUNTER_SYS] = 1.0;
+    circles_per_ns_[PERF_COUNTER_DEFAULT] = circles_per_ns_[PERF_COUNTER_RDTSC];
 #elif (defined __APPLE__)
     double rdtsc_rate = perf_self_cpu_mhz();
     rdtsc_rate *= 1000 * 1000;
     rdtsc_rate = 1.0 / rdtsc_rate;
     rdtsc_rate *= 1000 * 1000 * 1000;
-    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rdtsc_rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
-    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
-    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
+    circles_per_ns_[PERF_COUNTER_RDTSC] = rdtsc_rate;
+    circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
+    circles_per_ns_[PERF_COUNTER_CLOCK] = 1.0;
+    circles_per_ns_[PERF_COUNTER_SYS] = 1.0;
+    circles_per_ns_[PERF_COUNTER_DEFAULT] = circles_per_ns_[PERF_COUNTER_RDTSC];
 #else
     //cpu_set_t set;
     //CPU_ZERO(&set);
@@ -808,11 +808,11 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     rdtsc_rate *= 1000 * 1000;
     rdtsc_rate = 1.0 / rdtsc_rate;
     rdtsc_rate *= 1000 * 1000 * 1000;
-    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC] = rdtsc_rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
-    circles_per_ns_[PERF_CYCLE_COUNTER_CLOCK] = 1.0;
-    circles_per_ns_[PERF_CYCLE_COUNTER_SYS] = 1.0;
-    circles_per_ns_[PERF_CYCLE_COUNTER_DEFAULT] = circles_per_ns_[PERF_CYCLE_COUNTER_RDTSC];
+    circles_per_ns_[PERF_COUNTER_RDTSC] = rdtsc_rate;
+    circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
+    circles_per_ns_[PERF_COUNTER_CLOCK] = 1.0;
+    circles_per_ns_[PERF_COUNTER_SYS] = 1.0;
+    circles_per_ns_[PERF_COUNTER_DEFAULT] = circles_per_ns_[PERF_COUNTER_RDTSC];
 #endif
 
     return 0;
@@ -1055,7 +1055,7 @@ const char* PerfRecord<T, S>::serialize(int entry_idx)
 
 
 
-template<PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
+template<PerfCounterType T = PERF_COUNTER_DEFAULT>
 class PerfCounter
 {
 public:
@@ -1071,13 +1071,13 @@ public:
     }
     void start()
     {
-        start_val_ = perf_tsc<T>((PerfCycleCounterTypeClass<T>*)NULL);
+        start_val_ = perf_tsc<T>((PerfCounterTypeClass<T>*)NULL);
         cycles_ = 0;
     }
 
     PerfCounter& save()
     {
-        cycles_ = perf_tsc<T>((PerfCycleCounterTypeClass<T>*)NULL) - start_val_;
+        cycles_ = perf_tsc<T>((PerfCounterTypeClass<T>*)NULL) - start_val_;
         //cycles_ = elapse > 0 ? elapse : 0;
         return *this;
     }
@@ -1142,7 +1142,7 @@ struct PerfCountIsGreatOne
 
 
 template <bool COUNT = 1, bool IS_FAST =false,
-    PerfCycleCounter C = PERF_CYCLE_COUNTER_DEFAULT>
+    PerfCounterType C = PERF_COUNTER_DEFAULT>
 class PerfAutoRecord
 {
 public:
@@ -1164,17 +1164,17 @@ private:
 
 
 
-template <PerfCycleCounter T = PERF_CYCLE_COUNTER_DEFAULT>
-class PerfAutoReg
+template <PerfCounterType T = PERF_COUNTER_DEFAULT>
+class PerfRegister
 {
 public:
-    PerfAutoReg(const char* desc)
+    PerfRegister(const char* desc)
     {
         this_id_ = PerfInst.new_dyn_track_id();
         PerfInst.regist_track(this_id_, desc, T, false);
     }
 
-    ~PerfAutoReg()
+    ~PerfRegister()
     {
 
     }
@@ -1211,24 +1211,22 @@ private:
 };
 
 template <long long COUNT = 1LL, bool IS_FAST = false,
-    PerfCycleCounter C = PERF_CYCLE_COUNTER_DEFAULT>
-class PerfAutoOTRecord
+    PerfCounterType C = PERF_COUNTER_DEFAULT>
+class PerfAutoSingleRecord
 {
 public:
-    PerfAutoOTRecord(const char* desc):reg_(desc)
+    PerfAutoSingleRecord(const char* desc):reg_(desc)
     {
         reg_.start();
     }
-    ~PerfAutoOTRecord()
+    ~PerfAutoSingleRecord()
     {
-        PerfRecordWrap(reg_.track_id(), COUNT, reg_.counter().save().cycles(),
-            (PerfRecordTypeClass<PerfCountIsGreatOne<COUNT>::is_bat, IS_FAST >*)NULL);
-       // reg_.record_current<COUNT, IS_FAST>();
+        PerfRecordWrap(reg_.track_id(), COUNT, reg_.counter().save().cycles(), (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, IS_FAST>*)NULL);
     }
 
-    PerfAutoReg<C>& reg() { return reg_; }
+    PerfRegister<C>& reg() { return reg_; }
 private:
-    PerfAutoReg<C> reg_;
+    PerfRegister<C> reg_;
 };
 
 
@@ -1239,7 +1237,7 @@ private:
 #ifdef OPEN_ZPERF
 
 #define PERF_REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
-#define PERF_FAST_REGIST_TRACK(id)  PerfInst.regist_track(id, #id, PERF_CYCLE_COUNTER_DEFAULT, false)
+#define PERF_FAST_REGIST_TRACK(id)  PerfInst.regist_track(id, #id, PERF_COUNTER_DEFAULT, false)
 #define PERF_BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
 #define PERF_BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
 
@@ -1247,90 +1245,71 @@ private:
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
 
-#define PERF_CALL_CPU_G_REALTIME_WITH_C(idx, count, counter) PerfInst.call_cpu(idx, count, counter.save().cycles())
-#define PERF_CALL_CPU_G_WITH_C(idx, count, counter) PerfInst.call_cpu(idx, count, counter.cycles())
-#define PERF_CALL_CPU_G_REALTIME(idx, counter) PerfInst.call_cpu(idx, counter.save().cycles())
-#define PERF_CALL_CPU_G(idx, counter) PerfInst.call_cpu(idx, counter.cycles())
 #define PERF_CALL_CPU(idx, cost) PerfInst.call_cpu(idx, cost)
-#define PERF_CALL_CPU_NO_SM(idx, cost) PerfInst.call_cpu_no_sm(idx, cost)
-#define PERF_CALL_CPU_WITH_C(idx, c, cost) PerfInst.call_cpu(idx, c, cost)
-
-
-#define PERF_CALL_MEM_WITH_C(idx, count, mem) PerfInst.call_mem(idx, count, mem)
-#define PERF_CALL_MEM(idx, mem) PerfInst.call_mem(idx, 1, mem)
-
+#define PERF_CALL_CPU_WRAP(idx, COUNT, cost, IS_FAST)  \
+            PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, IS_FAST>((int)(idx), (long long)(COUNT), (long long)cost, \
+                    (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, IS_FAST> *)NULL)
+#define PERF_CALL_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
 #define PERF_CALL_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
 
 
-#define PERF_DEFINE_COUNTER(tc)  PerfCounter<> tc
-#define PERF_DEFINE_COUNTER_REF(tc, ref)  PerfCounter<> tc(ref.begin())
+#define PERF_DEFINE_COUNTER(c)  PerfCounter<> c
 #define PERF_DEFINE_COUNTER_INIT(tc, start)  PerfCounter<> tc(start)
-#define PERF_START_COUNTER(pf) pf.start()
-#define PERF_RESTART_COUNTER(pf) pf.start()
-#define PERF_REC_COUNTER(pf) pf.save()
-#define PERF_DEFINE_AUTO_RECORD(tc, idx) PerfAutoRecord<> tc(idx)
+#define PERF_START_COUNTER(c) c.start()
+#define PERF_RESTART_COUNTER(c) c.start()
+
+#define PERF_DEFINE_AUTO_RECORD(c, idx) PerfAutoRecord<> c(idx)
 
 
-
-#define PERF_DEFINE_AUTO_REG(reg, desc) PerfAutoReg<> reg(desc);  
-#define PERF_DEFINE_AUTO_REG_COUNTER(reg, desc, counter) PerfAutoReg<counter> reg(desc) 
-#define PERF_AUTO_REG_START(reg) reg.start()
-#define PERF_AUTO_REG_RECORD(reg) reg.record_current()
-#define PERF_AUTO_REG_RECORD_WITH_C(reg, c) reg.record_current<c>()
-#define PERF_AUTO_REG_RECORD_FAST(reg) reg.record_current<1, true>()
-#define PERF_AUTO_REG_RECORD_FAST_WITH_C(reg, c) reg.record_current<c, true>()
-#define PERF_AUTO_REG_REC_MEM(reg, add) reg.record_mem(add)
+#define PERF_DEFINE_REGISTER(reg, desc, counter) PerfRegister<counter> reg(desc);  
+#define PERF_DEFINE_REGISTER_DEFAULT(reg, desc) PerfRegister<> reg(desc);  
+#define PERF_REGISTER_START(reg) reg.start()
+#define PERF_REGISTER_RECORD(reg) reg.record_current()
+#define PERF_REGISTER_RECORD_WRAP(reg, COUNT, IS_FAST) reg.record_current<COUNT, IS_FAST>()
+#define PERF_REGISTER_REC_MEM(reg, add) reg.record_mem(add)
 
 
-#define PERF_DEFINE_AUTO_OT_RECORD(rec, desc) PerfAutoOTRecord<1, false, PERF_CYCLE_COUNTER_DEFAULT> rec(desc)
-#define PERF_DEFINE_AUTO_OT_RECORD_WITH_C(rec, desc, c) PerfAutoOTRecord<c, false,PERF_CYCLE_COUNTER_DEFAULT> rec(desc)
-#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ PerfAutoReg<> __temp_perf_record_mem__(desc); PERF_CALL_MEM(__temp_perf_record_mem__.track_id(), perf_self_memory_use()); }while(0)
+#define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, IS_FAST, desc) PerfAutoSingleRecord<COUNT, IS_FAST, PERF_COUNTER_DEFAULT> rec(desc)
+#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ PerfRegister<> __temp_perf_record_mem__(desc); PERF_CALL_MEM(__temp_perf_record_mem__.track_id(), perf_self_memory_use()); }while(0)
 
 
 
 
 #else
-
-#define PERF_REGIST_TRACK(id, name, pt, force)  
-#define PERF_FAST_REGIST_TRACK(id)  
-#define PERF_BIND_CHILD(id, cid)  
+#define PERF_REGIST_TRACK(id, name, pt, force)
+#define PERF_FAST_REGIST_TRACK(id) 
+#define PERF_BIND_CHILD(id, cid) 
 #define PERF_BIND_MERGE(id, tid) 
 
 #define PERF_INIT(desc) 
 #define PERF_RESET_CHILD(idx) 
-#define PERF_UPDATE_MERGE()
+#define PERF_UPDATE_MERGE() 
 
-#define PERF_CALL_CPU_G_REALTIME_WITH_C(idx, count, counter) 
-#define PERF_CALL_CPU_G_WITH_C(idx, count, counter) 
-#define PERF_CALL_MEM_WITH_C(idx, count, mem) 
-#define PERF_CALL_CPU_G_REALTIME(idx, counter) 
-#define PERF_CALL_CPU_G(idx, counter) 
 #define PERF_CALL_CPU(idx, cost) 
-#define PERF_CALL_CPU_WITH_C(idx, c, cost) 
-#define PERF_CALL_CPU_NO_SM(idx, cost) 
+#define PERF_CALL_CPU_WRAP(idx, COUNT, cost, IS_FAST) 
+#define PERF_CALL_MEM(idx, count, mem) 
+#define PERF_CALL_TIMER(idx, stamp) 
 
-#define PERF_CALL_MEM(idx, mem) 
-#define PERF_CALL_TIMER(idx, stamp)
 
-#define PERF_DEFINE_COUNTER(tc)  
-#define PERF_DEFINE_COUNTER_REF(tc, ref)  
-#define PERF_DEFINE_COUNTER_EMPTY(tc) 
-#define PERF_START_COUNTER(pf) 
-#define PERF_RESTART_COUNTER(pf) 
-#define PERF_REC_COUNTER(pf) 
-#define PERF_DEFINE_AUTO_REG(otc, desc)
-#define PERF_DEFINE_AUTO_REG_COUNTER(reg, desc, counter) 
-#define PERF_AUTO_REG_START(otc) 
-#define PERF_AUTO_REG_RECORD(otc) 
-#define PERF_AUTO_REG_RECORD_WITH_C(reg, c) 
-#define PERF_AUTO_REG_RECORD_FAST(reg) 
-#define PERF_AUTO_REG_RECORD_FAST_WITH_C(reg, c) 
-#define PERF_AUTO_REG_REC_MEM(otc, cost)
+#define PERF_DEFINE_COUNTER(c)  
+#define PERF_DEFINE_COUNTER_INIT(tc, start)  
+#define PERF_START_COUNTER(c) 
+#define PERF_RESTART_COUNTER(c) 
 
-#define PERF_DEFINE_AUTO_RECORD(tc, idx)
-#define PERF_DEFINE_AUTO_OT_RECORD(rec, desc) 
-#define PERF_DEFINE_AUTO_OT_RECORD_WITH_C(rec, desc, c) 
-#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc)
+#define PERF_DEFINE_AUTO_RECORD(c, idx) 
+
+
+#define PERF_DEFINE_REGISTER(reg, desc, counter) 
+#define PERF_DEFINE_REGISTER_DEFAULT(reg, desc) 
+#define PERF_REGISTER_START(reg) 
+#define PERF_REGISTER_RECORD(reg) 
+#define PERF_REGISTER_RECORD_WRAP(reg, COUNT, IS_FAST) 
+#define PERF_REGISTER_REC_MEM(reg, add) 
+
+
+#define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, IS_FAST, desc) 
+#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) 
+
 #endif
 
 
