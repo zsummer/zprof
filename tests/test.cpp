@@ -30,7 +30,7 @@ void entry_mem_test()
         char* ptr = new char[100];
         delete[] ptr;
     }
-    PERF_CALL_CPU_G_REALTIME_WITH_C(ENUM_BAT_ALLOC_FREE, 10000, counter);
+    PERF_CALL_CPU_WRAP(ENUM_BAT_ALLOC_FREE, 10000, counter.save().cycles(), false);
 
     PERF_DEFINE_AUTO_RECORD(guard, ENUM_ENTRY);
 
@@ -38,12 +38,12 @@ void entry_mem_test()
     {
         PERF_START_COUNTER(counter);
         char* ptr = new char[10];
-        PERF_CALL_CPU_G_REALTIME(ENUM_ALLOC, counter);
-        PERF_CALL_MEM(ENUM_ALLOC, 10);
+        PERF_CALL_CPU_WRAP(ENUM_ALLOC, 1, counter.save().cycles(), false);
+        PERF_CALL_MEM(ENUM_ALLOC, 1, 10);
         PERF_START_COUNTER(counter);
         delete[] ptr;
-        PERF_CALL_CPU_G_REALTIME(ENUM_FREE, counter);
-        PERF_CALL_MEM(ENUM_FREE, 10);
+        PERF_CALL_CPU_WRAP(ENUM_FREE, 1, counter.save().cycles(), false);
+        PERF_CALL_MEM(ENUM_FREE, 1, 10);
     }
 
 }
