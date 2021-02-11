@@ -131,7 +131,7 @@ static_assert(PERF_DYN_TRACK_COUNT > 0, "");
 
 enum PerfCounterType
 {
-    PERF_COUNTER_DEFAULT,
+    PERF_COUNTER_NULL,
     PERF_COUNTER_SYS,
     PERF_COUNTER_CLOCK,
     PERF_CONNTER_CHRONO,
@@ -139,6 +139,7 @@ enum PerfCounterType
     PERF_COUNTER_RDTSC_NOFENCE,
     PERF_COUNTER_MAX,
 };
+#define PERF_COUNTER_DEFAULT PERF_COUNTER_RDTSC
 template<PerfCounterType T>
 struct PerfCounterTypeClass
 {
@@ -400,12 +401,6 @@ inline long long perf_tsc(const PerfCounterTypeClass<T>* ptr)
     return perf_tsc_clock();
 }
 
-template<>
-inline long long perf_tsc(const PerfCounterTypeClass<PERF_COUNTER_DEFAULT>* ptr)
-{
-    (void)ptr;
-    return perf_tsc_rdtsc();
-}
 
 
 template<>
@@ -660,7 +655,7 @@ public:
     char* mutable_desc() { return desc_; }
     const unsigned int state() const { return state_; }
     void set_state(unsigned int state) { state_ = state; }
-    double circles_per_ns(int t) { return circles_per_ns_[t]; }
+    double circles_per_ns(int t) { return  circles_per_ns_[t == PERF_COUNTER_NULL ? PERF_COUNTER_DEFAULT : t]; }
     int new_dyn_track_id() 
     { 
         if (used_track_id_ >= TRACK_COUNT)
@@ -762,7 +757,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     chrono_rate /= 1000.0 * 1000.0 * 1000.0;
     chrono_rate = 1.0 / chrono_rate;
     circles_per_ns_[PERF_CONNTER_CHRONO] = chrono_rate;
-
+    circles_per_ns_[PERF_COUNTER_NULL] = 0;
 #ifdef WIN32
     double freq_rate = 0;
     long long win_freq = 0;
@@ -786,7 +781,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = tsc_rate;
     circles_per_ns_[PERF_COUNTER_CLOCK] = freq_rate;
     circles_per_ns_[PERF_COUNTER_SYS] = 1.0;
-    circles_per_ns_[PERF_COUNTER_DEFAULT] = circles_per_ns_[PERF_COUNTER_RDTSC];
+
 #elif (defined __APPLE__)
     double rdtsc_rate = perf_self_cpu_mhz();
     rdtsc_rate *= 1000 * 1000;
@@ -796,7 +791,6 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
     circles_per_ns_[PERF_COUNTER_CLOCK] = 1.0;
     circles_per_ns_[PERF_COUNTER_SYS] = 1.0;
-    circles_per_ns_[PERF_COUNTER_DEFAULT] = circles_per_ns_[PERF_COUNTER_RDTSC];
 #else
     //cpu_set_t set;
     //CPU_ZERO(&set);
@@ -812,7 +806,6 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
     circles_per_ns_[PERF_COUNTER_CLOCK] = 1.0;
     circles_per_ns_[PERF_COUNTER_SYS] = 1.0;
-    circles_per_ns_[PERF_COUNTER_DEFAULT] = circles_per_ns_[PERF_COUNTER_RDTSC];
 #endif
 
     return 0;
@@ -920,13 +913,13 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         char buff_call[50];
         human_count_format(buff_call, track.cpu.c);
         char buff_avg[50];
-        human_time_format(buff_avg, (long long)(track.cpu.sum * circles_per_ns_[track.desc.counter_type]) / track.cpu.c);
+        human_time_format(buff_avg, (long long)( track.cpu.sum * circles_per_ns(track.desc.counter_type)) / track.cpu.c);
         char buff_sm[50];
-        human_time_format(buff_sm, (long long)(track.cpu.sm * circles_per_ns_[track.desc.counter_type]));
+        human_time_format(buff_sm, (long long)(track.cpu.sm * circles_per_ns(track.desc.counter_type)));
         char buff_dv[50];
-        human_time_format(buff_dv, (long long)(track.cpu.dv * circles_per_ns_[track.desc.counter_type] / track.cpu.c));
+        human_time_format(buff_dv, (long long)(track.cpu.dv * circles_per_ns(track.desc.counter_type) / track.cpu.c));
         char buff_sum[50];
-        human_time_format(buff_sum, (long long)(track.cpu.sum * circles_per_ns_[track.desc.counter_type]));
+        human_time_format(buff_sum, (long long)(track.cpu.sum * circles_per_ns(track.desc.counter_type)));
 
 
         int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s sm: %s dv:%s sum: %s  \n",
@@ -1236,7 +1229,7 @@ private:
 
 #ifdef OPEN_ZPERF
 
-#define PERF_REGIST_TRACK(id, name, pt, force)  PerfInst.regist_track(id, name, pt, force)
+#define PERF_REGIST_TRACK(id, name, c, force)  PerfInst.regist_track(id, name, c, force)
 #define PERF_FAST_REGIST_TRACK(id)  PerfInst.regist_track(id, #id, PERF_COUNTER_DEFAULT, false)
 #define PERF_BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
 #define PERF_BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
