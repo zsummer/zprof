@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_rdtsc | dis fast 1000w");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_rdtsc | dis fast default 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
@@ -198,6 +198,45 @@ int main(int argc, char *argv[])
             PERF_REGISTER_RECORD_WRAP(rec, 1, true);
         }
     }
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, false, "perf_tsc_rdtsc(lfence)*10 bat 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            for (size_t i = 0; i < 10; i++)
+            {
+                cycles += perf_tsc_rdtsc();
+            }
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_rdtsc *10| dis fast default 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            for (size_t i = 0; i < 10; i++)
+            {
+                cycles += perf_tsc_rdtsc();
+            }
+            PERF_REGISTER_RECORD_WRAP(rec, 1, true);
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_REGISTER(rec, "perf_tsc_rdtsc *10| dis fast nofence 1000w", PERF_COUNTER_RDTSC_NOFENCE);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            for (size_t i = 0; i < 10; i++)
+            {
+                cycles += perf_tsc_rdtsc();
+            }
+            PERF_REGISTER_RECORD_WRAP(rec, 1, true);
+        }
+    }
+
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, false, "sleep 300ms: sys ");
