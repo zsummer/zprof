@@ -139,6 +139,14 @@ enum PerfCounterType
     PERF_COUNTER_RDTSC_NOFENCE,
     PERF_COUNTER_MAX,
 };
+
+enum PerfCPURecType
+{
+    PERF_CPU_NORMAL,
+    PERF_CPU_FAST,
+    PERF_CPU_FULL,
+};
+
 #define PERF_COUNTER_DEFAULT PERF_COUNTER_RDTSC
 template<PerfCounterType T>
 struct PerfCounterTypeClass
@@ -160,9 +168,14 @@ struct PerfCPU
     long long sum;  
     long long dv; 
     long long sm;
+    long long h_sm;
+    long long l_sm;
+    long long max_u;
+    long long min_u;
     long long t_c;
     long long t_u;
 };
+
 struct PerfTimer
 {
     long long last;
@@ -557,6 +570,7 @@ public:
         memset(&track.mem, 0, sizeof(track.mem));
     }
     inline void reset_childs(int idx, int depth = 0);
+
     void call_cpu(int idx, long long c, long long cost)
     {
         long long dis = cost / c;
@@ -599,6 +613,31 @@ public:
         track.cpu.t_c += count;
         track.cpu.t_u += cost;
     }
+    void call_cpu_full(int idx, long long c, long long cost)
+    {
+        
+        PerfTrack& track = tracks_[idx];
+        track.cpu.c += c;
+        track.cpu.sum += cost;
+        long long dis = cost / c;
+        long long avg = track.cpu.sum / track.cpu.c;
+        track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
+        track.cpu.h_sm = track.cpu.h_sm == 0 ? dis : track.cpu.h_sm;
+        track.cpu.l_sm = track.cpu.l_sm == 0 ? dis : track.cpu.l_sm;
+        track.cpu.min_u = track.cpu.min_u == 0 ? dis : track.cpu.min_u;
+
+        track.cpu.max_u = track.cpu.max_u > dis ? track.cpu.max_u : dis;
+        track.cpu.min_u = track.cpu.min_u < dis ? track.cpu.min_u : dis;
+
+        track.cpu.sm = (track.cpu.sm * 8 + cost * 2) / 10;
+        track.cpu.h_sm = dis > avg ? (track.cpu.h_sm * 8 + cost * 2) / 10 : track.cpu.h_sm;
+        track.cpu.l_sm = dis < avg ? (track.cpu.l_sm * 8 + cost * 2) / 10 : track.cpu.l_sm;
+
+
+        track.cpu.dv += abs(dis - track.cpu.sm);
+        track.cpu.t_c += c;
+        track.cpu.t_u += cost;
+    }
     void call_timer(int idx, long long stamp)
     {
         PerfTrack& track = tracks_[idx];
@@ -607,7 +646,7 @@ public:
             track.timer.last = stamp;
             return;
         }
-        call_cpu(idx, stamp - track.timer.last);
+        call_cpu_full(idx, 1, stamp - track.timer.last);
         track.timer.last = stamp;
     }
 
@@ -920,10 +959,17 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         human_time_format(buff_dv, (long long)(track.cpu.dv * circles_per_ns(track.desc.counter_type) / track.cpu.c));
         char buff_sum[50];
         human_time_format(buff_sum, (long long)(track.cpu.sum * circles_per_ns(track.desc.counter_type)));
+        char buff_hsm[50];
+        human_time_format(buff_hsm, (long long)(track.cpu.h_sm * circles_per_ns(track.desc.counter_type)));
+        char buff_lsm[50];
+        human_time_format(buff_lsm, (long long)(track.cpu.l_sm * circles_per_ns(track.desc.counter_type)));
+        char buff_max[50];
+        human_time_format(buff_max, (long long)(track.cpu.max_u * circles_per_ns(track.desc.counter_type)));
+        char buff_min[50];
+        human_time_format(buff_min, (long long)(track.cpu.min_u * circles_per_ns(track.desc.counter_type)));
 
-
-        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s sm: %s dv:%s sum: %s  \n",
-            track.desc.track_name, buff_call, buff_avg, buff_sm, buff_dv, buff_sum);
+        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s dv: %s sum: %s  sm: %s hsm: %s lsm: %s max: %s min: %s  \n",
+            track.desc.track_name, buff_call, buff_avg, buff_dv, buff_sum, buff_sm, buff_hsm, buff_lsm, buff_max, buff_min);
 
         if (ret < 0)
         {
@@ -1091,40 +1137,51 @@ private:
 
 
 
-template<bool IS_BAT, bool IS_FAST>
+template<bool IS_BAT, PerfCPURecType CPU_REC_TYPE>
 struct PerfRecordTypeClass
 {
 
 };
 
-template<bool IS_BAT, bool IS_FAST>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<IS_BAT, IS_FAST>*)
+template<bool IS_BAT, PerfCPURecType CPU_REC_TYPE>
+inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<IS_BAT, CPU_REC_TYPE>*)
 {
 
 }
 
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<true, false>*)
+inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<true, PERF_CPU_NORMAL>*)
 {
     PerfInst.call_cpu(idx, count, cost);
 }
 
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<false, false>*)
+inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<false, PERF_CPU_NORMAL>*)
 {
     (void)count;
     PerfInst.call_cpu(idx, cost);
 }
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<true, true>*)
+inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<true, PERF_CPU_FAST>*)
 {
     PerfInst.call_cpu_no_sm(idx, count, cost);
 }
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<false, true>*)
+inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<false, PERF_CPU_FAST>*)
 {
     (void)count;
     PerfInst.call_cpu_no_sm(idx, cost);
+}
+
+template<>
+inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<true, PERF_CPU_FULL>*)
+{
+    PerfInst.call_cpu_full(idx, count, cost);
+}
+template<>
+inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<false, PERF_CPU_FULL>*)
+{
+    PerfInst.call_cpu_full(idx, count, cost);
 }
 
 template<long long COUNT>
@@ -1134,7 +1191,7 @@ struct PerfCountIsGreatOne
 };
 
 
-template <bool COUNT = 1, bool IS_FAST =false,
+template <bool COUNT = 1, PerfCPURecType CPU_REC_TYPE = PERF_CPU_NORMAL,
     PerfCounterType C = PERF_COUNTER_DEFAULT>
 class PerfAutoRecord
 {
@@ -1147,7 +1204,7 @@ public:
     ~PerfAutoRecord()
     {
         PerfRecordWrap(idx_, COUNT, counter_.save().cycles(), 
-            (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, IS_FAST> *)NULL);
+            (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE> *)NULL);
     }
     PerfCounter<C>& counter() { return counter_; }
 private:
@@ -1182,11 +1239,11 @@ public:
         counter_.start();
     }
 
-    template <long long COUNT = 1LL, bool IS_FAST = false>
+    template <long long COUNT = 1LL, PerfCPURecType CPU_REC_TYPE = PERF_CPU_NORMAL>
     void record_current()
     {
         PerfRecordWrap(this_id_, COUNT, counter_.save().cycles(), 
-            (PerfRecordTypeClass<PerfCountIsGreatOne<COUNT>::is_bat, IS_FAST > *)NULL);
+            (PerfRecordTypeClass<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE > *)NULL);
     }
 
 
@@ -1203,7 +1260,7 @@ private:
     PerfCounter<T> counter_;
 };
 
-template <long long COUNT = 1LL, bool IS_FAST = false,
+template <long long COUNT = 1LL, PerfCPURecType CPU_REC_TYPE = PERF_CPU_NORMAL,
     PerfCounterType C = PERF_COUNTER_DEFAULT>
 class PerfAutoSingleRecord
 {
@@ -1214,14 +1271,13 @@ public:
     }
     ~PerfAutoSingleRecord()
     {
-        PerfRecordWrap(reg_.track_id(), COUNT, reg_.counter().save().cycles(), (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, IS_FAST>*)NULL);
+        PerfRecordWrap(reg_.track_id(), COUNT, reg_.counter().save().cycles(), (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>*)NULL);
     }
 
     PerfRegister<C>& reg() { return reg_; }
 private:
     PerfRegister<C> reg_;
 };
-
 
 
 
@@ -1239,9 +1295,9 @@ private:
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
 
 #define PERF_CALL_CPU(idx, cost) PerfInst.call_cpu(idx, cost)
-#define PERF_CALL_CPU_WRAP(idx, COUNT, cost, IS_FAST)  \
-            PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, IS_FAST>((int)(idx), (long long)(COUNT), (long long)cost, \
-                    (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, IS_FAST> *)NULL)
+#define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE)  \
+            PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>((int)(idx), (long long)(COUNT), (long long)cost, \
+                    (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE> *)NULL)
 #define PERF_CALL_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
 #define PERF_CALL_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
 
@@ -1258,11 +1314,11 @@ private:
 #define PERF_DEFINE_REGISTER_DEFAULT(reg, desc) PerfRegister<> reg(desc);  
 #define PERF_REGISTER_START(reg) reg.start()
 #define PERF_REGISTER_RECORD(reg) reg.record_current()
-#define PERF_REGISTER_RECORD_WRAP(reg, COUNT, IS_FAST) reg.record_current<COUNT, IS_FAST>()
+#define PERF_REGISTER_RECORD_WRAP(reg, COUNT, CPU_REC_TYPE) reg.record_current<COUNT, CPU_REC_TYPE>()
 #define PERF_REGISTER_REC_MEM(reg, add) reg.record_mem(add)
 
 
-#define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, IS_FAST, desc) PerfAutoSingleRecord<COUNT, IS_FAST, PERF_COUNTER_DEFAULT> rec(desc)
+#define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, CPU_REC_TYPE, desc) PerfAutoSingleRecord<COUNT, CPU_REC_TYPE, PERF_COUNTER_DEFAULT> rec(desc)
 #define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ PerfRegister<> __temp_perf_record_mem__(desc); PERF_CALL_MEM(__temp_perf_record_mem__.track_id(), perf_self_memory_use()); }while(0)
 
 
@@ -1279,7 +1335,7 @@ private:
 #define PERF_UPDATE_MERGE() 
 
 #define PERF_CALL_CPU(idx, cost) 
-#define PERF_CALL_CPU_WRAP(idx, COUNT, cost, IS_FAST) 
+#define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE) 
 #define PERF_CALL_MEM(idx, count, mem) 
 #define PERF_CALL_TIMER(idx, stamp) 
 
@@ -1296,11 +1352,11 @@ private:
 #define PERF_DEFINE_REGISTER_DEFAULT(reg, desc) 
 #define PERF_REGISTER_START(reg) 
 #define PERF_REGISTER_RECORD(reg) 
-#define PERF_REGISTER_RECORD_WRAP(reg, COUNT, IS_FAST) 
+#define PERF_REGISTER_RECORD_WRAP(reg, COUNT, CPU_REC_TYPE) 
 #define PERF_REGISTER_REC_MEM(reg, add) 
 
 
-#define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, IS_FAST, desc) 
+#define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, CPU_REC_TYPE, desc) 
 #define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) 
 
 #endif
