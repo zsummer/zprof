@@ -185,6 +185,7 @@ struct PerfMEM
 {
     long long c;  
     long long sum;
+    long long delta;
     long long t_c;
     long long t_u;
 };
@@ -673,6 +674,7 @@ public:
     {
         PerfTrack& track = tracks_[idx];
         track.mem.c = c;
+        track.mem.delta = add - track.mem.sum;
         track.mem.sum = add;
         track.mem.t_c = c;
         track.cpu.t_u = add;
@@ -1025,9 +1027,12 @@ int PerfRecord<T, S>::serialize(int entry_idx, int depth, char* org_buff, int bu
         human_mem_format(buff_avg, track.mem.sum / track.mem.c);
         char buff_use[50];
         human_mem_format(buff_use, track.mem.sum);
-
-        int ret = sprintf(buff, "[[ %s ]] mem: call:%s  avg: %s  sum: %s \n",
-            track.desc.track_name, buff_call, buff_avg, buff_use);
+        char buff_front[50];
+        human_mem_format(buff_front, track.mem.sum - track.mem.delta);
+        char buff_delta[50];
+        human_mem_format(buff_delta, track.mem.delta);
+        int ret = sprintf(buff, "[[ %s ]] mem: call:%s  avg: %s  sum: %s  front: %s delta: %s \n",
+            track.desc.track_name, buff_call, buff_avg, buff_use, buff_front, buff_delta);
 
         if (ret < 0)
         {
@@ -1271,7 +1276,10 @@ public:
     {
         PerfInst.call_mem(this_id_, 1, mem);
     }
-
+    void refresh_mem(long long mem)
+    {
+        PerfInst.refresh_mem(this_id_, 1, mem);
+    }
     int track_id() { return this_id_; }
     PerfCounter<T>& counter() { return counter_; }
 
@@ -1337,6 +1345,7 @@ private:
 #define PERF_REGISTER_RECORD(reg) reg.record_current()
 #define PERF_REGISTER_RECORD_WRAP(reg, COUNT, CPU_REC_TYPE) reg.record_current<COUNT, CPU_REC_TYPE>()
 #define PERF_REGISTER_REC_MEM(reg, add) reg.record_mem(add)
+#define PERF_REGISTER_REFRESH_MEM(reg, add) reg.refresh_mem(add)
 
 
 #define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, CPU_REC_TYPE, desc) PerfAutoSingleRecord<COUNT, CPU_REC_TYPE, PERF_COUNTER_DEFAULT> rec(desc)
@@ -1376,6 +1385,7 @@ private:
 #define PERF_REGISTER_RECORD(reg) 
 #define PERF_REGISTER_RECORD_WRAP(reg, COUNT, CPU_REC_TYPE) 
 #define PERF_REGISTER_REC_MEM(reg, add) 
+#define PERF_REGISTER_REFRESH_MEM(reg, add) 
 
 
 #define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, CPU_REC_TYPE, desc) 

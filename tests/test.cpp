@@ -24,6 +24,7 @@ void entry_mem_test()
 {
     PERF_DEFINE_COUNTER(counter);
     PERF_START_COUNTER(counter);
+    
 
     for (size_t i = 0; i < 10000; i++)
     {
@@ -45,5 +46,4 @@ void entry_mem_test()
         PERF_CALL_CPU_WRAP(ENUM_FREE, 1, counter.save().cycles(), PERF_CPU_NORMAL);
         PERF_CALL_MEM(ENUM_FREE, 1, 10);
     }
-
 }
