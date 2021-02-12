@@ -43,7 +43,7 @@
 #include <unordered_set>
 #include <memory>
 #include <atomic>
-
+#include <limits.h>
 #ifdef _WIN32
 #ifndef KEEP_INPUT_QUICK_EDIT
 #define KEEP_INPUT_QUICK_EDIT false
@@ -579,6 +579,8 @@ public:
         track.cpu.sum += cost;
         track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
         track.cpu.sm = (track.cpu.sm * 8 + dis * 2) / 10;
+        track.cpu.max_u = track.cpu.max_u > dis ? track.cpu.max_u : dis;
+        track.cpu.min_u = track.cpu.min_u < dis ? track.cpu.min_u : dis;
         track.cpu.dv += abs(dis - track.cpu.sm);
         track.cpu.t_c += c;
         track.cpu.t_u += cost;
@@ -589,7 +591,7 @@ public:
         track.cpu.c += 1;
         track.cpu.sum += cost;
         track.cpu.sm = track.cpu.sm == 0 ? cost : track.cpu.sm;
-        track.cpu.sm = (track.cpu.sm * 8 + cost * 2) / 10;
+        track.cpu.sm = (track.cpu.sm * 12 + cost * 4) / 16;
         track.cpu.dv += abs(cost - track.cpu.sm);
         track.cpu.t_c += 1;
         track.cpu.t_u += cost;
@@ -620,23 +622,32 @@ public:
         track.cpu.c += c;
         track.cpu.sum += cost;
         long long dis = cost / c;
+        long long h_sm = (track.cpu.h_sm * 12 + cost * 4) >> 4;
+        long long l_sm = (track.cpu.l_sm * 12 + cost * 4) >> 4;
         long long avg = track.cpu.sum / track.cpu.c;
+        
+
+
         track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
         track.cpu.h_sm = track.cpu.h_sm == 0 ? dis : track.cpu.h_sm;
         track.cpu.l_sm = track.cpu.l_sm == 0 ? dis : track.cpu.l_sm;
-        track.cpu.min_u = track.cpu.min_u == 0 ? dis : track.cpu.min_u;
+
+
+        track.cpu.sm = (track.cpu.sm * 12 + cost * 4) >> 4;
+        track.cpu.dv += abs(dis - track.cpu.sm);
+        track.cpu.t_c += c;
+        track.cpu.t_u += cost;
+
 
         track.cpu.max_u = track.cpu.max_u > dis ? track.cpu.max_u : dis;
         track.cpu.min_u = track.cpu.min_u < dis ? track.cpu.min_u : dis;
 
-        track.cpu.sm = (track.cpu.sm * 8 + cost * 2) / 10;
-        track.cpu.h_sm = dis > avg ? (track.cpu.h_sm * 8 + cost * 2) / 10 : track.cpu.h_sm;
-        track.cpu.l_sm = dis < avg ? (track.cpu.l_sm * 8 + cost * 2) / 10 : track.cpu.l_sm;
+        track.cpu.h_sm = dis > avg ? h_sm : track.cpu.h_sm;
+        track.cpu.l_sm = dis < avg ? l_sm : track.cpu.l_sm;
 
 
-        track.cpu.dv += abs(dis - track.cpu.sm);
-        track.cpu.t_c += c;
-        track.cpu.t_u += cost;
+
+
     }
     void call_timer(int idx, long long stamp)
     {
@@ -847,6 +858,7 @@ int PerfRecord<T, S>::init_perf(const char* desc)
     circles_per_ns_[PERF_COUNTER_SYS] = 1.0;
 #endif
 
+
     return 0;
 
 }
@@ -889,6 +901,7 @@ int PerfRecord<T, S>::regist_track(int idx, const char* desc, unsigned int count
     track.desc.track_name_len = len;
     track.active = true;
     track.desc.counter_type = counter_type;
+    track.cpu.min_u = LLONG_MAX;
     return 0;
 }
 
