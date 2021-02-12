@@ -669,7 +669,14 @@ public:
         track.mem.t_c += c;
         track.cpu.t_u += add;
     }
-    
+    void refresh_mem(int idx, long long c, long long add)
+    {
+        PerfTrack& track = tracks_[idx];
+        track.mem.c = c;
+        track.mem.sum = add;
+        track.mem.t_c = c;
+        track.cpu.t_u = add;
+    }
     void merge_to(int idx, int to)
     {
         PerfTrack& track = tracks_[idx];
@@ -1312,6 +1319,7 @@ private:
             PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>((int)(idx), (long long)(COUNT), (long long)cost, \
                     (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE> *)NULL)
 #define PERF_CALL_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
+#define PERF_REFRESH_MEM(idx, count, mem) PerfInst.refresh_mem(idx, count, mem)
 #define PERF_CALL_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
 
 
@@ -1350,6 +1358,7 @@ private:
 #define PERF_CALL_CPU(idx, cost) 
 #define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE) 
 #define PERF_CALL_MEM(idx, count, mem) 
+#define PERF_REFRESH_MEM(idx, count, mem) 
 #define PERF_CALL_TIMER(idx, stamp) 
 
 
