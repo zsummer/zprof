@@ -27,7 +27,8 @@ int main(int argc, char *argv[])
     PERF_INIT("inner perf");
     //PerfInst.init_perf("inner perf");
     regist_perf();
-
+    PERF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PERF_CPU_NORMAL, "self use mem in main func begin and exit");
+    PERF_REGISTER_REFRESH_MEM(delta.reg(), perf_self_memory_use());
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PERF_CPU_NORMAL, "start fnlog use");
@@ -41,6 +42,7 @@ int main(int argc, char *argv[])
         PERF_DEFINE_AUTO_SINGLE_RECORD(ot, 1, PERF_CPU_NORMAL, "self use mem");
         PERF_REGISTER_REC_MEM(ot.reg(), perf_self_memory_use());
     }
+
 
     if (true)
     {
@@ -376,6 +378,7 @@ int main(int argc, char *argv[])
     entry_mem_test();
     PERF_UPDATE_MERGE();
     PERF_SERIALIZE_FN_LOG();
+    PERF_REGISTER_REFRESH_MEM(delta.reg(), perf_self_memory_use());
 
     PERF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
