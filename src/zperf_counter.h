@@ -338,7 +338,7 @@ inline double perf_self_cpu_mhz()
     return mhz;
 }
 
-inline double get_win_freq_rate()
+inline double perf_win_freq_rate()
 {
     double freq_rate = 0;
     long long win_freq = 0;
@@ -506,7 +506,25 @@ public:
     PerfCounter& stop_and_save() { return save(); }
 
     long long cycles() { return cycles_; }
-    long long duration_ns() { return (long long)(cycles_ / perf_self_cpu_mhz()/1000.0); }
+    long long duration_ns() 
+    { 
+        double rate = 1.0;
+        switch (T)
+        {
+        case PERF_COUNTER_CLOCK:
+#ifdef WIN32
+            rate = perf_win_freq_rate();
+#endif
+            break;
+        case PERF_COUNTER_RDTSC:
+        case PERF_COUNTER_RDTSC_NOFENCE:
+            rate = 1.0 / (perf_self_cpu_mhz() / 1000.0);
+            break;
+        default:
+            break;
+        }
+        return (long long)(cycles_ * rate); 
+    }
     double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
     long long stop_val() { return start_val_ + cycles_; }
     long long start_val() { return start_val_; }

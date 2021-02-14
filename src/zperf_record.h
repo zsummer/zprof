@@ -447,21 +447,15 @@ int PerfRecord<T, S, D>::init_perf(const char* desc)
     circles_per_ns_[PERF_CONNTER_CHRONO] = chrono_rate;
     circles_per_ns_[PERF_COUNTER_NULL] = 0;
 #ifdef WIN32
-    double rdtsc_rate = perf_self_cpu_mhz();
-    rdtsc_rate *= 1000 * 1000;
-    rdtsc_rate = 1.0 / rdtsc_rate;
-    rdtsc_rate *= 1000 * 1000 * 1000;
-    double freq_rate = get_win_freq_rate();
+    double rdtsc_rate = 1.0/(perf_self_cpu_mhz()/1000);
+    double freq_rate = perf_win_freq_rate();
     circles_per_ns_[PERF_COUNTER_RDTSC] = rdtsc_rate;
     circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
     circles_per_ns_[PERF_COUNTER_CLOCK] = freq_rate;
     circles_per_ns_[PERF_COUNTER_SYS] = 1.0;
 
 #elif (defined __APPLE__)
-    double rdtsc_rate = perf_self_cpu_mhz();
-    rdtsc_rate *= 1000 * 1000;
-    rdtsc_rate = 1.0 / rdtsc_rate;
-    rdtsc_rate *= 1000 * 1000 * 1000;
+    double rdtsc_rate = 1.0 / (perf_self_cpu_mhz() / 1000);
     circles_per_ns_[PERF_COUNTER_RDTSC] = rdtsc_rate;
     circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
     circles_per_ns_[PERF_COUNTER_CLOCK] = 1.0;
@@ -473,10 +467,7 @@ int PerfRecord<T, S, D>::init_perf(const char* desc)
     //sched_setaffinity(0, sizeof(set), &set);
     //cat /proc/cpuinfo |grep constant_tsc  
 
-    double rdtsc_rate = perf_self_cpu_mhz();
-    rdtsc_rate *= 1000 * 1000;
-    rdtsc_rate = 1.0 / rdtsc_rate;
-    rdtsc_rate *= 1000 * 1000 * 1000;
+    double rdtsc_rate = 1.0 / (perf_self_cpu_mhz() / 1000);
     circles_per_ns_[PERF_COUNTER_RDTSC] = rdtsc_rate;
     circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = rdtsc_rate;
     circles_per_ns_[PERF_COUNTER_CLOCK] = 1.0;
