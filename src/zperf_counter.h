@@ -21,28 +21,7 @@
 #include <cstddef>
 #include <cstring>
 #include <stdio.h>
-#include <iostream>
-#include <vector>
 #include <array>
-#include <string>
-#include <algorithm>
-#include <array>
-#include <mutex>
-#include <thread>
-#include <functional>
-#include <regex>
-#include <atomic>
-#include <cmath>
-#include <cfloat>
-#include <list>
-#include <deque>
-#include <queue>
-#include <map>
-#include <unordered_map>
-#include <set>
-#include <unordered_set>
-#include <memory>
-#include <atomic>
 #include <limits.h>
 #ifdef _WIN32
 #ifndef KEEP_INPUT_QUICK_EDIT
@@ -68,15 +47,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/stat.h>
-#include <dirent.h>
 #include <fcntl.h>
-#include <semaphore.h>
 #include <sys/syscall.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #
 #endif
 
@@ -340,12 +314,16 @@ inline double perf_self_cpu_mhz()
 
 inline double perf_win_freq_rate()
 {
+#ifdef WIN32
     double freq_rate = 0;
     long long win_freq = 0;
     QueryPerformanceFrequency((LARGE_INTEGER*)&win_freq);
     freq_rate = 1.0 / win_freq;
     freq_rate *= 1000.0 * 1000 * 1000;
     return freq_rate;
+#else
+    return 0.0;
+#endif
 }
 
 
