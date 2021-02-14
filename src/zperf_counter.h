@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <array>
 #include <limits.h>
+#include <chrono>
 #ifdef _WIN32
 #ifndef KEEP_INPUT_QUICK_EDIT
 #define KEEP_INPUT_QUICK_EDIT false
@@ -265,7 +266,7 @@ inline double perf_self_cpu_mhz()
 
     SYSTEM_INFO si = { 0 };
     GetSystemInfo(&si);
-    std::vector<PERF_PROCESSOR_POWER_INFORMATION> pppi(si.dwNumberOfProcessors);
+    std::array< PERF_PROCESSOR_POWER_INFORMATION, 128> pppi;
     DWORD dwSize = sizeof(PERF_PROCESSOR_POWER_INFORMATION) * si.dwNumberOfProcessors;
     memset(&pppi[0], 0, dwSize);
     long ret = CallNtPowerInformation(ProcessorInformation, NULL, 0, &pppi[0], dwSize);
