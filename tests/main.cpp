@@ -283,12 +283,31 @@ int main(int argc, char *argv[])
 
     if (true)
     {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu normal wrap 1000w (without count)");
+        for (int i = 0; i < 10000000; i++)
+        {
+            PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 1, 1000, PERF_CPU_NORMAL);
+        }
+    }
+
+    if (true)
+    {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu normal wrap 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 10, 1000, PERF_CPU_NORMAL);
         }
     }
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu full wrap 1000w (without count)");
+        for (int i = 0; i < 10000000; i++)
+        {
+            PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 1, 1000, PERF_CPU_FULL);
+        }
+    }
+
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu full wrap 1000w (with count)");
