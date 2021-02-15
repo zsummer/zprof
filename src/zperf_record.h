@@ -99,8 +99,7 @@ public:
     static const int TRACK_MAX_COUNT = S+D;
     static const int PERF_RECORD_TYPE = T;
     static const int SERIALIZE_BUFF_LEN = PERF_MAX_TRACK_CHILD_DEPTH* PERF_MAX_TRACK_CHILD_COUNT* PERF_MAX_TRACK_LINE_SIZE * 2;
-    using SMFUNC = void(PerfRecord<T, S, D>::*) (PerfTrack & , long long );
-    SMFUNC smfuncs_[2];
+
 
     PerfRecord() 
     {
@@ -111,9 +110,6 @@ public:
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
         used_track_id_ = TRACK_COUNT;
         serialize_buff_[0] = '\0';
-        smfuncs_[0] = &PerfRecord<T, S, D>::call_cpu_full_high;
-        smfuncs_[1] = &PerfRecord<T, S, D>::call_cpu_full_low;
-        //smfuncs_ = { &PerfRecord<T,S,D>::call_cpu_full_high , &PerfRecord<T,S,D>::call_cpu_full_low };
     };
     static PerfRecord& instance()
     {
@@ -144,7 +140,7 @@ public:
         track.cpu.c += c;
         track.cpu.sum += cost;
         track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
-        track.cpu.sm = (track.cpu.sm * 8 + dis * 2) / 10;
+        track.cpu.sm = (track.cpu.sm * 12 + cost * 4) >> 4;
         track.cpu.max_u = track.cpu.max_u > dis ? track.cpu.max_u : dis;
         track.cpu.min_u = track.cpu.min_u < dis ? track.cpu.min_u : dis;
         track.cpu.dv += abs(dis - track.cpu.sm);
@@ -157,7 +153,7 @@ public:
         track.cpu.c += 1;
         track.cpu.sum += cost;
         track.cpu.sm = track.cpu.sm == 0 ? cost : track.cpu.sm;
-        track.cpu.sm = (track.cpu.sm * 12 + cost * 4) / 16;
+        track.cpu.sm = (track.cpu.sm * 12 + cost * 4) >> 4;
         track.cpu.dv += abs(cost - track.cpu.sm);
         track.cpu.t_c += 1;
         track.cpu.t_u += cost;
@@ -182,18 +178,30 @@ public:
         track.cpu.t_u += cost;
     }
 
-    void call_cpu_full_high(PerfTrack& track, long long dis)
+    void call_cpu_full(int idx, long long cost)
     {
-        track.cpu.h_sm = track.cpu.h_sm == 0 ? dis : track.cpu.h_sm;
-        track.cpu.h_sm = (track.cpu.h_sm * 12 + dis * 4) >> 4;
+
+        PerfTrack& track = tracks_[idx];
+        track.cpu.c += 1;
+        track.cpu.sum += cost;
+        long long dis = cost;
+        long long avg = track.cpu.sum / track.cpu.c;
+        if (track.cpu.sm == 0)
+        {
+            track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
+            track.cpu.l_sm = track.cpu.l_sm == 0 ? dis : track.cpu.l_sm;
+            track.cpu.h_sm = track.cpu.h_sm == 0 ? dis : track.cpu.h_sm;
+        }
+        long long& hlsm = dis > avg ? track.cpu.h_sm : track.cpu.l_sm;
+        hlsm = (hlsm * 12 + dis * 4) >> 4;
+        track.cpu.sm = (track.cpu.sm * 12 + cost * 4) >> 4;
+        track.cpu.dv += abs(dis - track.cpu.sm);
+        track.cpu.t_c += 1;
+        track.cpu.t_u += cost;
         track.cpu.max_u = track.cpu.max_u > dis ? track.cpu.max_u : dis;
-    }
-    void call_cpu_full_low(PerfTrack& track, long long dis)
-    {
-        track.cpu.l_sm = track.cpu.l_sm == 0 ? dis : track.cpu.l_sm;
-        track.cpu.l_sm = (track.cpu.l_sm * 12 + dis * 4) >> 4;
         track.cpu.min_u = track.cpu.min_u < dis ? track.cpu.min_u : dis;
     }
+
     void call_cpu_full(int idx, long long c, long long cost)
     {
         
@@ -201,31 +209,23 @@ public:
         track.cpu.c += c;
         track.cpu.sum += cost;
         long long dis = cost / c;
-        
-        
         long long avg = track.cpu.sum / track.cpu.c;
-        
-        track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
+        if (track.cpu.sm == 0)
+        {
+            track.cpu.sm = track.cpu.sm == 0 ? dis : track.cpu.sm;
+            track.cpu.l_sm = track.cpu.l_sm == 0 ? dis : track.cpu.l_sm;
+            track.cpu.h_sm = track.cpu.h_sm == 0 ? dis : track.cpu.h_sm;
+        }
+        long long& hlsm = dis > avg ? track.cpu.h_sm : track.cpu.l_sm;
+        hlsm = (hlsm * 12 + dis * 4) >> 4;
         track.cpu.sm = (track.cpu.sm * 12 + cost * 4) >> 4;
-        //long long index = (unsigned long long)(dis - avg) >> 63;
-        //(this->*(smfuncs_[index]))(track, dis);
-
-        track.cpu.h_sm = track.cpu.h_sm == 0 ? dis : track.cpu.h_sm;
-        long long h_sm = (track.cpu.h_sm * 12 + dis * 4) >> 4;
-        track.cpu.h_sm = dis > avg ? h_sm : track.cpu.h_sm;
-        track.cpu.max_u = track.cpu.max_u > dis ? track.cpu.max_u : dis;
-             
-            
-        track.cpu.l_sm = track.cpu.l_sm == 0 ? dis : track.cpu.l_sm;
-        long long l_sm = (track.cpu.l_sm * 12 + dis * 4) >> 4;
-        track.cpu.l_sm = dis < avg ? l_sm : track.cpu.l_sm;
-        track.cpu.min_u = track.cpu.min_u < dis ? track.cpu.min_u : dis;
- 
         track.cpu.dv += abs(dis - track.cpu.sm);
         track.cpu.t_c += c;
         track.cpu.t_u += cost;
-
+        track.cpu.max_u = track.cpu.max_u > dis ? track.cpu.max_u : dis;
+        track.cpu.min_u = track.cpu.min_u < dis ? track.cpu.min_u : dis;
     }
+
 
     void call_timer(int idx, long long stamp)
     {
@@ -534,7 +534,7 @@ int PerfRecord<T, S, D>::serialize(int entry_idx, int depth, char* org_buff, int
         char buff_max[50];
         human_time_format(buff_max, (long long)(track.cpu.max_u * circles_per_ns(track.desc.counter_type)));
         char buff_min[50];
-        human_time_format(buff_min, (long long)(track.cpu.min_u * circles_per_ns(track.desc.counter_type)));
+        human_time_format(buff_min, (long long)(track.cpu.min_u == LLONG_MAX ? 0 : track.cpu.min_u * circles_per_ns(track.desc.counter_type)));
 
         int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s dv: %s sum: %s  sm: %s hsm: %s lsm: %s max: %s min: %s  \n",
             track.desc.track_name, buff_call, buff_avg, buff_dv, buff_sum, buff_sm, buff_hsm, buff_lsm, buff_max, buff_min);

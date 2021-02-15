@@ -327,6 +327,17 @@ inline double perf_win_freq_rate()
 #endif
 }
 
+inline double perf_static_win_freq_rate()
+{
+    static double freq_rate = perf_win_freq_rate();
+    return freq_rate;
+}
+
+inline double perf_static_rdtsc_rate()
+{
+    static double rdtsc_rate = 1.0 / (perf_self_cpu_mhz() / 1000); 
+    return rdtsc_rate;
+}
 
 template<PerfCounterType T>
 inline long long perf_tsc(const PerfCounterTypeClass<T>* ptr)
@@ -492,12 +503,12 @@ public:
         {
         case PERF_COUNTER_CLOCK:
 #ifdef WIN32
-            rate = perf_win_freq_rate();
+            rate = perf_static_win_freq_rate();
 #endif
             break;
         case PERF_COUNTER_RDTSC:
         case PERF_COUNTER_RDTSC_NOFENCE:
-            rate = 1.0 / (perf_self_cpu_mhz() / 1000.0);
+            rate = perf_static_rdtsc_rate();
             break;
         default:
             break;

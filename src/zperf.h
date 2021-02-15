@@ -86,7 +86,8 @@ inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordT
 template<>
 inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<false, PERF_CPU_FULL>*)
 {
-    PerfInst.call_cpu_full(idx, count, cost);
+    (void)count;
+    PerfInst.call_cpu_full(idx, cost);
 }
 
 template<long long COUNT>
