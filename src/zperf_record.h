@@ -22,7 +22,7 @@
 #define ZPERF_RECORD_H
 
 
-#define PERF_RESERVE_TRACK_BEGIN 1
+#define PERF_DECLARE_TRACK_BEGIN 1
 
 #define PERF_MAX_TRACK_NAME_SIZE 128
 #define PERF_MAX_TRACK_LINE_SIZE (PERF_MAX_TRACK_NAME_SIZE + 200)
@@ -30,7 +30,7 @@
 #define PERF_MAX_TRACK_CHILD_DEPTH 5
 
 
-static_assert(PERF_RESERVE_TRACK_BEGIN > 0, "");
+static_assert(PERF_DECLARE_TRACK_BEGIN > 0, "");
 
 
 enum PerfCPURecType
@@ -60,6 +60,7 @@ struct PerfCPU
     long long min_u;
     long long t_c;
     long long t_u;
+    long long merge_temp;
 };
 
 struct PerfTimer
@@ -74,6 +75,7 @@ struct PerfMEM
     long long delta;
     long long t_c;
     long long t_u;
+    long long merge_temp;
 };
 
 struct PerfTrack
@@ -94,22 +96,37 @@ template<int T, int S, int D>
 class PerfRecord 
 {
 public:
-    static const int TRACK_COUNT = S;
+    static const int DECLARE_TRACK_COUNT = S;
     static const int TRACK_DYN_COUNT = D;
-    static const int TRACK_MAX_COUNT = S+D;
+    static const int TRACK_MAX_COUNT = PERF_DECLARE_TRACK_BEGIN + DECLARE_TRACK_COUNT + TRACK_DYN_COUNT;
     static const int PERF_RECORD_TYPE = T;
     static const int SERIALIZE_BUFF_LEN = PERF_MAX_TRACK_CHILD_DEPTH* PERF_MAX_TRACK_CHILD_COUNT* PERF_MAX_TRACK_LINE_SIZE * 2;
+    static constexpr int track_count() { return TRACK_MAX_COUNT; }
+    static constexpr int track_max_count() { return TRACK_MAX_COUNT; }
+    static constexpr int track_declare_begin() { return PERF_DECLARE_TRACK_BEGIN; }
+    static constexpr int track_declare_count() { return DECLARE_TRACK_COUNT; }
+    static constexpr int track_declare_end() { return track_declare_begin() + track_declare_count(); }
+    static constexpr int track_dyn_begin() { return track_declare_end(); }
+    static constexpr int track_dyn_count() { return TRACK_DYN_COUNT; }
+    static constexpr int track_dyn_end() { return track_dyn_begin() + track_dyn_count(); }
 
+    static_assert(track_max_count() == track_dyn_end(), "");
+
+public:
+    long long init_timestamp_;
+    long long last_timestamp_;
+public:
 
     PerfRecord() 
     {
         memset(tracks_, 0, sizeof(tracks_));
         desc_[0] = '\0';
-        state_ = 0;
         merge_to_size_ = 0;
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
-        used_track_id_ = TRACK_COUNT;
+        used_track_id_ = track_dyn_begin();
         serialize_buff_[0] = '\0';
+        init_timestamp_ = 0;
+        last_timestamp_ = 0;
     };
     static PerfRecord& instance()
     {
@@ -130,6 +147,21 @@ public:
     {
         PerfTrack& track = tracks_[idx];
         memset(&track.mem, 0, sizeof(track.mem));
+    }
+    void reset_timer(int idx)
+    {
+        PerfTrack& track = tracks_[idx];
+        memset(&track.timer, 0, sizeof(track.timer));
+    }
+    void reset_declare_info()
+    {
+        for (int i = track_declare_begin(); i < track_declare_end(); i++)
+        {
+            reset_cpu(i);
+            reset_mem(i);
+            reset_timer(i);
+        }
+        last_timestamp_ = time(NULL);
     }
     inline void reset_childs(int idx, int depth = 0);
 
@@ -245,7 +277,7 @@ public:
         track.mem.c += c;
         track.mem.sum += add;
         track.mem.t_c += c;
-        track.cpu.t_u += add;
+        track.mem.t_u += add;
     }
     void refresh_mem(int idx, long long c, long long add)
     {
@@ -254,27 +286,71 @@ public:
         track.mem.delta = add - track.mem.sum;
         track.mem.sum = add;
         track.mem.t_c = c;
-        track.cpu.t_u = add;
+        track.mem.t_u = add;
     }
-    void merge_to(int idx, int to)
+
+
+    void merge_cpu_temp(long long t_u, int to)
+    {
+        PerfTrack& to_track = tracks_[to];
+        to_track.cpu.merge_temp += t_u;
+        if (to_track.merge_to > 0)
+        {
+            merge_cpu_temp(t_u, to_track.merge_to);
+        }
+    }
+    void merge_mem_temp(long long t_u, int to)
+    {
+        PerfTrack& to_track = tracks_[to];
+        to_track.mem.merge_temp += t_u;
+        if (to_track.merge_to > 0)
+        {
+            merge_mem_temp(t_u, to_track.merge_to);
+        }
+    }
+    void merge_proc(int idx, int to)
     {
         PerfTrack& track = tracks_[idx];
         if (track.cpu.t_c > 0)
         {
-            call_cpu(to, track.cpu.t_u);
+            merge_cpu_temp(track.cpu.t_u, to);
             track.cpu.t_c = 0;
             track.cpu.t_u = 0;
         }
         if (track.mem.t_c > 0)
         {
-            call_mem(to, 1, track.mem.t_u);
+            merge_mem_temp(track.mem.t_u, to);
             track.mem.t_c = 0;
             track.mem.t_u = 0;
         }
     }
 
+    void merge_to(int idx, int to)
+    {
+        PerfTrack& to_track = tracks_[to];
+        if (to_track.cpu.merge_temp > 0)
+        {
+            call_cpu_full(to, to_track.cpu.merge_temp);
+            to_track.cpu.merge_temp = 0;
+            to_track.cpu.t_c = 0;
+            to_track.cpu.t_u = 0;
+        }
+        if (to_track.mem.merge_temp > 0)
+        {
+            call_mem(to, 1, to_track.mem.merge_temp);
+            to_track.mem.merge_temp = 0;
+            to_track.mem.t_c = 0;
+            to_track.mem.t_u = 0;
+        }
+    }
+
     void update_merge()
     {
+        for (int i = 0; i < merge_to_size_; i++)
+        {
+            PerfTrack& track = tracks_[merge_to_[i]];
+            merge_proc(merge_to_[i], track.merge_to);
+        }
         for (int i = 0; i < merge_to_size_; i++)
         {
             PerfTrack& track = tracks_[merge_to_[i]];
@@ -286,11 +362,9 @@ public:
 
 
     PerfTrack& track(int idx) { return tracks_[idx]; }
-    int track_count()const { return TRACK_MAX_COUNT; }
+    
     const char* desc() const { return desc_; }
     char* mutable_desc() { return desc_; }
-    const unsigned int state() const { return state_; }
-    void set_state(unsigned int state) { state_ = state; }
     double circles_per_ns(int t) { return  circles_per_ns_[t == PERF_COUNTER_NULL ? PERF_COUNTER_DEFAULT : t]; }
     int new_dyn_track_id() 
     { 
@@ -305,7 +379,6 @@ private:
     char desc_[PERF_MAX_TRACK_NAME_SIZE];
     std::array<int, TRACK_MAX_COUNT> merge_to_;
     int merge_to_size_;
-    unsigned int state_;
     double circles_per_ns_[PERF_COUNTER_MAX];
     int used_track_id_;
     char serialize_buff_[SERIALIZE_BUFF_LEN];
@@ -380,6 +453,11 @@ template<int T, int S, int D>
 int PerfRecord<T, S, D>::init_perf(const char* desc)
 {
     sprintf(desc_, "%s", desc);
+
+    last_timestamp_ = time(NULL);
+    init_timestamp_ = time(NULL);
+
+
     double chrono_rate = (double)std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count();
     chrono_rate /= 1000.0 * 1000.0 * 1000.0;
     chrono_rate = 1.0 / chrono_rate;
@@ -536,7 +614,7 @@ int PerfRecord<T, S, D>::serialize(int entry_idx, int depth, char* org_buff, int
         char buff_min[50];
         human_time_format(buff_min, (long long)(track.cpu.min_u == LLONG_MAX ? 0 : track.cpu.min_u * circles_per_ns(track.desc.counter_type)));
 
-        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  avg: %s dv: %s sum: %s  sm: %s hsm: %s lsm: %s max: %s min: %s  \n",
+        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  [avg: %s] dv: %s sum: %s  [sm: %s] hsm: %s lsm: %s max: %s min: %s  \n",
             track.desc.track_name, buff_call, buff_avg, buff_dv, buff_sum, buff_sm, buff_hsm, buff_lsm, buff_max, buff_min);
 
         if (ret < 0)

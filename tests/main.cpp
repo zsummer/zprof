@@ -39,6 +39,44 @@ int main(int argc, char *argv[])
 
     if (true)
     {
+        PERF_CALL_CPU(ENUM_MERGE_CHILD1, 100);
+        PERF_CALL_CPU(ENUM_MERGE_CHILD1, 106);
+        PERF_CALL_CPU(ENUM_MERGE_CHILD2, 200);
+        PERF_CALL_CPU(ENUM_MERGE_CHILD2, 300);
+
+        PERF_CALL_MEM(ENUM_MERGE_CHILD1, 1, 100);
+        PERF_CALL_MEM(ENUM_MERGE_CHILD1, 1, 106);
+        PERF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 200);
+        PERF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
+
+        PERF_UPDATE_MERGE();
+        PERF_SERIALIZE_FN_LOG();
+
+        PERF_CALL_CPU(ENUM_MERGE_CHILD1, 100);
+        PERF_CALL_CPU(ENUM_MERGE_CHILD1, 106);
+        PERF_CALL_CPU(ENUM_MERGE_CHILD2, 200);
+        PERF_CALL_CPU(ENUM_MERGE_CHILD2, 300);
+
+        PERF_CALL_MEM(ENUM_MERGE_CHILD1, 1, 100);
+        PERF_CALL_MEM(ENUM_MERGE_CHILD1, 1, 106);
+        PERF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 200);
+        PERF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
+
+        PERF_UPDATE_MERGE();
+        PERF_SERIALIZE_FN_LOG();
+        PERF_CLEAR_DECLARE();
+        PERF_SERIALIZE_FN_LOG();
+
+
+    }
+
+
+
+
+
+
+    if (true)
+    {
         PERF_DEFINE_AUTO_SINGLE_RECORD(ot, 1, PERF_CPU_NORMAL, "self use mem");
         PERF_REGISTER_REC_MEM(ot.reg(), perf_self_memory_use());
     }
@@ -401,7 +439,7 @@ int main(int argc, char *argv[])
 
     PERF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
-    PerfInst.update_merge();
+    PERF_UPDATE_MERGE();
     PERF_SERIALIZE_FN_LOG();
 
     
