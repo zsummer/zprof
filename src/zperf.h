@@ -198,10 +198,12 @@ private:
 #define PERF_FAST_REGIST_TRACK(id)  PerfInst.regist_track(id, #id, PERF_COUNTER_DEFAULT, false)
 #define PERF_BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
 #define PERF_BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
+#define PERF_BIND_MERGE_FROM(id, fid) PerfInst.add_merge_to(fid, id)
 
 #define PERF_INIT(desc) PerfInst.init_perf(desc)
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
+#define PERF_CLEAR_DECLARE() PerfInst.reset_declare_info()
 
 #define PERF_CALL_CPU(idx, cost) PerfInst.call_cpu(idx, cost)
 #define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE)  \
@@ -230,7 +232,7 @@ private:
 
 
 #define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, CPU_REC_TYPE, desc) PerfAutoSingleRecord<COUNT, CPU_REC_TYPE, PERF_COUNTER_DEFAULT> rec(desc)
-#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ PerfRegister<> __temp_perf_record_mem__(desc); PERF_CALL_MEM(__temp_perf_record_mem__.track_id(), perf_self_memory_use()); }while(0)
+#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ PerfRegister<> __temp_perf_record_mem__(desc); PERF_CALL_MEM(__temp_perf_record_mem__.track_id(), 1, perf_self_memory_use()); }while(0)
 
 
 
@@ -240,6 +242,7 @@ private:
 #define PERF_FAST_REGIST_TRACK(id) 
 #define PERF_BIND_CHILD(id, cid) 
 #define PERF_BIND_MERGE(id, tid) 
+#define PERF_BIND_MERGE_FROM(id, fid) 
 
 #define PERF_INIT(desc) 
 #define PERF_RESET_CHILD(idx) 
