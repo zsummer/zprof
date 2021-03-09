@@ -89,7 +89,17 @@ enum PerfCounterType
     PERF_COUNTER_MAX,
 };
 
+
+#ifndef PERF_COUNTER_DEFAULT
+
 #define PERF_COUNTER_DEFAULT PERF_COUNTER_RDTSC
+
+#endif 
+
+
+
+
+
 template<PerfCounterType T>
 struct PerfCounterTypeClass
 {

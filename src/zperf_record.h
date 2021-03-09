@@ -134,7 +134,7 @@ public:
         return inst;
     }
     inline int init_perf(const char* desc);
-    inline int regist_track(int idx, const char* desc, unsigned int counter, bool overwrite);
+    inline int regist_track(int idx, const char* desc, unsigned int counter, bool re_reg);
     inline int add_track_child(int idx, int child);
     inline int add_merge_to(int idx, int to);
 
@@ -501,7 +501,7 @@ int PerfRecord<T, S, D>::init_perf(const char* desc)
 
 
 template<int T, int S, int D>
-int PerfRecord<T, S, D>::regist_track(int idx, const char* desc, unsigned int counter_type, bool overwrite)
+int PerfRecord<T, S, D>::regist_track(int idx, const char* desc, unsigned int counter_type, bool re_reg)
 {
     if (idx < 0)
     {
@@ -518,7 +518,7 @@ int PerfRecord<T, S, D>::regist_track(int idx, const char* desc, unsigned int co
     PerfTrack& track = tracks_[idx];
 
 
-    if (overwrite && track.active)
+    if (!re_reg && track.active)
     {
         return 0;
     }
