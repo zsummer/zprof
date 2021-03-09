@@ -194,7 +194,7 @@ private:
 
 #ifdef OPEN_ZPERF
 
-#define PERF_REGIST_TRACK(id, name, c, force)  PerfInst.regist_track(id, name, c, force)
+#define PERF_REGIST_TRACK(id, name, c, re_reg)  PerfInst.regist_track(id, name, c, re_reg)
 #define PERF_FAST_REGIST_TRACK(id)  PerfInst.regist_track(id, #id, PERF_COUNTER_DEFAULT, false)
 #define PERF_BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
 #define PERF_BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
