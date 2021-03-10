@@ -89,7 +89,17 @@ enum PerfCounterType
     PERF_COUNTER_MAX,
 };
 
+
+#ifndef PERF_COUNTER_DEFAULT
+
 #define PERF_COUNTER_DEFAULT PERF_COUNTER_RDTSC
+
+#endif 
+
+
+
+
+
 template<PerfCounterType T>
 struct PerfCounterTypeClass
 {
@@ -663,7 +673,7 @@ public:
         return inst;
     }
     inline int init_perf(const char* desc);
-    inline int regist_track(int idx, const char* desc, unsigned int counter, bool overwrite);
+    inline int regist_track(int idx, const char* desc, unsigned int counter, bool re_reg);
     inline int add_track_child(int idx, int child);
     inline int add_merge_to(int idx, int to);
 
@@ -897,7 +907,7 @@ public:
     double circles_per_ns(int t) { return  circles_per_ns_[t == PERF_COUNTER_NULL ? PERF_COUNTER_DEFAULT : t]; }
     int new_dyn_track_id() 
     { 
-        if (used_track_id_ >= TRACK_MAX_COUNT)
+        if (used_track_id_ >= TRACK_MAX_COUNT - 1)
         {
             return 0;
         }
@@ -1030,7 +1040,7 @@ int PerfRecord<T, S, D>::init_perf(const char* desc)
 
 
 template<int T, int S, int D>
-int PerfRecord<T, S, D>::regist_track(int idx, const char* desc, unsigned int counter_type, bool overwrite)
+int PerfRecord<T, S, D>::regist_track(int idx, const char* desc, unsigned int counter_type, bool re_reg)
 {
     if (idx < 0)
     {
@@ -1047,7 +1057,7 @@ int PerfRecord<T, S, D>::regist_track(int idx, const char* desc, unsigned int co
     PerfTrack& track = tracks_[idx];
 
 
-    if (overwrite && track.active)
+    if (!re_reg && track.active)
     {
         return 0;
     }
@@ -1463,7 +1473,7 @@ private:
 
 #ifdef OPEN_ZPERF
 
-#define PERF_REGIST_TRACK(id, name, c, force)  PerfInst.regist_track(id, name, c, force)
+#define PERF_REGIST_TRACK(id, name, c, re_reg)  PerfInst.regist_track(id, name, c, re_reg)
 #define PERF_FAST_REGIST_TRACK(id)  PerfInst.regist_track(id, #id, PERF_COUNTER_DEFAULT, false)
 #define PERF_BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
 #define PERF_BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)

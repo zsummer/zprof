@@ -368,7 +368,7 @@ public:
     double circles_per_ns(int t) { return  circles_per_ns_[t == PERF_COUNTER_NULL ? PERF_COUNTER_DEFAULT : t]; }
     int new_dyn_track_id() 
     { 
-        if (used_track_id_ >= TRACK_MAX_COUNT)
+        if (used_track_id_ >= TRACK_MAX_COUNT - 1)
         {
             return 0;
         }
