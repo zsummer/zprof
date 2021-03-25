@@ -1476,8 +1476,11 @@ private:
 #define PERF_REGIST_TRACK(id, name, c, re_reg)  PerfInst.regist_track(id, name, c, re_reg)
 #define PERF_FAST_REGIST_TRACK(id)  PerfInst.regist_track(id, #id, PERF_COUNTER_DEFAULT, false)
 #define PERF_BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
-#define PERF_BIND_MERGE(id, tid) PerfInst.add_merge_to(id, tid)
-#define PERF_BIND_MERGE_FROM(id, fid) PerfInst.add_merge_to(fid, id)
+#define PERF_BIND_MERGE(id, cid) PerfInst.add_merge_to(cid, id)
+#define PERF_BIND_CHILD_AND_MERGE(id, cid) do {PERF_BIND_CHILD(id, cid); PERF_BIND_MERGE(id, cid); }while(0)
+
+
+
 
 #define PERF_INIT(desc) PerfInst.init_perf(desc)
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
@@ -1520,8 +1523,8 @@ private:
 #define PERF_REGIST_TRACK(id, name, pt, force)
 #define PERF_FAST_REGIST_TRACK(id) 
 #define PERF_BIND_CHILD(id, cid) 
-#define PERF_BIND_MERGE(id, tid) 
-#define PERF_BIND_MERGE_FROM(id, fid) 
+#define PERF_BIND_MERGE(id, cid) 
+#define PERF_BIND_CHILD_AND_MERGE(id, cid) 
 
 #define PERF_INIT(desc) 
 #define PERF_RESET_CHILD(idx) 
