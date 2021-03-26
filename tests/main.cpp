@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     //PerfInst.init_perf("inner perf");
     regist_perf();
     PERF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PERF_CPU_NORMAL, "self use mem in main func begin and exit");
-    PERF_REGISTER_REFRESH_MEM(delta.reg(), perf_self_memory_use());
+    PERF_REGISTER_REFRESH_MEM(delta.reg(), perf_get_mem_use());
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PERF_CPU_NORMAL, "start fnlog use");
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 
         PERF_UPDATE_MERGE();
         PERF_SERIALIZE_FN_LOG();
-        PERF_CLEAR_DECLARE();
+        PERF_RESET_DECLARE();
         PERF_SERIALIZE_FN_LOG();
 
 
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(ot, 1, PERF_CPU_NORMAL, "self use mem");
-        PERF_REGISTER_REC_MEM(ot.reg(), perf_self_memory_use());
+        PERF_REGISTER_REC_MEM(ot.reg(), perf_get_mem_use());
     }
 
 
@@ -383,11 +383,11 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 100; i++)
         {
             PERF_REGISTER_START(ot);
-            PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
+            PERF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         PERF_REGISTER_START(ot);
-        PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
+        PERF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
     }
 
     if (true)
@@ -396,11 +396,11 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 100; i++)
         {
             PERF_REGISTER_START(ot);
-            PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
+            PERF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
             std::this_thread::sleep_for(std::chrono::nanoseconds(10 * 1000 * 1000));
         }
         PERF_REGISTER_START(ot);
-        PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
+        PERF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
     }
 
 #ifndef WIN32
@@ -411,11 +411,11 @@ int main(int argc, char *argv[])
     for (int i = 0; i < 100; i++)
     {
         PERF_REGISTER_START(ot);
-        PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
+        PERF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
         nanosleep(&tim, &tim2);
     }
     PERF_REGISTER_START(ot);
-    PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
+    PERF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
 #endif // WIN32
 
     if (true)
@@ -424,18 +424,18 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 20; i++)
         {
             PERF_REGISTER_START(ot);
-            PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
+            PERF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         PERF_REGISTER_START(ot);
-        PERF_CALL_TIMER(ot.track_id(), ot.counter().start_val());
+        PERF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
     }
 
     PERF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
     PERF_UPDATE_MERGE();
     PERF_SERIALIZE_FN_LOG();
-    PERF_REGISTER_REFRESH_MEM(delta.reg(), perf_self_memory_use());
+    PERF_REGISTER_REFRESH_MEM(delta.reg(), perf_get_mem_use());
 
     PERF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
