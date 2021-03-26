@@ -26,16 +26,16 @@
 #define PERF_DEFAULT_INST_ID 0
 #endif
 
-#ifndef PERF_TRACK_COUNT
-#define PERF_TRACK_COUNT 200
+#ifndef PERF_NODE_COUNT
+#define PERF_NODE_COUNT 200
 #endif 
 
-#ifndef PERF_TRACK_DYN_COUNT
-#define PERF_TRACK_DYN_COUNT 200
+#ifndef PERF_ANON_COUNT
+#define PERF_ANON_COUNT 200
 #endif
 
 
-#define PerfInst PerfRecord<PERF_DEFAULT_INST_ID, PERF_TRACK_COUNT, PERF_TRACK_DYN_COUNT>::instance()
+#define PerfInst PerfRecord<PERF_DEFAULT_INST_ID, PERF_NODE_COUNT, PERF_ANON_COUNT>::instance()
 
 
 
@@ -126,8 +126,8 @@ class PerfRegister
 public:
     PerfRegister(const char* desc)
     {
-        this_id_ = PerfInst.new_dyn_track_id();
-        PerfInst.regist_track(this_id_, desc, T, false);
+        this_id_ = PerfInst.new_anon_node_id();
+        PerfInst.regist_node(this_id_, desc, T, false);
     }
 
     ~PerfRegister()
@@ -161,7 +161,7 @@ public:
     {
         PerfInst.refresh_mem(this_id_, 1, mem);
     }
-    int track_id() { return this_id_; }
+    int node_id() { return this_id_; }
     PerfCounter<T>& counter() { return counter_; }
 
 private:
@@ -180,7 +180,7 @@ public:
     }
     ~PerfAutoSingleRecord()
     {
-        PerfRecordWrap(reg_.track_id(), COUNT, reg_.counter().save().cycles(), (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>*)NULL);
+        PerfRecordWrap(reg_.node_id(), COUNT, reg_.counter().save().cycles(), (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>*)NULL);
     }
 
     PerfRegister<C>& reg() { return reg_; }
@@ -194,10 +194,10 @@ private:
 
 #ifdef OPEN_ZPERF
 
-#define PERF_REGIST_TRACK(id, name, c, re_reg)  PerfInst.regist_track(id, name, c, re_reg)
-#define PERF_FAST_REGIST_TRACK(id)  PerfInst.regist_track(id, #id, PERF_COUNTER_DEFAULT, false)
-#define PERF_BIND_CHILD(id, cid)  PerfInst.add_track_child(id, cid)
-#define PERF_BIND_MERGE(id, cid) PerfInst.add_merge_to(cid, id)
+#define PERF_REGIST_NODE(id, name, c, re_reg)  PerfInst.regist_node(id, name, c, re_reg)
+#define PERF_FAST_REGIST_NODE(id)  PerfInst.regist_node(id, #id, PERF_COUNTER_DEFAULT, false)
+#define PERF_BIND_CHILD(id, cid)  PerfInst.bind_childs(id, cid)
+#define PERF_BIND_MERGE(id, cid) PerfInst.bind_merge(cid, id)
 #define PERF_BIND_CHILD_AND_MERGE(id, cid) do {PERF_BIND_CHILD(id, cid); PERF_BIND_MERGE(id, cid); }while(0)
 
 
@@ -206,7 +206,8 @@ private:
 #define PERF_INIT(desc) PerfInst.init_perf(desc)
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
-#define PERF_CLEAR_DECLARE() PerfInst.reset_declare_info()
+#define PERF_RESET_DECLARE() PerfInst.reset_declare_info()
+#define PERF_RESET_ANON() PerfInst.reset_anon_info()
 
 #define PERF_CALL_CPU(idx, cost) PerfInst.call_cpu(idx, cost)
 #define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE)  \
@@ -215,6 +216,7 @@ private:
 #define PERF_CALL_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
 #define PERF_REFRESH_MEM(idx, count, mem) PerfInst.refresh_mem(idx, count, mem)
 #define PERF_CALL_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
+#define PERF_CALL_USER(idx, count, add) PerfInst.call_user(idx, count, add)
 
 
 #define PERF_DEFINE_COUNTER(c)  PerfCounter<> c
@@ -235,14 +237,14 @@ private:
 
 
 #define PERF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, CPU_REC_TYPE, desc) PerfAutoSingleRecord<COUNT, CPU_REC_TYPE, PERF_COUNTER_DEFAULT> rec(desc)
-#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ PerfRegister<> __temp_perf_record_mem__(desc); PERF_CALL_MEM(__temp_perf_record_mem__.track_id(), 1, perf_self_memory_use()); }while(0)
+#define PERF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ PerfRegister<> __temp_perf_record_mem__(desc); PERF_CALL_MEM(__temp_perf_record_mem__.node_id(), 1, perf_get_mem_use()); }while(0)
 
 
 
 
 #else
-#define PERF_REGIST_TRACK(id, name, pt, force)
-#define PERF_FAST_REGIST_TRACK(id) 
+#define PERF_REGIST_NODE(id, name, pt, force)
+#define PERF_FAST_REGIST_NODE(id) 
 #define PERF_BIND_CHILD(id, cid) 
 #define PERF_BIND_MERGE(id, cid) 
 #define PERF_BIND_CHILD_AND_MERGE(id, cid) 
@@ -256,7 +258,7 @@ private:
 #define PERF_CALL_MEM(idx, count, mem) 
 #define PERF_REFRESH_MEM(idx, count, mem) 
 #define PERF_CALL_TIMER(idx, stamp) 
-
+#define PERF_CALL_USER(idx, count, add)
 
 #define PERF_DEFINE_COUNTER(c)  
 #define PERF_DEFINE_COUNTER_INIT(tc, start)  
@@ -284,9 +286,9 @@ private:
 #define PERF_SERIALIZE_FN_LOG()     LogDebug() \
 << "\n\n ------------------------------------------------------------------ " \
 "\n ----------------------PerfRecord[" << PerfInst.desc() << "] begin ---------------------- \n"; \
-for (int i = 0; i < PerfInst.track_count(); i++) \
+for (int i = 0; i < PerfInst.node_count(); i++) \
 { \
-    if (PerfInst.track(i).active && !PerfInst.track(i).is_child) \
+    if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
     { \
         LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) << PerfInst.serialize(i); \
     } \
