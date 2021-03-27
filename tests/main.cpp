@@ -92,55 +92,64 @@ int main(int argc, char *argv[])
     volatile double cycles = 0.0f;
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "perf_tsc_sys bat 1000w");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_SYS bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_tsc_sys();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_SYS>*)NULL); 
         }
     }
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "perf_tsc_clock bat 1000w");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_CLOCK bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_tsc_clock();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_CLOCK>*)NULL);
         }
     }
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "perf_tsc_rdtsc(lfence) bat 1000w");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_CONNTER_CHRONO bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_tsc_rdtsc();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_CONNTER_CHRONO>*)NULL);
+        }
+    }
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC(lfence) bat 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
         }
     }
 
     
     if (false)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "perf_tsc_rdtscp bat 1000");
-        for (size_t i = 0; i < 1000 * 10000; i++)
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSCP bat 1000");
+        for (size_t i = 0; i < 1000; i++)
         {
-            cycles += perf_tsc_rdtscp();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>*)NULL);
         }
     }
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "perf_tsc_rdtsc_nofence bat 1000w");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_MFENCE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_tsc_rdtsc_nofence();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>*)NULL);
         }
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "perf_tsc_mfence bat 1000w");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_NOFENCE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_tsc_mfence();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>*)NULL);
         }
     }
 
@@ -169,14 +178,6 @@ int main(int argc, char *argv[])
             cycles += std::chrono::steady_clock().now().time_since_epoch().count();
         }
     }
-    if (true)
-    {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "perf_tsc_chrono 1000w");
-        for (size_t i = 0; i < 1000 * 10000; i++)
-        {
-            cycles += perf_tsc_chrono();
-        }
-    }
 
 
     if (true)
@@ -190,92 +191,146 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_sys dis 1000w");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_SYS dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_tsc_sys();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_SYS>*)NULL);
             PERF_REGISTER_RECORD(rec);
         }
     }
+
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_clock dis 1000w");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_CLOCK dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_tsc_clock();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_CLOCK>*)NULL);
             PERF_REGISTER_RECORD(rec);
         }
     }
+
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_rdtsc dis 1000w");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_CONNTER_CHRONO dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_tsc_rdtsc();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_CONNTER_CHRONO>*)NULL);
             PERF_REGISTER_RECORD(rec);
         }
     }
+
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_rdtsc dis 1000w | fast default");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSC dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_tsc_rdtsc();
-            PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+            PERF_REGISTER_RECORD(rec);
         }
     }
+
     if (true)
     {
-        PERF_DEFINE_REGISTER(rec, "perf_tsc_rdtsc | fast nofence", PERF_COUNTER_RDTSC_NOFENCE);
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSCP dis 1000");
+        for (size_t i = 0; i < 1000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>*)NULL);
+            PERF_REGISTER_RECORD(rec);
+        }
+    }
+
+    if (true)
+    {
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSC_MFENCE dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_tsc_rdtsc();
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>*)NULL);
+            PERF_REGISTER_RECORD(rec);
+        }
+    }
+
+
+    if (true)
+    {
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSC_NOFENCE dis 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>*)NULL);
+            PERF_REGISTER_RECORD(rec);
+        }
+    }
+
+
+
+    if (true)
+    {
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSC dis 1000w | PERF_CPU_FAST | DEFAULT");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
             PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
         }
     }
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "perf_tsc_rdtsc(lfence)*10 bat 1000w");
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC dis 1000w | PERF_CPU_FAST | PERF_COUNTER_SYS", PERF_COUNTER_SYS);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+            PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
+        }
+    }
+
+    if (true)
+    {
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC dis 1000w | PERF_CPU_FAST | PERF_COUNTER_RDTSC_NOFENCE", PERF_COUNTER_RDTSC_NOFENCE); 
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+            PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
+        }
+    }
+
+
+
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000 * 10, PERF_CPU_NORMAL, "PERF_DEFINE_AUTO_SINGLE_RECORD: PERF_COUNTER_RDTSC(lfence)*10 bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             for (size_t i = 0; i < 10; i++)
             {
-                cycles += perf_tsc_rdtsc();
+                cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
             }
         }
     }
+
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "perf_tsc_rdtsc *10| dis fast default 1000w");
+        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSC(lfence) * 10 dis 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
             for (size_t i = 0; i < 10; i++)
             {
-                cycles += perf_tsc_rdtsc();
+                cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
             }
             PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
         }
     }
-    if (true)
-    {
-        PERF_DEFINE_REGISTER(rec, "perf_tsc_rdtsc *10| dis fast nofence 1000w", PERF_COUNTER_RDTSC_NOFENCE);
-        for (size_t i = 0; i < 1000 * 10000; i++)
-        {
-            PERF_REGISTER_START(rec);
-            for (size_t i = 0; i < 10; i++)
-            {
-                cycles += perf_tsc_rdtsc();
-            }
-            PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
-        }
-    }
+
 
     if (true)
     {
@@ -295,7 +350,25 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu fast 1000w (without count)");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "PERF_CALL_CPU_SAMPLE 1000w ");
+        for (int i = 0; i < 10000000; i++)
+        {
+            PERF_CALL_CPU_SAMPLE(ENUM_PERF_TEST, 1000);
+        }
+    }
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "PERF_CALL_CPU_SAMPLE 1000w ");
+        for (int i = 0; i < 10000000; i++)
+        {
+            PERF_CALL_CPU_SAMPLE(ENUM_PERF_TEST, 1000);
+        }
+    }
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "PERF_CALL_CPU 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU(ENUM_PERF_TEST, 1000);
@@ -304,7 +377,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu fast wrap 1000w (without count)");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "PERF_CPU_FAST 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 1, 1000, PERF_CPU_FAST);
@@ -312,7 +385,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu fast wrap 1000w (with count)");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "PERF_CPU_FAST 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 10, 1000, PERF_CPU_FAST);
@@ -321,7 +394,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu normal wrap 1000w (without count)");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "PERF_CPU_NORMAL 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 1, 1000, PERF_CPU_NORMAL);
@@ -330,7 +403,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu normal wrap 1000w (with count)");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "PERF_CPU_NORMAL 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 10, 1000, PERF_CPU_NORMAL);
@@ -339,7 +412,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu full wrap 1000w (without count)");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "PERF_CPU_FULL 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 1, 1000, PERF_CPU_FULL);
@@ -348,7 +421,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "call cpu full wrap 1000w (with count)");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_FAST, "PERF_CPU_FULL 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
             PERF_CALL_CPU_WRAP(ENUM_PERF_TEST, 10, 1000, PERF_CPU_FULL);

@@ -42,12 +42,16 @@ public:
         buff_len_ = buff_size;
         offset_ = 0;
     }
-    inline int serialize(const char* fmt, ...);
-    inline int push_human_count(long long count);
-    inline int push_human_time(long long ns);
-    inline int push_human_mem(long long bytes);
+    inline PerfSerializeBuffer& serialize(const char* fmt, ...);
+    inline PerfSerializeBuffer& push_human_count(long long count);
+    inline PerfSerializeBuffer& push_human_time(long long ns);
+    inline PerfSerializeBuffer& push_human_mem(long long bytes);
+    inline PerfSerializeBuffer& push_char(char ch, int repeat = 1);
+    inline PerfSerializeBuffer& push_string(const char* str) { return serialize("%s", str); };
+    inline PerfSerializeBuffer& closing_string();
     char* buff() { return buff_; }
     size_t offset() { return offset_; }
+    size_t buff_len() { return buff_len_; }
 private:
     char* buff_;
     size_t offset_;
@@ -56,25 +60,23 @@ private:
 
 
 
-int PerfSerializeBuffer::serialize(const char* fmt, ...)
+PerfSerializeBuffer& PerfSerializeBuffer::serialize(const char* fmt, ...)
 {
     if (buff_ == NULL)
     {
-        return 0;
+        return *this;
     }
     if (buff_len_ == 0)
     {
-        return 0;
+        return *this;
     }
     if (buff_len_ <= offset_)
     {
-        return 0;
+        return *this;
     }
 
     int ret = 0;
     va_list argp;
-    int argno = 0;
-    char para;
     va_start(argp, fmt);
 #if WIN32
     ret = _vsnprintf_s(buff_ + offset_, buff_len_ - offset_, _TRUNCATE, fmt, argp);
@@ -84,18 +86,17 @@ int PerfSerializeBuffer::serialize(const char* fmt, ...)
     va_end(argp);
     if (ret < 0)
     {
-        return 0;
+        return *this;
     }
     offset_ += ret;
-    return ret;
+    return *this;
 }
 
-int PerfSerializeBuffer::push_human_count(long long count)
+PerfSerializeBuffer& PerfSerializeBuffer::push_human_count(long long count)
 {
     if (count > 1000 * 1000)
     {
         return serialize("%lld,%03lld,%03lld", count / 1000 / 1000, (count / 1000) % 1000, count % 1000);
-
     }
     else if (count > 1000)
     {
@@ -104,41 +105,61 @@ int PerfSerializeBuffer::push_human_count(long long count)
     return serialize("%lld", count);
 }
 
-int PerfSerializeBuffer::push_human_time(long long ns)
+PerfSerializeBuffer& PerfSerializeBuffer::push_human_time(long long ns)
 {
     if (ns > 1000 * 1000 * 1000)
     {
-        return serialize("%.4lfs", ns / 1000.0 / 1000.0 / 1000.0);
+        return serialize("%.3lfs", ns / 1000.0 / 1000.0 / 1000.0);
     }
     else if (ns > 1000 * 1000)
     {
-        return serialize("%.4lfms", ns / 1000.0 / 1000.0);
+        return serialize("%.3lfms", ns / 1000.0 / 1000.0);
     }
     else if (ns > 1000)
     {
-        return serialize("%.4lfus", ns / 1000.0);
+        return serialize("%.3lfus", ns / 1000.0);
     }
     return serialize("%lldns", ns);
 }
 
 
-int PerfSerializeBuffer::push_human_mem(long long bytes)
+PerfSerializeBuffer& PerfSerializeBuffer::push_human_mem(long long bytes)
 {
     if (bytes > 1024 * 1024 * 1024)
     {
-        return serialize("%.4lfg", bytes / 1024.0 / 1024.0 / 1024.0);
+        return serialize("%.3lfg", bytes / 1024.0 / 1024.0 / 1024.0);
     }
     else if (bytes > 1024 * 1024)
     {
-        return serialize("%.4lfm", bytes / 1024.0 / 1024.0);
+        return serialize("%.3lfm", bytes / 1024.0 / 1024.0);
     }
     else if (bytes > 1024)
     {
-        return serialize("%.4lfk", bytes / 1024.0);
+        return serialize("%.3lfk", bytes / 1024.0);
     }
     return serialize("%lldb", bytes);
 }
 
-
+inline PerfSerializeBuffer& PerfSerializeBuffer::push_char(char ch, int repeat)
+{
+    while (repeat > 0 && offset_ < buff_len_)
+    {
+        buff_[offset_++] = ch;
+        repeat--;
+    }
+    return *this;
+}
+inline PerfSerializeBuffer& PerfSerializeBuffer::closing_string()
+{
+    if (buff_len_ > 0 && buff_)
+    {
+        if (offset_ >= buff_len_)
+        {
+            offset_ = buff_len_ - 1;
+        }
+        buff_[offset_] = '\0';
+    }
+    return *this;
+}
 
 #endif
