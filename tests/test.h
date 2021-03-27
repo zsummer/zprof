@@ -74,4 +74,18 @@ inline void regist_perf()
 
 void entry_mem_test();
 
+
+inline std::string human_time_format(long long cycles)
+{
+    char buff[50];
+    PerfSerializeBuffer buffer(buff, sizeof(buff));
+    return buffer.push_human_time(cycles).buff();
+}
+inline std::string human_count_format(long long cycles)
+{
+    char buff[50];
+    PerfSerializeBuffer buffer(buff, sizeof(buff));
+    return buffer.push_human_count(cycles).buff();
+}
+
 #endif

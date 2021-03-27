@@ -130,8 +130,8 @@ public:
     static constexpr int node_anon_begin_id() { return node_declare_end_id(); }
     static constexpr int node_anon_count() { return ANON_COUNT; }
     static constexpr int node_anon_end_id() { return node_anon_begin_id() + node_anon_count(); }
-    static constexpr int node_anon_real_count() { return used_node_id_ - node_anon_begin_id(); }
-    static constexpr int node_anon_real_end_id() { return used_node_id_ + 1; }
+    inline int node_anon_real_count() { return used_node_id_ - node_anon_begin_id(); }
+    inline int node_anon_real_end_id() { return used_node_id_ + 1; }
 
 public:
     long long init_timestamp_;
@@ -144,12 +144,12 @@ public:
         desc_[0] = '\0';
         merge_to_size_ = 0;
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
-        used_node_id_ = node_anon_begin();
+        used_node_id_ = node_anon_begin_id();
         serialize_buff_[0] = '\0';
         init_timestamp_ = 0;
         last_timestamp_ = 0;
     };
-    static PerfRecord& instance()
+    static inline PerfRecord& instance()
     {
         static PerfRecord inst;
         return inst;
@@ -159,22 +159,22 @@ public:
     inline int bind_childs(int idx, int child);
     inline int bind_merge(int idx, int to);
 
-    void reset_cpu(int idx)
+    PERF_ALWAYS_INLINE void reset_cpu(int idx)
     {
         PerfNode& node = nodes_[idx];
         memset(&node.cpu, 0, sizeof(node.cpu));
     }
-    void reset_mem(int idx)
+    PERF_ALWAYS_INLINE void reset_mem(int idx)
     {
         PerfNode& node = nodes_[idx];
         memset(&node.mem, 0, sizeof(node.mem));
     }
-    void reset_timer(int idx)
+    PERF_ALWAYS_INLINE void reset_timer(int idx)
     {
         PerfNode& node = nodes_[idx];
         memset(&node.timer, 0, sizeof(node.timer));
     }
-    void reset_user(int idx)
+    PERF_ALWAYS_INLINE void reset_user(int idx)
     {
         PerfNode& node = nodes_[idx];
         memset(&node.user, 0, sizeof(node.user));
@@ -218,7 +218,7 @@ public:
 
     inline void reset_childs(int idx, int depth = 0);
 
-    void call_cpu(int idx, long long c, long long cost)
+    PERF_ALWAYS_INLINE void call_cpu(int idx, long long c, long long cost)
     {
         long long dis = cost / c;
         PerfNode& node = nodes_[idx];
@@ -228,11 +228,11 @@ public:
         node.cpu.sm = (node.cpu.sm * 12 + cost * 4) >> 4;
         node.cpu.max_u = node.cpu.max_u > dis ? node.cpu.max_u : dis;
         node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
-        node.cpu.dv += abs(dis - node.cpu.sm);
+        node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
         node.cpu.t_c += c;
         node.cpu.t_u += cost;
     }
-    void call_cpu(int idx, long long cost)
+    PERF_ALWAYS_INLINE void call_cpu(int idx, long long cost)
     {
         PerfNode& node = nodes_[idx];
         node.cpu.c += 1;
@@ -243,7 +243,7 @@ public:
         node.cpu.t_c += 1;
         node.cpu.t_u += cost;
     }
-    void call_cpu_no_sm(int idx, long long cost)
+    PERF_ALWAYS_INLINE void call_cpu_no_sm(int idx, long long cost)
     {
         PerfNode& node = nodes_[idx];
         node.cpu.c += 1;
@@ -252,7 +252,7 @@ public:
         node.cpu.t_c += 1;
         node.cpu.t_u += cost;
     }
-    void call_cpu_no_sm(int idx, long long count, long long cost)
+    PERF_ALWAYS_INLINE void call_cpu_no_sm(int idx, long long count, long long cost)
     {
         long long dis = cost / count;
         PerfNode& node = nodes_[idx];
@@ -263,7 +263,7 @@ public:
         node.cpu.t_u += cost;
     }
 
-    void call_cpu_full(int idx, long long cost)
+    PERF_ALWAYS_INLINE void call_cpu_full(int idx, long long cost)
     {
 
         PerfNode& node = nodes_[idx];
@@ -287,7 +287,7 @@ public:
         node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
     }
 
-    void call_cpu_full(int idx, long long c, long long cost)
+    PERF_ALWAYS_INLINE void call_cpu_full(int idx, long long c, long long cost)
     {
         
         PerfNode& node = nodes_[idx];
@@ -312,7 +312,7 @@ public:
     }
 
 
-    void call_timer(int idx, long long stamp)
+    PERF_ALWAYS_INLINE void call_timer(int idx, long long stamp)
     {
         PerfNode& node = nodes_[idx];
         if (node.timer.last == 0)
@@ -324,7 +324,7 @@ public:
         node.timer.last = stamp;
     }
 
-    void call_mem(int idx, long long c, long long add)
+    PERF_ALWAYS_INLINE void call_mem(int idx, long long c, long long add)
     {
         PerfNode& node = nodes_[idx];
         node.mem.c += c;
@@ -333,7 +333,7 @@ public:
         node.mem.t_u += add;
     }
 
-    void call_user(int idx, long long c, long long add)
+    PERF_ALWAYS_INLINE void call_user(int idx, long long c, long long add)
     {
         PerfNode& node = nodes_[idx];
         node.user.c += c;
@@ -342,7 +342,7 @@ public:
         node.user.t_u += add;
     }
 
-    void refresh_mem(int idx, long long c, long long add)
+    PERF_ALWAYS_INLINE void refresh_mem(int idx, long long c, long long add)
     {
         PerfNode& node = nodes_[idx];
         node.mem.c = c;
@@ -445,7 +445,7 @@ public:
             merge_to(merge_to_[i], node.merge_to);
         }
     }
-    int serialize(int entry_idx, int depth, char* org_buff, int buff_len);
+    int serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer);
     const char* serialize(int entry_idx);
 
 
@@ -456,11 +456,11 @@ public:
     double circles_per_ns(int t) { return  circles_per_ns_[t == PERF_COUNTER_NULL ? PERF_COUNTER_DEFAULT : t]; }
     int new_anon_node_id() 
     { 
-        if (used_node_id_ >= MAX_COUNT - 1)
+        if (used_node_id_ >= node_anon_end_id())
         {
             return 0;
         }
-        return ++used_node_id_; 
+        return used_node_id_++;
     }
 private:
     PerfNode nodes_[MAX_COUNT];
@@ -545,15 +545,14 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     last_timestamp_ = time(NULL);
     init_timestamp_ = time(NULL);
 
-    
     circles_per_ns_[PERF_COUNTER_NULL] = 0;
-    circles_per_ns_[PERF_COUNTER_SYS] = 1.0;
-    circles_per_ns_[PERF_COUNTER_CLOCK] = perf_static_clock_rate();
-    circles_per_ns_[PERF_CONNTER_CHRONO] = perf_static_chrono_rate();
-    circles_per_ns_[PERF_COUNTER_RDTSC] = perf_static_rdtsc_rate();
-    circles_per_ns_[PERF_COUNTER_RDTSCP] = perf_static_rdtsc_rate();
-    circles_per_ns_[PERF_COUNTER_RDTSC_MFENCE] = perf_static_rdtsc_rate();
-    circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = perf_static_rdtsc_rate();
+    circles_per_ns_[PERF_COUNTER_SYS] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_SYS>*)NULL);
+    circles_per_ns_[PERF_COUNTER_CLOCK] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_CLOCK>*)NULL);
+    circles_per_ns_[PERF_CONNTER_CHRONO] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_CONNTER_CHRONO>*)NULL);
+    circles_per_ns_[PERF_COUNTER_RDTSC] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+    circles_per_ns_[PERF_COUNTER_RDTSCP] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>*)NULL);
+    circles_per_ns_[PERF_COUNTER_RDTSC_MFENCE] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>*)NULL);
+    circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>*)NULL);
     circles_per_ns_[PERF_COUNTER_NULL] = circles_per_ns_[PERF_COUNTER_DEFAULT];
     return 0;
 }
@@ -627,157 +626,107 @@ void PerfRecord<INST, RESERVE, DECLARE,  ANON>::reset_childs(int idx, int depth)
 
 
 template<int INST, int RESERVE, int DECLARE, int ANON>
-int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int depth, char* org_buff, int buff_len)
+int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer)
 {
     if (entry_idx < 0 || entry_idx >= MAX_COUNT)
     {
         return -1;
     }
-    if (buff_len < PERF_MAX_SERIALIZE_LINE_SIZE)
+    if (buffer.offset() >= buffer.buff_len())
     {
         return -2;
     }
-    char* buff = org_buff;
+    if (buffer.buff_len() - buffer.offset() < PERF_MAX_SERIALIZE_LINE_SIZE)
+    {
+        buffer.push_string("serialize buffer too short ...\r\n");
+        buffer.closing_string();
+        return -3;
+    }
+
 
     PerfNode& node = nodes_[entry_idx];
+    int name_blank = ((int)strlen(node.desc.node_name) + depth * 2) %32;
+    name_blank = name_blank > 32 ? 0 : 32 - name_blank;
+
     if (node.cpu.c > 0)
     {
-        if (buff_len < PERF_MAX_SERIALIZE_LINE_SIZE)
-        {
-            return -6;
-        }
-        for (int i = 0; i < depth; i++)
-        {
-            *buff++ = ' ';
-            *buff++ = ' ';
-            buff_len -= 2;
-        }
-        *(buff + 1) = '\0';
-        if (buff_len < PERF_MAX_SERIALIZE_LINE_SIZE)
-        {
-            return -6;
-        }
-        char buff_call[50];
-        human_count_format(buff_call, node.cpu.c);
-        char buff_avg[50];
-        human_time_format(buff_avg, (long long)( node.cpu.sum * circles_per_ns(node.desc.counter_type)) / node.cpu.c);
-        char buff_sm[50];
-        human_time_format(buff_sm, (long long)(node.cpu.sm * circles_per_ns(node.desc.counter_type)));
-        char buff_dv[50];
-        human_time_format(buff_dv, (long long)(node.cpu.dv * circles_per_ns(node.desc.counter_type) / node.cpu.c));
-        char buff_sum[50];
-        human_time_format(buff_sum, (long long)(node.cpu.sum * circles_per_ns(node.desc.counter_type)));
-        char buff_hsm[50];
-        human_time_format(buff_hsm, (long long)(node.cpu.h_sm * circles_per_ns(node.desc.counter_type)));
-        char buff_lsm[50];
-        human_time_format(buff_lsm, (long long)(node.cpu.l_sm * circles_per_ns(node.desc.counter_type)));
-        char buff_max[50];
-        human_time_format(buff_max, (long long)(node.cpu.max_u * circles_per_ns(node.desc.counter_type)));
-        char buff_min[50];
-        human_time_format(buff_min, (long long)(node.cpu.min_u == LLONG_MAX ? 0 : node.cpu.min_u * circles_per_ns(node.desc.counter_type)));
+        buffer.push_char(' ', depth * 2);
+        buffer.serialize("[[ %s ]] ", node.desc.node_name);
+        buffer.push_char(' ', name_blank);
+        buffer.push_string("\t\t cpu: call:");
 
-        int ret = sprintf(buff, "[[ %s ]] cpu: call:%s  [avg: %s] dv: %s sum: %s  [sm: %s] hsm: %s lsm: %s max: %s min: %s  \n",
-            node.desc.node_name, buff_call, buff_avg, buff_dv, buff_sum, buff_sm, buff_hsm, buff_lsm, buff_max, buff_min);
-
-        if (ret < 0)
+        buffer.push_human_count(node.cpu.c);
+        buffer.push_string("\t avg:");
+        buffer.push_human_time((long long)(node.cpu.sum * circles_per_ns(node.desc.counter_type) / node.cpu.c));
+        buffer.push_string("\t sum:");
+        buffer.push_human_time((long long)(node.cpu.sum * circles_per_ns(node.desc.counter_type)));
+        if (node.cpu.dv > 0 || node.cpu.sm > 0)
         {
-            return -4;
+            buffer.push_string(" --||-- ");
+            buffer.push_string("\t dv:");
+            buffer.push_human_time((long long)(node.cpu.dv * circles_per_ns(node.desc.counter_type) / node.cpu.c));
+            buffer.push_string("\t sm:");
+            buffer.push_human_time((long long)(node.cpu.sm * circles_per_ns(node.desc.counter_type)));
         }
-        buff += ret;
-        buff_len -= ret;
-        if (buff_len < 0)
+        if (node.cpu.h_sm > 0 || node.cpu.l_sm > 0)
         {
-            return -5;
+            buffer.push_string(" --||-- ");
+            buffer.push_string("\t hsm:");
+            buffer.push_human_time((long long)(node.cpu.h_sm * circles_per_ns(node.desc.counter_type)));
+            buffer.push_string("\t lsm:");
+            buffer.push_human_time((long long)(node.cpu.l_sm * circles_per_ns(node.desc.counter_type)));
         }
+        if (node.cpu.min_u != LLONG_MAX && node.cpu.max_u > 0)
+        {
+            buffer.push_string(" --||-- ");
+            buffer.push_string("\t max:");
+            buffer.push_human_time((long long)(node.cpu.max_u * circles_per_ns(node.desc.counter_type)));
+            buffer.push_string("\t min:");
+            buffer.push_human_time((long long)(node.cpu.min_u * circles_per_ns(node.desc.counter_type)));
+        }
+        buffer.push_string("\r\n");
+        buffer.closing_string();
     }
+
     if (node.mem.c > 0)
     {
-        if (buff_len < PERF_MAX_SERIALIZE_LINE_SIZE)
-        {
-            return -6;
-        }
-        for (int i = 0; i < depth; i++)
-        {
-            *buff++ = ' ';
-            *buff++ = ' ';
-            buff_len -= 2;
-        }
-        *(buff + 1) = '\0';
-        if (buff_len < PERF_MAX_SERIALIZE_LINE_SIZE)
-        {
-            return -6;
-        }
-        char buff_call[50];
-        human_count_format(buff_call, node.mem.c);
-        char buff_avg[50];
-        human_mem_format(buff_avg, node.mem.sum / node.mem.c);
-        char buff_use[50];
-        human_mem_format(buff_use, node.mem.sum);
-        char buff_front[50];
-        human_mem_format(buff_front, node.mem.sum - node.mem.delta);
-        char buff_delta[50];
-        human_mem_format(buff_delta, node.mem.delta);
-        int ret = sprintf(buff, "[[ %s ]] mem: call:%s  avg: %s  sum: %s  front: %s delta: %s \n",
-            node.desc.node_name, buff_call, buff_avg, buff_use, buff_front, buff_delta);
+        buffer.push_char(' ', depth * 2);
+        buffer.serialize("[[ %s ]] ", node.desc.node_name);
+        buffer.push_char(' ', name_blank);
+        buffer.push_string("\t\t mem: call:");
 
-        if (ret < 0)
+        buffer.push_human_count(node.mem.c);
+        buffer.push_string("\t avg:");
+        buffer.push_human_mem(node.mem.sum / node.mem.c);
+        buffer.push_string("\t sum:");
+        buffer.push_human_mem(node.mem.sum);
+        if (node.mem.delta > 0)
         {
-            return -7;
+            buffer.push_string("\t last sum:");
+            buffer.push_human_mem(node.mem.sum - node.mem.delta);
+            buffer.push_string("\t delta:");
+            buffer.push_human_mem(node.mem.delta);
         }
-        buff += ret;
-        buff_len -= ret;
-        if (buff_len < 0)
-        {
-            return -8;
-        }
-    }
-    if (node.cpu.c <= 0 && node.mem.c <= 0)
-    {
-        if (buff_len < PERF_MAX_SERIALIZE_LINE_SIZE)
-        {
-            return -6;
-        }
-        for (int i = 0; i < depth; i++)
-        {
-            *buff++ = ' ';
-            *buff++ = ' ';
-            buff_len -= 2;
-        }
-        *(buff + 1) = '\0';
-        if (buff_len < PERF_MAX_SERIALIZE_LINE_SIZE)
-        {
-            return -6;
-        }
-        int ret = sprintf(buff, "[%s] no any call data. \n", node.desc.node_name);
-        if (ret < 0)
-        {
-            return -7;
-        }
-        buff += ret;
-        buff_len -= ret;
-        if (buff_len < 0)
-        {
-            return -8;
-        }
+        buffer.push_string("\r\n");
+        buffer.closing_string();
     }
 
     if (depth > 5)
     {
-        return -9;
+        buffer.push_string("more node in here ... \r\n");
+        buffer.closing_string();
+        return -4;
     }
 
     for (int i = 0; i < node.child_count; i++)
     {
-        int ret = serialize(node.child_ids[i], depth + 1, buff, buff_len);
+        int ret = serialize(node.child_ids[i], depth + 1, buffer);
         if (ret < 0)
         {
-            ret -= 10 * (1+depth);
             return ret;
         }
-        buff += buff_len - ret;
-        buff_len = ret;
     }
-    return buff_len;
+    return 0;
 }
 
 
@@ -788,14 +737,13 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
 template<int INST, int RESERVE, int DECLARE, int ANON>
 const char* PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx)
 {
-    char* buff = serialize_buff_;
-    int remaind = SERIALIZE_BUFF_LEN;
-    int ret = serialize(entry_idx, 0, buff, remaind);
+    PerfSerializeBuffer buffer(serialize_buff_, sizeof(serialize_buff_));
+    int ret = serialize(entry_idx, 0, buffer);
     if (ret < 0)
     {
-        sprintf(buff, "serialize idx:<%d> has error:<%d>\n", entry_idx, ret);
+        buffer.closing_string();
     }
-    return buff;
+    return buffer.buff();
 }
 
 

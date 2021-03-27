@@ -26,8 +26,12 @@
 #define PERF_DEFAULT_INST_ID 0
 #endif
 
-#ifndef PERF_NODE_COUNT
-#define PERF_NODE_COUNT 200
+#ifndef PERF_RESERVE_COUNT
+#define PERF_RESERVE_COUNT 50
+#endif 
+
+#ifndef PERF_DECLARE_COUNT
+#define PERF_DECLARE_COUNT 200
 #endif 
 
 #ifndef PERF_ANON_COUNT
@@ -35,7 +39,7 @@
 #endif
 
 
-#define PerfInst PerfRecord<PERF_DEFAULT_INST_ID, PERF_NODE_COUNT, PERF_ANON_COUNT>::instance()
+#define PerfInst PerfRecord<PERF_DEFAULT_INST_ID, PERF_RESERVE_COUNT, PERF_DECLARE_COUNT, PERF_ANON_COUNT>::instance()
 
 
 
@@ -209,10 +213,11 @@ private:
 #define PERF_RESET_DECLARE() PerfInst.reset_declare_info()
 #define PERF_RESET_ANON() PerfInst.reset_anon_info()
 
-#define PERF_CALL_CPU(idx, cost) PerfInst.call_cpu(idx, cost)
+#define PERF_CALL_CPU_SAMPLE(idx, cost) PerfInst.call_cpu(idx, cost)
 #define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE)  \
             PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>((int)(idx), (long long)(COUNT), (long long)cost, \
                     (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE> *)NULL)
+#define PERF_CALL_CPU(idx, cost) PERF_CALL_CPU_WRAP(idx, 1, cost, PERF_CPU_NORMAL)
 #define PERF_CALL_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
 #define PERF_REFRESH_MEM(idx, count, mem) PerfInst.refresh_mem(idx, count, mem)
 #define PERF_CALL_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
@@ -253,6 +258,7 @@ private:
 #define PERF_RESET_CHILD(idx) 
 #define PERF_UPDATE_MERGE() 
 
+#define PERF_CALL_CPU_SAMPLE(idx, cost) 
 #define PERF_CALL_CPU(idx, cost) 
 #define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE) 
 #define PERF_CALL_MEM(idx, count, mem) 
