@@ -63,13 +63,15 @@ int main(int argc, char *argv[])
         PERF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
 
         PERF_UPDATE_MERGE();
-        PERF_SERIALIZE_FN_LOG();
+        PERF_SERIALIZE_FN_LOG2();
+
+
         PERF_RESET_DECLARE();
         PERF_SERIALIZE_FN_LOG();
 
 
     }
-
+    
 
 
 
@@ -95,7 +97,7 @@ int main(int argc, char *argv[])
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_SYS bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_SYS>*)NULL); 
+            cycles += perf_get_time_cycle<PERF_COUNTER_SYS>();
         }
     }
 
@@ -104,7 +106,7 @@ int main(int argc, char *argv[])
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_CLOCK bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_CLOCK>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_CLOCK>();
         }
     }
 
@@ -113,7 +115,7 @@ int main(int argc, char *argv[])
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_CONNTER_CHRONO bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_CONNTER_CHRONO>*)NULL);
+            cycles += perf_get_time_cycle<PERF_CONNTER_CHRONO>();
         }
     }
 
@@ -122,7 +124,7 @@ int main(int argc, char *argv[])
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC(lfence) bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC>();
         }
     }
 
@@ -132,7 +134,7 @@ int main(int argc, char *argv[])
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSCP bat 1000");
         for (size_t i = 0; i < 1000; i++)
         {
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSCP>();
         }
     }
 
@@ -141,7 +143,7 @@ int main(int argc, char *argv[])
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_MFENCE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>();
         }
     }
     if (true)
@@ -149,7 +151,7 @@ int main(int argc, char *argv[])
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_NOFENCE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
         }
     }
 
@@ -195,7 +197,7 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_SYS>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_SYS>();
             PERF_REGISTER_RECORD(rec);
         }
     }
@@ -206,7 +208,7 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_CLOCK>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_CLOCK>();
             PERF_REGISTER_RECORD(rec);
         }
     }
@@ -217,7 +219,7 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_CONNTER_CHRONO>*)NULL);
+            cycles += perf_get_time_cycle<PERF_CONNTER_CHRONO>();
             PERF_REGISTER_RECORD(rec);
         }
     }
@@ -228,7 +230,7 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC>();
             PERF_REGISTER_RECORD(rec);
         }
     }
@@ -239,7 +241,7 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSCP>();
             PERF_REGISTER_RECORD(rec);
         }
     }
@@ -250,7 +252,7 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>();
             PERF_REGISTER_RECORD(rec);
         }
     }
@@ -262,12 +264,14 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
             PERF_REGISTER_RECORD(rec);
         }
     }
 
-
+    LOGD(perf_get_time_cycle<PERF_COUNTER_RDTSC>());
+     LOGD(perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>());
+   
 
     if (true)
     {
@@ -275,7 +279,7 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC>();
             PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
         }
     }
@@ -286,7 +290,7 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC>();
             PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
         }
     }
@@ -297,7 +301,7 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC>();
             PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
         }
     }
@@ -312,7 +316,7 @@ int main(int argc, char *argv[])
         {
             for (size_t i = 0; i < 10; i++)
             {
-                cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+                cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC>();
             }
         }
     }
@@ -325,7 +329,7 @@ int main(int argc, char *argv[])
             PERF_REGISTER_START(rec);
             for (size_t i = 0; i < 10; i++)
             {
-                cycles += perf_get_time_cycle((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
+                cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC>();
             }
             PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
         }
