@@ -118,61 +118,60 @@ enum PerfCounterType
 #ifndef PERF_COUNTER_DEFAULT
 #define PERF_COUNTER_DEFAULT PERF_COUNTER_RDTSC
 #endif 
-template<PerfCounterType T>
-struct PerfCounterTypeClass{};
+
 
 template<PerfCounterType T>
-PERF_ALWAYS_INLINE long long perf_get_time_cycle(const PerfCounterTypeClass<T>* ptr);
+PERF_ALWAYS_INLINE long long perf_get_time_cycle();
 
 template<>
-PERF_ALWAYS_INLINE long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSC>* ptr);
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC>();
 
 template<>
-PERF_ALWAYS_INLINE long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>* ptr);
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
 
 template<>
-PERF_ALWAYS_INLINE long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>* ptr);
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>();
 
 template<>
-PERF_ALWAYS_INLINE long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>* ptr);
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSCP>();
 
 template<>
-PERF_ALWAYS_INLINE long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_CLOCK>* ptr);
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_CLOCK>();
 
 template<>
-PERF_ALWAYS_INLINE long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_SYS>* ptr);
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_SYS>();
 
 template<>
-PERF_ALWAYS_INLINE long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_CONNTER_CHRONO>* ptr);
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_CONNTER_CHRONO>();
 
 // all frequency is per ns  
 template<PerfCounterType T>
-PERF_ALWAYS_INLINE double perf_get_time_frequency(const PerfCounterTypeClass<T>* ptr);
+PERF_ALWAYS_INLINE double perf_get_time_frequency();
 
 template<>
-PERF_ALWAYS_INLINE double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_RDTSC>* ptr);
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 
 template<>
-PERF_ALWAYS_INLINE double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>* ptr);
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_NOFENCE>();
 
 template<>
-PERF_ALWAYS_INLINE double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>* ptr);
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_MFENCE>();
 
 template<>
-PERF_ALWAYS_INLINE double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>* ptr);
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSCP>();
 
 template<>
-PERF_ALWAYS_INLINE double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_CLOCK>* ptr);
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_CLOCK>();
 
 template<>
-PERF_ALWAYS_INLINE double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_SYS>* ptr);
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_SYS>();
 
 template<>
-PERF_ALWAYS_INLINE double perf_get_time_frequency(const PerfCounterTypeClass<PERF_CONNTER_CHRONO>* ptr);
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_CONNTER_CHRONO>();
 
 
 template<PerfCounterType T>
-PERF_ALWAYS_INLINE double perf_get_time_inverse_frequency(const PerfCounterTypeClass<T>* ptr);
+PERF_ALWAYS_INLINE double perf_get_time_inverse_frequency();
 
 
 PERF_ALWAYS_INLINE long long perf_get_mem_use();
@@ -195,13 +194,13 @@ public:
     }
     void start()
     {
-        start_val_ = perf_get_time_cycle<T>((PerfCounterTypeClass<T>*)NULL);
+        start_val_ = perf_get_time_cycle<T>();
         cycles_ = 0;
     }
 
     PerfCounter& save()
     {
-        cycles_ = perf_get_time_cycle<T>((PerfCounterTypeClass<T>*)NULL) - start_val_;
+        cycles_ = perf_get_time_cycle<T>() - start_val_;
         return *this;
     }
 
@@ -211,7 +210,7 @@ public:
     long long start_val() { return start_val_; }
 
     long long cycles() { return cycles_; }
-    PERF_ALWAYS_INLINE long long duration_ns() { return (long long)(cycles_ * perf_get_time_inverse_frequency<T>((PerfCounterTypeClass<T>*)NULL)); }
+    PERF_ALWAYS_INLINE long long duration_ns() { return (long long)(cycles_ * perf_get_time_inverse_frequency<T>()); }
     double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
 
 private:
@@ -228,16 +227,14 @@ private:
 
 
 template<PerfCounterType T>
-long long perf_get_time_cycle(const PerfCounterTypeClass<T>* ptr)
+long long perf_get_time_cycle()
 {
-    (void)ptr;
     return 0;
 }
 
 template<>
-long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSC>* ptr)
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC>()
 {
-    (void)ptr;
 #ifdef WIN32
     return (long long)__rdtsc();
 #else
@@ -249,9 +246,8 @@ long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSC>* pt
 }
 
 template<>
-long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>* ptr)
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>()
 {
-    (void)ptr;
 #ifdef WIN32
     return (long long)__rdtsc();
 #else
@@ -263,9 +259,8 @@ long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFE
 }
 
 template<>
-long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>* ptr)
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>()
 {
-    (void)ptr;
 #ifdef WIN32
     return (long long)__rdtsc();
 #else
@@ -277,9 +272,8 @@ long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFEN
 }
 
 template<>
-long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>* ptr)
+long long perf_get_time_cycle<PERF_COUNTER_RDTSCP>()
 {
-    (void)ptr;
 #ifdef WIN32
     return (long long)__rdtsc();
 #else
@@ -292,9 +286,8 @@ long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>* p
 
 
 template<>
-long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_CLOCK>* ptr)
+long long perf_get_time_cycle<PERF_COUNTER_CLOCK>()
 {
-    (void)ptr;
 #if (defined WIN32)
     long long count = 0;
     QueryPerformanceCounter((LARGE_INTEGER*)&count);
@@ -307,9 +300,8 @@ long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_CLOCK>* pt
 }
 
 template<>
-long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_SYS>* ptr)
+long long perf_get_time_cycle<PERF_COUNTER_SYS>()
 {
-    (void)ptr;
 #if (defined WIN32)
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
@@ -327,9 +319,8 @@ long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_COUNTER_SYS>* ptr)
 }
 
 template<>
-long long perf_get_time_cycle(const PerfCounterTypeClass<PERF_CONNTER_CHRONO>* ptr)
+long long perf_get_time_cycle<PERF_CONNTER_CHRONO>()
 {
-    (void)ptr;
     return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 }
 
@@ -454,43 +445,38 @@ PERF_ALWAYS_INLINE double perf_get_cpu_mhz()
 
 
 template<PerfCounterType T>
-double perf_get_time_frequency(const PerfCounterTypeClass<T>* ptr)
+double perf_get_time_frequency()
 {
-    (void)ptr;
     return 1.0;
 }
 
 template<>
-double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_RDTSC>* ptr)
+double perf_get_time_frequency<PERF_COUNTER_RDTSC>()
 {
-    (void)ptr;
     static double frequency_per_ns = perf_get_cpu_mhz() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
     return frequency_per_ns;
 }
 
 template<>
-double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>* ptr)
+double perf_get_time_frequency<PERF_COUNTER_RDTSC_NOFENCE>()
 {
-    (void)ptr;
-    return perf_get_time_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*) NULL);
+    return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 }
 
 template<>
-double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>* ptr)
+double perf_get_time_frequency<PERF_COUNTER_RDTSC_MFENCE>()
 {
-    (void)ptr;
-    return perf_get_time_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*) NULL);
+    return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 }
 
 template<>
-double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>* ptr)
+double perf_get_time_frequency<PERF_COUNTER_RDTSCP>()
 {
-    (void)ptr;
-    return perf_get_time_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*) NULL);
+    return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 }
 
 template<>
-double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_CLOCK>* ptr)
+double perf_get_time_frequency<PERF_COUNTER_CLOCK>()
 {
 #ifdef WIN32
     double frequency_per_ns = 0;
@@ -504,26 +490,23 @@ double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_CLOCK>* p
 }
 
 template<>
-double perf_get_time_frequency(const PerfCounterTypeClass<PERF_COUNTER_SYS>* ptr)
+double perf_get_time_frequency<PERF_COUNTER_SYS>()
 {
-    (void)ptr;
     return 1.0;
 }
 
 template<>
-double perf_get_time_frequency(const PerfCounterTypeClass<PERF_CONNTER_CHRONO>* ptr)
+double perf_get_time_frequency<PERF_CONNTER_CHRONO>()
 {
-    (void)ptr;
     static double chrono_frequency = std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
     return chrono_frequency;
 }
 
 
 template<PerfCounterType T>
-double perf_get_time_inverse_frequency(const PerfCounterTypeClass<T>* ptr)
+double perf_get_time_inverse_frequency()
 {
-    (void)ptr;
-    static double inverse_frequency_per_ns = 1.0 / (perf_get_time_frequency(ptr) <= 0.0 ? 1.0 : perf_get_time_frequency(ptr));
+    static double inverse_frequency_per_ns = 1.0 / (perf_get_time_frequency<T>() <= 0.0 ? 1.0 : perf_get_time_frequency<T>());
     return inverse_frequency_per_ns;
 }
 

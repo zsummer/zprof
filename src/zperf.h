@@ -30,6 +30,7 @@
 #define PERF_RESERVE_COUNT 50
 #endif 
 
+
 #ifndef PERF_DECLARE_COUNT
 #define PERF_DECLARE_COUNT 200
 #endif 
@@ -39,7 +40,8 @@
 #endif
 
 
-#define PerfInst PerfRecord<PERF_DEFAULT_INST_ID, PERF_RESERVE_COUNT, PERF_DECLARE_COUNT, PERF_ANON_COUNT>::instance()
+#define PerfInstType PerfRecord<PERF_DEFAULT_INST_ID, PERF_RESERVE_COUNT, PERF_DECLARE_COUNT, PERF_ANON_COUNT>
+#define PerfInst PerfInstType::instance()
 
 
 
@@ -296,12 +298,32 @@ for (int i = 0; i < PerfInst.node_count(); i++) \
 { \
     if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
     { \
-        LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) << PerfInst.serialize(i); \
+        PerfSerializeBuffer perf_temp_buffer = PerfInst.serialize(i); \
+        if (perf_temp_buffer.offset() > 0) \
+        { \
+            LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL).write_buffer(perf_temp_buffer.buff(), (int)perf_temp_buffer.offset()); \
+        } \
     } \
 } \
 LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) \
 << "\n ----------------------PerfRecord[" << PerfInst.desc() << "] end ----------------------" \
 "\n ------------------------------------------------------------------\n\n";
 
+
+#define PERF_SERIALIZE_FN_LOG2()     LogDebug() \
+<< "\n\n ------------------------------------------------------------------ " \
+"\n ----------------------PerfRecord[" << PerfInst.desc() << "] begin ---------------------- \n"; \
+for (int i = 0; i < PerfInst.node_count(); i++) \
+{ \
+    if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
+    { \
+        PerfInst.serialize(i, \
+            [](const PerfSerializeBuffer& buffer) \
+                {LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset()); }); \
+    } \
+} \
+LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) \
+<< "\n ----------------------PerfRecord[" << PerfInst.desc() << "] end ----------------------" \
+"\n ------------------------------------------------------------------\n\n";
 
 #endif

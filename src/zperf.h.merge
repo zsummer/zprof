@@ -42,6 +42,12 @@ public:
         buff_len_ = buff_size;
         offset_ = 0;
     }
+    PerfSerializeBuffer(const PerfSerializeBuffer& buffer)
+    {
+        buff_ = buffer.buff_;
+        buff_len_ = buffer.buff_len_;
+        offset_ = buffer.offset_;
+    }
     inline PerfSerializeBuffer& serialize(const char* fmt, ...);
     inline PerfSerializeBuffer& push_human_count(long long count);
     inline PerfSerializeBuffer& push_human_time(long long ns);
@@ -50,8 +56,12 @@ public:
     inline PerfSerializeBuffer& push_string(const char* str) { return serialize("%s", str); };
     inline PerfSerializeBuffer& closing_string();
     char* buff() { return buff_; }
+    const char* buff() const { return buff_; }
     size_t offset() { return offset_; }
+    size_t offset() const { return offset_; }
     size_t buff_len() { return buff_len_; }
+    size_t buff_len()const { return buff_len_; }
+    void reset_offset() { offset_ = 0; }
 private:
     char* buff_;
     size_t offset_;
@@ -182,19 +192,17 @@ inline PerfSerializeBuffer& PerfSerializeBuffer::closing_string()
 */
 
 #include <algorithm>
+#include <functional>
 #ifndef ZPERF_RECORD_H
 #define ZPERF_RECORD_H
 
 
-#define PERF_DECLARE_BEGIN 1
 
 #define PERF_MAX_NODE_NAME_SIZE 128
 #define PERF_MAX_SERIALIZE_LINE_SIZE (PERF_MAX_NODE_NAME_SIZE + 200)
 #define PERF_MAX_BROTHER_COUNT 10
 #define PERF_MAX_DEPTH 5
 
-
-static_assert(PERF_DECLARE_BEGIN > 0, "");
 
 
 enum PerfCPURecType
@@ -608,8 +616,8 @@ public:
             merge_to(merge_to_[i], node.merge_to);
         }
     }
-    int serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer);
-    const char* serialize(int entry_idx);
+    int serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer, std::function<void(const PerfSerializeBuffer& buffer)> call_log = NULL);
+    PerfSerializeBuffer serialize(int entry_idx, std::function<void(const PerfSerializeBuffer& buffer)> call_log = NULL);
 
 
     PerfNode& node(int idx) { return nodes_[idx]; }
@@ -709,13 +717,13 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     init_timestamp_ = time(NULL);
 
     circles_per_ns_[PERF_COUNTER_NULL] = 0;
-    circles_per_ns_[PERF_COUNTER_SYS] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_SYS>*)NULL);
-    circles_per_ns_[PERF_COUNTER_CLOCK] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_CLOCK>*)NULL);
-    circles_per_ns_[PERF_CONNTER_CHRONO] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_CONNTER_CHRONO>*)NULL);
-    circles_per_ns_[PERF_COUNTER_RDTSC] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
-    circles_per_ns_[PERF_COUNTER_RDTSCP] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>*)NULL);
-    circles_per_ns_[PERF_COUNTER_RDTSC_MFENCE] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>*)NULL);
-    circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>*)NULL);
+    circles_per_ns_[PERF_COUNTER_SYS] = perf_get_time_inverse_frequency<PERF_COUNTER_SYS>();
+    circles_per_ns_[PERF_COUNTER_CLOCK] = perf_get_time_inverse_frequency<PERF_COUNTER_CLOCK>();
+    circles_per_ns_[PERF_CONNTER_CHRONO] = perf_get_time_inverse_frequency<PERF_CONNTER_CHRONO>();
+    circles_per_ns_[PERF_COUNTER_RDTSC] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC>();
+    circles_per_ns_[PERF_COUNTER_RDTSCP] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSCP>();
+    circles_per_ns_[PERF_COUNTER_RDTSC_MFENCE] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_MFENCE>();
+    circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_NOFENCE>();
     circles_per_ns_[PERF_COUNTER_NULL] = circles_per_ns_[PERF_COUNTER_DEFAULT];
     return 0;
 }
@@ -789,7 +797,7 @@ void PerfRecord<INST, RESERVE, DECLARE,  ANON>::reset_childs(int idx, int depth)
 
 
 template<int INST, int RESERVE, int DECLARE, int ANON>
-int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer)
+int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer, std::function<void(const PerfSerializeBuffer& buffer)> call_log)
 {
     if (entry_idx < 0 || entry_idx >= MAX_COUNT)
     {
@@ -803,6 +811,10 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     {
         buffer.push_string("serialize buffer too short ...\r\n");
         buffer.closing_string();
+        if (call_log)
+        {
+            call_log(buffer);
+        }
         return -3;
     }
 
@@ -815,6 +827,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     {
         buffer.push_char(' ', depth * 2);
         buffer.serialize("[[ %s ]] ", node.desc.node_name);
+        //buffer.serialize("[[ %03d| %s ]] ", entry_idx, node.desc.node_name);
         buffer.push_char(' ', name_blank);
         buffer.push_string("\t\t cpu: call:");
 
@@ -849,12 +862,18 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         }
         buffer.push_string("\r\n");
         buffer.closing_string();
+        if (call_log)
+        {
+            call_log(buffer);
+            buffer.reset_offset();
+        }
     }
 
     if (node.mem.c > 0)
     {
         buffer.push_char(' ', depth * 2);
         buffer.serialize("[[ %s ]] ", node.desc.node_name);
+//        buffer.serialize("[[ %03d| %s ]] ", entry_idx, node.desc.node_name);
         buffer.push_char(' ', name_blank);
         buffer.push_string("\t\t mem: call:");
 
@@ -872,12 +891,22 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         }
         buffer.push_string("\r\n");
         buffer.closing_string();
+        if (call_log)
+        {
+            call_log(buffer);
+            buffer.reset_offset();
+        }
     }
 
     if (depth > 5)
     {
         buffer.push_string("more node in here ... \r\n");
         buffer.closing_string();
+        if (call_log)
+        {
+            call_log(buffer);
+            buffer.reset_offset();
+        }
         return -4;
     }
 
@@ -898,15 +927,13 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
 
 
 template<int INST, int RESERVE, int DECLARE, int ANON>
-const char* PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx)
+PerfSerializeBuffer PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, std::function<void(const PerfSerializeBuffer& buffer)> call_log)
 {
     PerfSerializeBuffer buffer(serialize_buff_, sizeof(serialize_buff_));
-    int ret = serialize(entry_idx, 0, buffer);
-    if (ret < 0)
-    {
-        buffer.closing_string();
-    }
-    return buffer.buff();
+    int ret = serialize(entry_idx, 0, buffer, call_log);
+    (void)ret;
+    buffer.closing_string();
+    return buffer;
 }
 
 
@@ -943,6 +970,7 @@ const char* PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx)
 #define PERF_RESERVE_COUNT 50
 #endif 
 
+
 #ifndef PERF_DECLARE_COUNT
 #define PERF_DECLARE_COUNT 200
 #endif 
@@ -952,7 +980,8 @@ const char* PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx)
 #endif
 
 
-#define PerfInst PerfRecord<PERF_DEFAULT_INST_ID, PERF_RESERVE_COUNT, PERF_DECLARE_COUNT, PERF_ANON_COUNT>::instance()
+#define PerfInstType PerfRecord<PERF_DEFAULT_INST_ID, PERF_RESERVE_COUNT, PERF_DECLARE_COUNT, PERF_ANON_COUNT>
+#define PerfInst PerfInstType::instance()
 
 
 
@@ -1209,12 +1238,32 @@ for (int i = 0; i < PerfInst.node_count(); i++) \
 { \
     if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
     { \
-        LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) << PerfInst.serialize(i); \
+        PerfSerializeBuffer perf_temp_buffer = PerfInst.serialize(i); \
+        if (perf_temp_buffer.offset() > 0) \
+        { \
+            LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL).write_buffer(perf_temp_buffer.buff(), (int)perf_temp_buffer.offset()); \
+        } \
     } \
 } \
 LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) \
 << "\n ----------------------PerfRecord[" << PerfInst.desc() << "] end ----------------------" \
 "\n ------------------------------------------------------------------\n\n";
 
+
+#define PERF_SERIALIZE_FN_LOG2()     LogDebug() \
+<< "\n\n ------------------------------------------------------------------ " \
+"\n ----------------------PerfRecord[" << PerfInst.desc() << "] begin ---------------------- \n"; \
+for (int i = 0; i < PerfInst.node_count(); i++) \
+{ \
+    if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
+    { \
+        PerfInst.serialize(i, \
+            [](const PerfSerializeBuffer& buffer) \
+                {LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset()); }); \
+    } \
+} \
+LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) \
+<< "\n ----------------------PerfRecord[" << PerfInst.desc() << "] end ----------------------" \
+"\n ------------------------------------------------------------------\n\n";
 
 #endif

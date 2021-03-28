@@ -19,19 +19,17 @@
 #include "zperf_counter.h"
 #include "zperf_serialize.h"
 #include <algorithm>
+#include <functional>
 #ifndef ZPERF_RECORD_H
 #define ZPERF_RECORD_H
 
 
-#define PERF_DECLARE_BEGIN 1
 
 #define PERF_MAX_NODE_NAME_SIZE 128
 #define PERF_MAX_SERIALIZE_LINE_SIZE (PERF_MAX_NODE_NAME_SIZE + 200)
 #define PERF_MAX_BROTHER_COUNT 10
 #define PERF_MAX_DEPTH 5
 
-
-static_assert(PERF_DECLARE_BEGIN > 0, "");
 
 
 enum PerfCPURecType
@@ -445,8 +443,8 @@ public:
             merge_to(merge_to_[i], node.merge_to);
         }
     }
-    int serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer);
-    const char* serialize(int entry_idx);
+    int serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer, std::function<void(const PerfSerializeBuffer& buffer)> call_log = NULL);
+    PerfSerializeBuffer serialize(int entry_idx, std::function<void(const PerfSerializeBuffer& buffer)> call_log = NULL);
 
 
     PerfNode& node(int idx) { return nodes_[idx]; }
@@ -546,13 +544,13 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     init_timestamp_ = time(NULL);
 
     circles_per_ns_[PERF_COUNTER_NULL] = 0;
-    circles_per_ns_[PERF_COUNTER_SYS] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_SYS>*)NULL);
-    circles_per_ns_[PERF_COUNTER_CLOCK] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_CLOCK>*)NULL);
-    circles_per_ns_[PERF_CONNTER_CHRONO] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_CONNTER_CHRONO>*)NULL);
-    circles_per_ns_[PERF_COUNTER_RDTSC] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC>*)NULL);
-    circles_per_ns_[PERF_COUNTER_RDTSCP] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSCP>*)NULL);
-    circles_per_ns_[PERF_COUNTER_RDTSC_MFENCE] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_MFENCE>*)NULL);
-    circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = perf_get_time_inverse_frequency((const PerfCounterTypeClass<PERF_COUNTER_RDTSC_NOFENCE>*)NULL);
+    circles_per_ns_[PERF_COUNTER_SYS] = perf_get_time_inverse_frequency<PERF_COUNTER_SYS>();
+    circles_per_ns_[PERF_COUNTER_CLOCK] = perf_get_time_inverse_frequency<PERF_COUNTER_CLOCK>();
+    circles_per_ns_[PERF_CONNTER_CHRONO] = perf_get_time_inverse_frequency<PERF_CONNTER_CHRONO>();
+    circles_per_ns_[PERF_COUNTER_RDTSC] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC>();
+    circles_per_ns_[PERF_COUNTER_RDTSCP] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSCP>();
+    circles_per_ns_[PERF_COUNTER_RDTSC_MFENCE] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_MFENCE>();
+    circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_NOFENCE>();
     circles_per_ns_[PERF_COUNTER_NULL] = circles_per_ns_[PERF_COUNTER_DEFAULT];
     return 0;
 }
@@ -626,7 +624,7 @@ void PerfRecord<INST, RESERVE, DECLARE,  ANON>::reset_childs(int idx, int depth)
 
 
 template<int INST, int RESERVE, int DECLARE, int ANON>
-int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer)
+int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer, std::function<void(const PerfSerializeBuffer& buffer)> call_log)
 {
     if (entry_idx < 0 || entry_idx >= MAX_COUNT)
     {
@@ -640,6 +638,10 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     {
         buffer.push_string("serialize buffer too short ...\r\n");
         buffer.closing_string();
+        if (call_log)
+        {
+            call_log(buffer);
+        }
         return -3;
     }
 
@@ -652,6 +654,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     {
         buffer.push_char(' ', depth * 2);
         buffer.serialize("[[ %s ]] ", node.desc.node_name);
+        //buffer.serialize("[[ %03d| %s ]] ", entry_idx, node.desc.node_name);
         buffer.push_char(' ', name_blank);
         buffer.push_string("\t\t cpu: call:");
 
@@ -686,12 +689,18 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         }
         buffer.push_string("\r\n");
         buffer.closing_string();
+        if (call_log)
+        {
+            call_log(buffer);
+            buffer.reset_offset();
+        }
     }
 
     if (node.mem.c > 0)
     {
         buffer.push_char(' ', depth * 2);
         buffer.serialize("[[ %s ]] ", node.desc.node_name);
+//        buffer.serialize("[[ %03d| %s ]] ", entry_idx, node.desc.node_name);
         buffer.push_char(' ', name_blank);
         buffer.push_string("\t\t mem: call:");
 
@@ -709,12 +718,22 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         }
         buffer.push_string("\r\n");
         buffer.closing_string();
+        if (call_log)
+        {
+            call_log(buffer);
+            buffer.reset_offset();
+        }
     }
 
     if (depth > 5)
     {
         buffer.push_string("more node in here ... \r\n");
         buffer.closing_string();
+        if (call_log)
+        {
+            call_log(buffer);
+            buffer.reset_offset();
+        }
         return -4;
     }
 
@@ -735,15 +754,13 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
 
 
 template<int INST, int RESERVE, int DECLARE, int ANON>
-const char* PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx)
+PerfSerializeBuffer PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, std::function<void(const PerfSerializeBuffer& buffer)> call_log)
 {
     PerfSerializeBuffer buffer(serialize_buff_, sizeof(serialize_buff_));
-    int ret = serialize(entry_idx, 0, buffer);
-    if (ret < 0)
-    {
-        buffer.closing_string();
-    }
-    return buffer.buff();
+    int ret = serialize(entry_idx, 0, buffer, call_log);
+    (void)ret;
+    buffer.closing_string();
+    return buffer;
 }
 
 

@@ -24,7 +24,7 @@
 
 enum MyEnum
 {
-    ENUM_PERF_TEST = PERF_DECLARE_BEGIN,
+    ENUM_PERF_TEST = PerfInstType::node_declare_begin_id(),
     ENUM_BAT_ALLOC_FREE,
     ENUM_ONE_TICK,
     ENUM_ENTRY,

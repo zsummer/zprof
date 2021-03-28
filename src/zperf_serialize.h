@@ -42,6 +42,12 @@ public:
         buff_len_ = buff_size;
         offset_ = 0;
     }
+    PerfSerializeBuffer(const PerfSerializeBuffer& buffer)
+    {
+        buff_ = buffer.buff_;
+        buff_len_ = buffer.buff_len_;
+        offset_ = buffer.offset_;
+    }
     inline PerfSerializeBuffer& serialize(const char* fmt, ...);
     inline PerfSerializeBuffer& push_human_count(long long count);
     inline PerfSerializeBuffer& push_human_time(long long ns);
@@ -50,8 +56,12 @@ public:
     inline PerfSerializeBuffer& push_string(const char* str) { return serialize("%s", str); };
     inline PerfSerializeBuffer& closing_string();
     char* buff() { return buff_; }
+    const char* buff() const { return buff_; }
     size_t offset() { return offset_; }
+    size_t offset() const { return offset_; }
     size_t buff_len() { return buff_len_; }
+    size_t buff_len()const { return buff_len_; }
+    void reset_offset() { offset_ = 0; }
 private:
     char* buff_;
     size_t offset_;
