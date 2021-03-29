@@ -110,6 +110,7 @@ public:
         INST_INNER_NULL,
         INST_INNER_INIT_COST,
         INST_INNER_SERIALIZE_COST,
+        INST_INNER_SELF_MEM_COST,
         INST_INNER_MAX,
     };
 
@@ -572,11 +573,21 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
 
     for (int i = node_begin_id(); i < node_reserve_end_id(); i++)
     {
-        regist_node(i, "reserve", 0, false);
+        regist_node(i, "reserve", PERF_COUNTER_DEFAULT, false);
     }
 
-    regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", 0, true);
-    regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", 0, true);
+    regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_SELF_MEM_COST, "INST_INNER_SELF_MEM_COST", PERF_COUNTER_DEFAULT, true);
+
+    if (true)
+    {
+        PerfCounter<> self_mem_cost;
+        self_mem_cost.start();
+        call_mem(INST_INNER_SELF_MEM_COST, 1, perf_get_mem_use());
+        call_cpu(INST_INNER_SELF_MEM_COST, self_mem_cost.stop_and_save().cycles());
+    }
+
     call_cpu(INST_INNER_INIT_COST, counter.stop_and_save().cycles());
 
     return 0;
