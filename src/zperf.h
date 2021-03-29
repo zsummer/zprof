@@ -45,52 +45,44 @@
 
 
 
-
-
-
 template<bool IS_BAT, PerfCPURecType CPU_REC_TYPE>
-struct PerfRecordTypeClass
-{
-
-};
-
-template<bool IS_BAT, PerfCPURecType CPU_REC_TYPE>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<IS_BAT, CPU_REC_TYPE>*)
+inline void PerfRecordWrap(int idx, long long count, long long cost)
 {
 
 }
 
+
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<true, PERF_CPU_NORMAL>*)
+inline void PerfRecordWrap<true, PERF_CPU_NORMAL>(int idx, long long count, long long cost)
 {
     PerfInst.call_cpu(idx, count, cost);
 }
 
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<false, PERF_CPU_NORMAL>*)
+inline void PerfRecordWrap<false, PERF_CPU_NORMAL>(int idx, long long count, long long cost)
 {
     (void)count;
     PerfInst.call_cpu(idx, cost);
 }
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<true, PERF_CPU_FAST>*)
+inline void PerfRecordWrap<true, PERF_CPU_FAST>(int idx, long long count, long long cost)
 {
     PerfInst.call_cpu_no_sm(idx, count, cost);
 }
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<false, PERF_CPU_FAST>*)
+inline void PerfRecordWrap<false, PERF_CPU_FAST>(int idx, long long count, long long cost)
 {
     (void)count;
     PerfInst.call_cpu_no_sm(idx, cost);
 }
 
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<true, PERF_CPU_FULL>*)
+inline void PerfRecordWrap<true, PERF_CPU_FULL>(int idx, long long count, long long cost)
 {
     PerfInst.call_cpu_full(idx, count, cost);
 }
 template<>
-inline void PerfRecordWrap(int idx, long long count, long long cost, PerfRecordTypeClass<false, PERF_CPU_FULL>*)
+inline void PerfRecordWrap<false, PERF_CPU_FULL>(int idx, long long count, long long cost)
 {
     (void)count;
     PerfInst.call_cpu_full(idx, cost);
@@ -115,8 +107,7 @@ public:
     }
     ~PerfAutoRecord()
     {
-        PerfRecordWrap(idx_, COUNT, counter_.save().cycles(), 
-            (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE> *)NULL);
+        PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>(idx_, COUNT, counter_.save().cycles());
     }
     PerfCounter<C>& counter() { return counter_; }
 private:
@@ -154,8 +145,7 @@ public:
     template <long long COUNT = 1LL, PerfCPURecType CPU_REC_TYPE = PERF_CPU_NORMAL>
     void record_current()
     {
-        PerfRecordWrap(this_id_, COUNT, counter_.save().cycles(), 
-            (PerfRecordTypeClass<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE > *)NULL);
+        PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE >(this_id_, COUNT, counter_.save().cycles());
     }
 
 
@@ -186,7 +176,7 @@ public:
     }
     ~PerfAutoSingleRecord()
     {
-        PerfRecordWrap(reg_.node_id(), COUNT, reg_.counter().save().cycles(), (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>*)NULL);
+        PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>(reg_.node_id(), COUNT, reg_.counter().save().cycles());
     }
 
     PerfRegister<C>& reg() { return reg_; }
@@ -217,9 +207,8 @@ private:
 
 #define PERF_CALL_CPU_SAMPLE(idx, cost) PerfInst.call_cpu(idx, cost)
 #define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE)  \
-            PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>((int)(idx), (long long)(COUNT), (long long)cost, \
-                    (PerfRecordTypeClass <PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE> *)NULL)
-#define PERF_CALL_CPU(idx, cost) PERF_CALL_CPU_WRAP(idx, 1, cost, PERF_CPU_NORMAL)
+        PerfRecordWrap<PerfCountIsGreatOne<COUNT>::is_bat, CPU_REC_TYPE>((int)(idx), (long long)(COUNT), (long long)cost)
+#define PERF_CALL_CPU(idx, cost) PERF_CALL_CPU_WRAP((idx), 1, (cost), PERF_CPU_NORMAL)
 #define PERF_CALL_MEM(idx, count, mem) PerfInst.call_mem(idx, count, mem)
 #define PERF_REFRESH_MEM(idx, count, mem) PerfInst.refresh_mem(idx, count, mem)
 #define PERF_CALL_TIMER(idx, stamp) PerfInst.call_timer(idx, stamp)
