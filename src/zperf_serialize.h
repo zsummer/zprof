@@ -32,6 +32,14 @@
 #ifndef ZPERF_SERIALIZE_H
 #define ZPERF_SERIALIZE_H
 
+#ifdef WIN32
+#define PERF_LINE_FEED "\r\n"
+#elif (defined __APPLE__)
+#define PERF_LINE_FEED "\r\n"
+#else
+#define PERF_LINE_FEED "\n"
+#endif // WIN32
+
 
 class PerfSerializeBuffer
 {
