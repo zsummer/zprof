@@ -771,7 +771,28 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
             buffer.reset_offset();
         }
     }
+    if (node.user.c > 0)
+    {
+        buffer.push_char(' ', depth * 2);
+        buffer.serialize("[[ %s ]] ", node.desc.node_name);
+        //        buffer.serialize("[[ %03d| %s ]] ", entry_idx, node.desc.node_name);
+        buffer.push_char(' ', name_blank);
+        buffer.push_string("usr: call:");
 
+        buffer.push_human_count(node.user.c);
+        buffer.push_string("\t avg:");
+        buffer.push_human_count(node.user.sum / node.user.c);
+        buffer.push_string("\t sum:");
+        buffer.push_human_count(node.user.sum);
+        
+        buffer.push_string("\r\n");
+        buffer.closing_string();
+        if (call_log)
+        {
+            call_log(buffer);
+            buffer.reset_offset();
+        }
+    }
     if (depth > 5)
     {
         buffer.push_char(' ', depth * 2);

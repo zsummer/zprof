@@ -71,7 +71,13 @@ int main(int argc, char *argv[])
 
 
     }
-    
+    if (true)
+    {
+        PERF_DEFINE_REGISTER_DEFAULT(ot, "user test");
+        PERF_CALL_USER(ot.node_id(), 1, 100);
+        PERF_CALL_USER(ot.node_id(), 1, 102);
+        PERF_CALL_USER(ot.node_id(), 1, 103);
+    }
 
 
 
