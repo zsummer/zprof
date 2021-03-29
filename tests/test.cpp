@@ -19,6 +19,18 @@
 #include "zperf.h"
 #include "test.h"
 
+int fence_func()
+{
+    return rand()%5;
+}
+
+int test_call_cpu()
+{
+    PERF_CALL_CPU(PerfInstType::node_reserve_begin_id(), 0x12345);
+    volatile int ret = fence_func();
+    PERF_CALL_CPU_SAMPLE(PerfInstType::node_reserve_begin_id(), 0x54321);
+    return ret;
+}
 
 void entry_mem_test()
 {
@@ -46,4 +58,5 @@ void entry_mem_test()
         PERF_CALL_CPU_WRAP(ENUM_FREE, 1, counter.save().cycles(), PERF_CPU_NORMAL);
         PERF_CALL_MEM(ENUM_FREE, 1, 10);
     }
+    test_call_cpu();
 }
