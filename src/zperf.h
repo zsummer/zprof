@@ -291,39 +291,12 @@ private:
 #endif
 
 
-#define PERF_SERIALIZE_FN_LOG()     LogDebug() \
-<< "\n\n ------------------------------------------------------------------ " \
-"\n ----------------------PerfRecord[" << PerfInst.desc() << "] begin ---------------------- \n"; \
-for (int i = 0; i < PerfInst.node_count(); i++) \
-{ \
-    if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
-    { \
-        PerfSerializeBuffer perf_temp_buffer = PerfInst.serialize(i); \
-        if (perf_temp_buffer.offset() > 0) \
-        { \
-            LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL).write_buffer(perf_temp_buffer.buff(), (int)perf_temp_buffer.offset()); \
-        } \
-    } \
-} \
-LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) \
-<< "\n ----------------------PerfRecord[" << PerfInst.desc() << "] end ----------------------" \
-"\n ------------------------------------------------------------------\n\n";
 
 
-#define PERF_SERIALIZE_FN_LOG2()     LogDebug() \
-<< "\n\n ------------------------------------------------------------------ " \
-"\n ----------------------PerfRecord[" << PerfInst.desc() << "] begin ---------------------- \n"; \
-for (int i = 0; i < PerfInst.node_count(); i++) \
-{ \
-    if (PerfInst.node(i).active && !PerfInst.node(i).is_child) \
-    { \
-        PerfInst.serialize(i, \
-            [](const PerfSerializeBuffer& buffer) \
-                {LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset()); }); \
-    } \
-} \
-LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL) \
-<< "\n ----------------------PerfRecord[" << PerfInst.desc() << "] end ----------------------" \
-"\n ------------------------------------------------------------------\n\n";
+#define PERF_SERIALIZE_FN_LOG()    PerfInst.serialize([](const PerfSerializeBuffer& buffer) \
+                {LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset()); })
+
+
+
 
 #endif

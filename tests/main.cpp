@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
         PERF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
 
         PERF_UPDATE_MERGE();
-        PERF_SERIALIZE_FN_LOG2();
+        PERF_SERIALIZE_FN_LOG();
 
 
         PERF_RESET_DECLARE();

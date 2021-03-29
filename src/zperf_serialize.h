@@ -54,6 +54,8 @@ public:
     inline PerfSerializeBuffer& push_human_mem(long long bytes);
     inline PerfSerializeBuffer& push_char(char ch, int repeat = 1);
     inline PerfSerializeBuffer& push_string(const char* str) { return serialize("%s", str); };
+    inline PerfSerializeBuffer& push_now_date() ;
+
     inline PerfSerializeBuffer& closing_string();
     char* buff() { return buff_; }
     const char* buff() const { return buff_; }
@@ -159,6 +161,56 @@ inline PerfSerializeBuffer& PerfSerializeBuffer::push_char(char ch, int repeat)
     }
     return *this;
 }
+
+inline PerfSerializeBuffer& PerfSerializeBuffer::push_now_date()
+{
+    time_t timestamp = 0;
+    unsigned int precise = 0;
+    do
+    {
+#ifdef _WIN32
+        FILETIME ft;
+        GetSystemTimeAsFileTime(&ft);
+        unsigned long long now = ft.dwHighDateTime;
+        now <<= 32;
+        now |= ft.dwLowDateTime;
+        now /= 10;
+        now -= 11644473600000000ULL;
+        now /= 1000;
+        timestamp = now / 1000;
+        precise = (unsigned int)(now % 1000);
+#else
+        struct timeval tm;
+        gettimeofday(&tm, nullptr);
+        timestamp = tm.tv_sec;
+        precise = tm.tv_usec / 1000;
+#endif
+    } while (0);
+
+    struct tm tt = { 0 };
+#ifdef WIN32
+    localtime_s(&tt, &timestamp);
+#else 
+    localtime_r(&timestamp, &tt);
+#endif
+
+    push_char('[');
+    serialize("%04d", tt.tm_year + 1900);
+    serialize("%02d", tt.tm_mon + 1);
+    serialize("%02d", tt.tm_mday);
+    push_char(' ');
+    serialize("%02d", tt.tm_hour);
+    push_char(':');
+    serialize("%02d", tt.tm_min);
+    push_char(':');
+    serialize("%02d", tt.tm_sec);
+    push_char('.');
+    serialize("%03u", precise);
+    push_char(']');
+    return *this;
+}
+
+
 inline PerfSerializeBuffer& PerfSerializeBuffer::closing_string()
 {
     if (buff_len_ > 0 && buff_)
