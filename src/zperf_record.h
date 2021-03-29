@@ -111,6 +111,8 @@ public:
         INST_INNER_INIT_COST,
         INST_INNER_SERIALIZE_COST,
         INST_INNER_SELF_MEM_COST,
+        INST_INNER_AUTO_TEST_COST,
+        INST_INNER_AUTO_COST,
         INST_INNER_MAX,
     };
 
@@ -579,6 +581,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", PERF_COUNTER_DEFAULT, true);
     regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true);
     regist_node(INST_INNER_SELF_MEM_COST, "INST_INNER_SELF_MEM_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_AUTO_COST, "INST_INNER_AUTO_COST", PERF_COUNTER_DEFAULT, true);
 
     if (true)
     {
@@ -586,6 +589,25 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
         self_mem_cost.start();
         call_mem(INST_INNER_SELF_MEM_COST, 1, perf_get_mem_use());
         call_cpu(INST_INNER_SELF_MEM_COST, self_mem_cost.stop_and_save().cycles());
+    }
+
+    if (true)
+    {
+        PerfCounter<> cost;
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            PerfCounter<> test_cost;
+            test_cost.start();
+            test_cost.stop_and_save();
+            call_cpu(INST_INNER_AUTO_TEST_COST, 1, test_cost.cycles());
+        }
+        cost.stop_and_save();
+        call_cpu(INST_INNER_AUTO_COST, 1000, cost.cycles());
+        reset_cpu(INST_INNER_AUTO_TEST_COST);
+        reset_mem(INST_INNER_AUTO_TEST_COST);
+        reset_timer(INST_INNER_AUTO_TEST_COST);
+        reset_user(INST_INNER_AUTO_TEST_COST);
     }
 
     call_cpu(INST_INNER_INIT_COST, counter.stop_and_save().cycles());
@@ -674,7 +696,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     if (buffer.buff_len() - buffer.offset() < PERF_MAX_SERIALIZE_LINE_SIZE)
     {
         buffer.push_char(' ', depth * 2);
-        buffer.push_string("serialize buffer too short ...\r\n");
+        buffer.push_string("serialize buffer too short ..." PERF_LINE_FEED);
         buffer.closing_string();
         if (call_log)
         {
@@ -745,7 +767,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
             buffer.push_string(" min:");
             buffer.push_human_time((long long)(node.cpu.min_u * circles_per_ns(node.desc.counter_type)));
         }
-        buffer.push_string("\r\n");
+        buffer.push_string(PERF_LINE_FEED);
         buffer.closing_string();
         if (call_log)
         {
@@ -774,7 +796,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
             buffer.push_string("\t delta:");
             buffer.push_human_mem(node.mem.delta);
         }
-        buffer.push_string("\r\n");
+        buffer.push_string(PERF_LINE_FEED);
         buffer.closing_string();
         if (call_log)
         {
@@ -796,7 +818,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         buffer.push_string("\t sum:");
         buffer.push_human_count(node.user.sum);
         
-        buffer.push_string("\r\n");
+        buffer.push_string(PERF_LINE_FEED);
         buffer.closing_string();
         if (call_log)
         {
@@ -807,7 +829,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     if (depth > 5)
     {
         buffer.push_char(' ', depth * 2);
-        buffer.push_string("more node in here ... \r\n");
+        buffer.push_string("more node in here ... " PERF_LINE_FEED);
         buffer.closing_string();
         if (call_log)
         {
@@ -857,7 +879,7 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
     }
 
 
-    buffer.push_string("\r\n");
+    buffer.push_string(PERF_LINE_FEED);
     call_log(buffer);
     buffer.reset_offset();
 
@@ -869,7 +891,7 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
     buffer.push_now_date();
     buffer.push_char('\t');
     buffer.push_char('-', 30);
-    buffer.push_string("\r\n");
+    buffer.push_string(PERF_LINE_FEED);
     call_log(buffer);
     buffer.reset_offset();
     for (int i = INST_INNER_NULL + 1; i < INST_INNER_MAX; i++)
@@ -905,17 +927,17 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
     buffer.push_now_date();
     buffer.push_char('\t');
     buffer.push_char('-', 30);
-    buffer.push_string("\r\n");
+    buffer.push_string(PERF_LINE_FEED);
     call_log(buffer);
     buffer.reset_offset();
 
     buffer.push_char('-', 120);
-    buffer.push_string("\r\n");
+    buffer.push_string(PERF_LINE_FEED);
     call_log(buffer);
     buffer.reset_offset();
 
 
-    buffer.push_string("\r\n");
+    buffer.push_string(PERF_LINE_FEED);
     call_log(buffer);
     buffer.reset_offset();
 

@@ -95,7 +95,7 @@ struct PerfCountIsGreatOne
 };
 
 
-template <bool COUNT = 1, PerfCPURecType CPU_REC_TYPE = PERF_CPU_NORMAL,
+template <long long COUNT = 1, PerfCPURecType CPU_REC_TYPE = PERF_CPU_NORMAL,
     PerfCounterType C = PERF_COUNTER_DEFAULT>
 class PerfAutoRecord
 {
@@ -202,6 +202,7 @@ private:
 #define PERF_INIT(desc) PerfInst.init_perf(desc)
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
+#define PERF_RESET_RESERVE() PerfInst.reset_reserve_info()
 #define PERF_RESET_DECLARE() PerfInst.reset_declare_info()
 #define PERF_RESET_ANON() PerfInst.reset_anon_info()
 
@@ -248,6 +249,9 @@ private:
 #define PERF_INIT(desc) 
 #define PERF_RESET_CHILD(idx) 
 #define PERF_UPDATE_MERGE() 
+#define PERF_RESET_RESERVE()
+#define PERF_RESET_DECLARE() 
+#define PERF_RESET_ANON() 
 
 #define PERF_CALL_CPU_SAMPLE(idx, cost) 
 #define PERF_CALL_CPU(idx, cost) 
