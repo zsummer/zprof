@@ -238,7 +238,7 @@ public:
         node.cpu.c += c;
         node.cpu.sum += cost;
         node.cpu.sm = node.cpu.sm == 0 ? dis : node.cpu.sm;
-        node.cpu.sm = (node.cpu.sm * 12 + cost * 4) >> 4;
+        node.cpu.sm = (node.cpu.sm * 12 + dis * 4) >> 4;
         node.cpu.max_u = node.cpu.max_u > dis ? node.cpu.max_u : dis;
         node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
         node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
@@ -595,12 +595,13 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     {
         PerfCounter<> cost;
         cost.start();
+        
         for (int i = 0; i < 1000; i++)
         {
             PerfCounter<> test_cost;
             test_cost.start();
             test_cost.stop_and_save();
-            call_cpu(INST_INNER_AUTO_TEST_COST, 1, test_cost.cycles());
+            call_cpu(INST_INNER_AUTO_TEST_COST, test_cost.cycles());
         }
         cost.stop_and_save();
         call_cpu(INST_INNER_AUTO_COST, 1000, cost.cycles());
