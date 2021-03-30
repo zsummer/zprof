@@ -236,6 +236,8 @@ template<>
 long long perf_get_time_cycle<PERF_COUNTER_RDTSC>()
 {
 #ifdef WIN32
+    //__faststorefence();
+    _mm_lfence();
     return (long long)__rdtsc();
 #else
     unsigned int lo, hi;
@@ -262,6 +264,7 @@ template<>
 long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>()
 {
 #ifdef WIN32
+    _mm_mfence();
     return (long long)__rdtsc();
 #else
     unsigned int lo, hi;
@@ -275,7 +278,8 @@ template<>
 long long perf_get_time_cycle<PERF_COUNTER_RDTSCP>()
 {
 #ifdef WIN32
-    return (long long)__rdtsc();
+    unsigned int ui;
+    return (long long)__rdtscp(&ui);
 #else
     unsigned long hi, lo;
     asm volatile("rdtscp" : "=a"(lo), "=d"(hi));
