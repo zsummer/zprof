@@ -660,7 +660,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* 
     node.desc.node_name[PERF_MAX_NODE_NAME_SIZE -1] = '\0';
     static_assert(sizeof(node.desc.node_name) == PERF_MAX_NODE_NAME_SIZE, "");
     static_assert(PERF_MAX_NODE_NAME_SIZE > 0, "");
-    node.desc.node_name_len = strlen(node.desc.node_name);
+    node.desc.node_name_len = (int)strlen(node.desc.node_name);
     node.active = true;
     node.desc.counter_type = counter_type;
     node.cpu.min_u = LLONG_MAX;
@@ -683,7 +683,7 @@ void PerfRecord<INST, RESERVE, DECLARE,  ANON>::reset_childs(int idx, int depth)
     PerfNode& node = nodes_[idx];
     memset(&node.cpu, 0, sizeof(node.cpu));
     memset(&node.mem, 0, sizeof(node.mem));
-    if (depth > 5)
+    if (depth > PERF_MAX_DEPTH)
     {
         return;
     }
@@ -844,7 +844,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
             buffer.reset_offset();
         }
     }
-    if (depth > 5)
+    if (depth > PERF_MAX_DEPTH)
     {
         buffer.push_char(' ', depth * 2);
         buffer.push_string("more node in here ... " PERF_LINE_FEED);
