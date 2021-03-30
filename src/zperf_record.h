@@ -27,7 +27,6 @@
 
 #define PERF_MAX_NODE_NAME_SIZE 128
 #define PERF_MAX_SERIALIZE_LINE_SIZE (PERF_MAX_NODE_NAME_SIZE + 200)
-#define PERF_MAX_BROTHER_COUNT 10
 #define PERF_MAX_DEPTH 5
 
 
@@ -88,9 +87,9 @@ struct PerfUser
 
 struct PerfNode
 {
-    bool active; 
-    bool is_child;  
-    std::array<unsigned int, PERF_MAX_BROTHER_COUNT> child_ids; 
+    bool active;  
+    int parrent;
+    int first_child;
     int child_count; 
     int merge_to;
     PerfDesc desc; 
@@ -508,17 +507,25 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::bind_childs(int idx, int cidx)
     {
         return -3; //regist method has memset all info ; 
     }
-    if (node.child_count >= PERF_MAX_BROTHER_COUNT)
+    if (node.first_child == 0)
     {
-        return -4;
+        node.first_child = cidx;
+        node.child_count = 1;
     }
-    if (std::find_if(node.child_ids.begin(), node.child_ids.end(), [cidx](int id) {return id == cidx; }) != node.child_ids.end())
+    else 
     {
-        return -5; //duplicate 
+        if (cidx < node.first_child)
+        {
+            node.child_count += node.first_child - cidx;
+            node.first_child = cidx;
+        }
+        else if (cidx >= node.first_child + node.child_count)
+        {
+            node.child_count = cidx - node.first_child + 1;
+        }
     }
-
-    node.child_ids[node.child_count++] = cidx;
-    child.is_child = true;
+    
+    child.parrent = idx;
     return 0;
 }
 
@@ -680,9 +687,13 @@ void PerfRecord<INST, RESERVE, DECLARE,  ANON>::reset_childs(int idx, int depth)
     {
         return;
     }
-    for (int i = 0; i < node.child_count; i++)
+    for (int i = node.first_child; i < node.first_child + node.child_count; i++)
     {
-        reset_childs(node.child_ids[i], depth + 1);
+        PerfNode& child = nodes_[i];
+        if (child.parrent == idx)
+        {
+           reset_childs(i, depth + 1);
+        }
     }
 }
 
@@ -716,7 +727,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
 
     PerfNode& node = nodes_[entry_idx];
 
-    if (depth == 0 && node.is_child)
+    if (depth == 0 && node.parrent)
     {
         return 0;
     }
@@ -846,14 +857,19 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         return -4;
     }
 
-    for (int i = 0; i < node.child_count; i++)
+    for (int i = node.first_child; i < node.first_child + node.child_count; i++)
     {
-        int ret = serialize(node.child_ids[i], depth + 1, buffer, call_log);
-        if (ret < 0)
+        PerfNode& child = nodes_[i];
+        if (child.parrent == entry_idx)
         {
-            return ret;
+            int ret = serialize(i, depth + 1, buffer, call_log);
+            if (ret < 0)
+            {
+                return ret;
+            }
         }
     }
+
     return 0;
 }
 
