@@ -555,10 +555,16 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::bind_merge(int idx, int to)
 template<int INST, int RESERVE, int DECLARE, int ANON>
 int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
 {
+    if (desc == NULL)
+    {
+        desc = "default";
+    }
     PerfCounter<> counter;
     counter.start();
-
-    sprintf(desc_, "%s", desc);
+    strncpy(desc_, desc, sizeof(desc_));
+    desc_[PERF_MAX_NODE_NAME_SIZE -1] = '\0';
+    static_assert(sizeof(desc_) == PERF_MAX_NODE_NAME_SIZE, "");
+    static_assert(PERF_MAX_NODE_NAME_SIZE > 0, "");
 
     last_timestamp_ = time(NULL);
     init_timestamp_ = time(NULL);
@@ -631,6 +637,8 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* 
     {
         return -3;
     }
+    
+    
     PerfNode& node = nodes_[idx];
 
 
@@ -639,15 +647,13 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* 
         return 0;
     }
 
-    int len = (int)strlen(desc);
-    if (len + 1 > PERF_MAX_NODE_NAME_SIZE)
-    {
-        return -4;
-    }
     
     memset(&node, 0, sizeof(node));
-    memcpy(node.desc.node_name, desc, len+1);
-    node.desc.node_name_len = len;
+    strncpy(node.desc.node_name, desc, sizeof(node.desc.node_name));
+    node.desc.node_name[PERF_MAX_NODE_NAME_SIZE -1] = '\0';
+    static_assert(sizeof(node.desc.node_name) == PERF_MAX_NODE_NAME_SIZE, "");
+    static_assert(PERF_MAX_NODE_NAME_SIZE > 0, "");
+    node.desc.node_name_len = strlen(node.desc.node_name);
     node.active = true;
     node.desc.counter_type = counter_type;
     node.cpu.min_u = LLONG_MAX;

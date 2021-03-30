@@ -36,6 +36,24 @@ int main(int argc, char *argv[])
     }
 
     LogDebug() << " main begin test. ";
+    if (true)
+    {
+        char buf[200] = {0};
+        for (size_t i = 0; i < 200; i++)
+        {
+            buf[i] ='1';
+        }
+        buf[200-1] = '\0';
+        
+        PerfInst.regist_node(PerfInst.node_reserve_begin_id(), buf, PERF_COUNTER_DEFAULT, true);
+        if (PerfInst.node(PerfInst.node_reserve_begin_id()).desc.node_name_len != PERF_MAX_NODE_NAME_SIZE-1)
+        {
+            LogDebug() <<"has error";
+            return -1;
+        }
+        
+    }
+    
 
     if (true)
     {
