@@ -32,7 +32,7 @@
 
 
 #ifndef PERF_DECLARE_COUNT
-#define PERF_DECLARE_COUNT 200
+#define PERF_DECLARE_COUNT 260
 #endif 
 
 #ifndef PERF_ANON_COUNT
