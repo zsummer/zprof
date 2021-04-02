@@ -20,6 +20,7 @@
 #include "zperf_serialize.h"
 #include <algorithm>
 #include <functional>
+#include <atomic>
 #ifndef ZPERF_RECORD_H
 #define ZPERF_RECORD_H
 
@@ -110,7 +111,12 @@ public:
         INST_INNER_SERIALIZE_COST,
         INST_INNER_SELF_MEM_COST,
         INST_INNER_AUTO_TEST_COST,
-        INST_INNER_AUTO_COST,
+        INST_INNER_FULL_AUTO_COST,
+        INST_INNER_COUNTER_COST,
+        INST_INNER_ORIGIN_INC,
+        INST_INNER_ATOM_RELEAX,
+        INST_INNER_ATOM_COST,
+        INST_INNER_ATOM_SEQ_COST,
         INST_INNER_MAX,
     };
 
@@ -192,15 +198,18 @@ public:
         PerfNode& node = nodes_[idx];
         memset(&node.user, 0, sizeof(node.user));
     }
-
+    PERF_ALWAYS_INLINE void reset_node(int idx)
+    {
+        reset_cpu(idx);
+        reset_mem(idx);
+        reset_timer(idx);
+        reset_user(idx);
+    }
     void reset_reserve_info()
     {
-        for (int i = node_reserve_begin_id(); i < node_reserve_end_id(); i++)
+        for (int idx = node_reserve_begin_id(); idx < node_reserve_end_id(); idx++)
         {
-            reset_cpu(i);
-            reset_mem(i);
-            reset_timer(i);
-            reset_user(i);
+            reset_node(idx);
         }
         last_timestamp_ = time(NULL);
     }
@@ -596,7 +605,13 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", PERF_COUNTER_DEFAULT, true);
     regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true);
     regist_node(INST_INNER_SELF_MEM_COST, "INST_INNER_SELF_MEM_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_AUTO_COST, "INST_INNER_AUTO_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_AUTO_TEST_COST, "INST_INNER_AUTO_TEST_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_FULL_AUTO_COST, "INST_INNER_FULL_AUTO_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_COUNTER_COST, "INST_INNER_COUNTER_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_ORIGIN_INC, "INST_INNER_ORIGIN_INC", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_ATOM_RELEAX, "INST_INNER_ATOM_RELEAX", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_ATOM_COST, "INST_INNER_ATOM_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_ATOM_SEQ_COST, "INST_INNER_ATOM_SEQ_COST", PERF_COUNTER_DEFAULT, true);
 
     if (true)
     {
@@ -610,7 +625,6 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     {
         PerfCounter<> cost;
         cost.start();
-        
         for (int i = 0; i < 1000; i++)
         {
             PerfCounter<> test_cost;
@@ -618,12 +632,47 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
             test_cost.stop_and_save();
             call_cpu(INST_INNER_AUTO_TEST_COST, test_cost.cycles());
         }
-        cost.stop_and_save();
-        call_cpu(INST_INNER_AUTO_COST, 1000, cost.cycles());
-        reset_cpu(INST_INNER_AUTO_TEST_COST);
-        reset_mem(INST_INNER_AUTO_TEST_COST);
-        reset_timer(INST_INNER_AUTO_TEST_COST);
-        reset_user(INST_INNER_AUTO_TEST_COST);
+        call_cpu(INST_INNER_FULL_AUTO_COST, 1000, cost.stop_and_save().cycles());
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            call_cpu_no_sm(INST_INNER_AUTO_TEST_COST, cost.stop_and_save().cycles());
+        }
+        call_cpu(INST_INNER_COUNTER_COST, 1000, cost.stop_and_save().cycles());
+        std::atomic<long long> atomll_test(0);
+        volatile long long origin_feetch_add_test = 0;
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            origin_feetch_add_test++;
+        }
+        call_cpu(INST_INNER_ORIGIN_INC, 1000, cost.stop_and_save().cycles());
+
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            atomll_test.fetch_add(1, std::memory_order_relaxed);
+        }
+        call_cpu(INST_INNER_ATOM_RELEAX, 1000, cost.stop_and_save().cycles());
+
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            atomll_test++;
+        }
+        call_cpu(INST_INNER_ATOM_COST, 1000, cost.stop_and_save().cycles());
+
+        
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            atomll_test.fetch_add(1, std::memory_order_seq_cst);
+        }
+        call_cpu(INST_INNER_ATOM_SEQ_COST, 1000, cost.stop_and_save().cycles());
+
+        call_cpu(INST_INNER_AUTO_TEST_COST, origin_feetch_add_test);
+        call_cpu(INST_INNER_AUTO_TEST_COST, atomll_test.load());
+        reset_node(INST_INNER_AUTO_TEST_COST);
     }
 
     call_cpu(INST_INNER_INIT_COST, counter.stop_and_save().cycles());
