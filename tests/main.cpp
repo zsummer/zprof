@@ -465,7 +465,16 @@ int main(int argc, char *argv[])
         }
     }
 
-
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_NORMAL, "call atom++ 1000w ");
+        std::atomic<long long> latom;
+        for (int i = 0; i < 10000000; i++)
+        {
+            latom++;
+        }
+        PERF_CALL_CPU(0, latom.load());
+    }
  
 
 
