@@ -467,6 +467,65 @@ int main(int argc, char *argv[])
 
     if (true)
     {
+        PERF_DEFINE_REGISTER(reg, "call empty", PERF_COUNTER_RDTSC);
+        long long start = 0;
+        for (int i = 0; i < 10000000; i++)
+        {
+            start = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>() - start);
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_REGISTER(reg, "call nofence empty", PERF_COUNTER_RDTSC);
+        long long start = 0;
+        for (int i = 0; i < 10000000; i++)
+        {
+            start = perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
+            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>() - start);
+        }
+    }
+    if (true)
+    {
+        volatile double ret = 3.1415926;
+        PERF_DEFINE_REGISTER(reg, "call fdiv", PERF_COUNTER_RDTSC);
+        long long start = 0;
+        for (int i = 0; i < 10000000; i++)
+        {
+            start = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+            ret = ret / start + i;
+            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>() - start);
+        }
+    }
+
+    if (true)
+    {
+        volatile double ret = 3.1415926;
+        PERF_DEFINE_REGISTER(reg, "call fdiv no any fence", PERF_COUNTER_RDTSC);
+        long long start = 0;
+        for (int i = 0; i < 10000000; i++)
+        {
+            start = perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
+            ret = ret / start + i;
+            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>() - start);
+        }
+    }
+    if (true)
+    {
+        volatile double ret = 3.1415926;
+        PERF_DEFINE_REGISTER(reg, "call fmul", PERF_COUNTER_RDTSC);
+        long long start = 0;
+        for (int i = 0; i < 10000000; i++)
+        {
+            start = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+            ret = ret * start;
+            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>() - start);
+        }
+    }
+
+
+    if (true)
+    {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PERF_CPU_NORMAL, "call atom++ 1000w ");
         std::atomic<long long> latom;
         for (int i = 0; i < 10000000; i++)

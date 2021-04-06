@@ -592,6 +592,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     circles_per_ns_[PERF_COUNTER_CLOCK] = perf_get_time_inverse_frequency<PERF_COUNTER_CLOCK>();
     circles_per_ns_[PERF_CONNTER_CHRONO] = perf_get_time_inverse_frequency<PERF_CONNTER_CHRONO>();
     circles_per_ns_[PERF_COUNTER_RDTSC] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC>();
+    circles_per_ns_[PERF_COUNTER_RDTSC_STOP] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_STOP>();
     circles_per_ns_[PERF_COUNTER_RDTSCP] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSCP>();
     circles_per_ns_[PERF_COUNTER_RDTSC_MFENCE] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_MFENCE>();
     circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_NOFENCE>();
