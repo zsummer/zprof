@@ -110,6 +110,7 @@ enum PerfCounterType
     PERF_COUNTER_CLOCK,
     PERF_CONNTER_CHRONO,
     PERF_COUNTER_RDTSC,
+    PERF_COUNTER_RDTSC_STOP,
     PERF_COUNTER_RDTSCP,
     PERF_COUNTER_RDTSC_MFENCE,
     PERF_COUNTER_RDTSC_NOFENCE,
@@ -125,6 +126,9 @@ PERF_ALWAYS_INLINE long long perf_get_time_cycle();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+
+template<>
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
@@ -150,6 +154,10 @@ PERF_ALWAYS_INLINE double perf_get_time_frequency();
 
 template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC>();
+
+template<>
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_STOP>();
+
 
 template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_NOFENCE>();
@@ -248,13 +256,31 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSC>()
 }
 
 template<>
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>()
+{
+#ifdef WIN32
+    //__faststorefence();
+    long long ret;
+    ret = (long long)__rdtsc();
+    _mm_lfence();
+    return ret;
+#else
+    unsigned int lo, hi;
+    __asm__ __volatile__("rdtsc;lfence" : "=a" (lo), "=d" (hi) :: "memory");
+    uint64_t val = ((uint64_t)hi << 32) | lo;
+    return (long long)val;
+#endif
+}
+
+
+template<>
 long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>()
 {
 #ifdef WIN32
     return (long long)__rdtsc();
 #else
     unsigned long hi, lo;
-    asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) :: "memory");
     uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
     return (long long)val;
 #endif
@@ -282,7 +308,7 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSCP>()
     return (long long)__rdtscp(&ui);
 #else
     unsigned long hi, lo;
-    asm volatile("rdtscp" : "=a"(lo), "=d"(hi));
+    __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi)::"memory");
     uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
     return (long long)val;
 #endif
@@ -459,6 +485,11 @@ double perf_get_time_frequency<PERF_COUNTER_RDTSC>()
 {
     static double frequency_per_ns = perf_get_cpu_mhz() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
     return frequency_per_ns;
+}
+template<>
+double perf_get_time_frequency<PERF_COUNTER_RDTSC_STOP>()
+{
+    return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 }
 
 template<>

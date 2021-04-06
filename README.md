@@ -113,6 +113,13 @@ __asm__ __volatile__("sfence" : :: "memory")  //store
   * 计数精度为0.4ns左右 取决于主频   获取消耗9ns (24 CPU CIRCLE) 
 
 * 对比测试  
+  * 寄存器操作 1个circle   
+  * L1 cache hit  3个circle  (不考虑在流水线中等情况)  
+  * L2 cache hit  12个circle    
+  * L3 cache hit  38个circle  
+  * 主内存 65ns   
+  * NUMA内存 相比主内存增加总线访问延迟 约40ns   
+
   * 三元赋值一般约8个circle (存在指令并行,预读等和其他周围代码一起统计会有推算上的偏差)
   * s64类型两次乘法一次除法计算一次三元赋值和若干普通赋值的cpu统计代码消耗约为3.71ns  (大样本均摊) 
   * s64类型两次乘法           一次三元赋值和若干普通赋值的cpu统计代码消耗约为2.93ns  (大样本均摊) 
