@@ -17,8 +17,40 @@
 
 #include "fn_log.h"
 #include "test.h"
-                         
+#include <unordered_map>
+#include <unordered_set>
+#include "zhash_map.h"
+typedef char s8;
+typedef unsigned char u8;
+typedef short int s16;
+typedef unsigned short int u16;
+typedef int s32;
+typedef unsigned int u32;
+typedef long long s64;
+typedef unsigned long long u64;
+typedef unsigned long pointer;
+typedef float f32;
+struct EntityCell
+{
+    s32 red_cell_;
+    s32 orange_cell_;
+    s32 green_cell_;
+    std::unordered_set<u64> player_refs;
+    std::unordered_set<u64> npc_refs;
+};
 
+inline s32 AdaptAxisIndex(float axis, int aligning) { return (int)axis / aligning; }
+inline u64 AdaptStoreIndex(s32 x, s32 y) { return (((u64)(u32)x) << 32) + (u32)y; }
+inline u64 AdaptStoreIndex(float x, float y, int aligning) { return AdaptStoreIndex(AdaptAxisIndex(x, aligning), AdaptAxisIndex(y, aligning)); }
+
+class FastHash
+{
+public:
+    u64 operator()(u64 input)
+    {
+        return (((input >> 32) * 73856093) ^ ((input & 0xffffffff) * 19349663));
+    }
+};
 
 
 
@@ -606,9 +638,248 @@ int main(int argc, char *argv[])
     PERF_SERIALIZE_FN_LOG();
     PERF_REGISTER_REFRESH_MEM(delta.reg(), perf_get_mem_use());
 
+
     PERF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
     PERF_UPDATE_MERGE();
+
+
+
+
+    auto fast_hash = [](u64 input)
+    {
+        return (((input >> 32) * 73856093) ^ ((input & 0xffffffff) * 19349663));
+    };
+
+    std::unordered_map<u64, EntityCell> entity_unordered_map;
+    zsummer::shm_arena::zhash_map<u64, EntityCell, 800 * 800 * 2, FastHash> * entity_hash_map_ptr = new zsummer::shm_arena::zhash_map<u64, EntityCell, 800 * 800 * 2, FastHash>();
+    zsummer::shm_arena::zhash_map<u64, EntityCell, 800 * 800 * 2, FastHash>& entity_hash_map = *entity_hash_map_ptr;
+    std::map<u64, EntityCell> entity_map;
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_unordered_map insert cost ");
+        for (float i = 0; i < 800; i += 1.0)
+        {
+
+            for (float j = 0; j < 800; j += 1.0)
+            {
+                EntityCell& cell = entity_unordered_map[AdaptStoreIndex(i, j, 1)];
+                cell.red_cell_ = (int)i;
+            }
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_unordered_map grid view cost ");
+        volatile float ret = 0;
+        for (float i = 0; i < 800; i += 1.0)
+        {
+            for (float j = 0; j < 800; j += 1.0)
+            {
+                for (size_t k = 0; k < 9; k++)
+                {
+                    s32 x = AdaptAxisIndex(i, 1);
+                    s32 y = AdaptAxisIndex(j, 1);
+                    u64 cur_id = AdaptStoreIndex(x + (k / 3) - 1, y + (k % 3) - 1);
+                    auto iter = entity_unordered_map.find(cur_id);
+                    if (iter != entity_unordered_map.end())
+                    {
+                        ret += iter->second.red_cell_;
+                    }
+                }
+            }
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_unordered_map erase cost ");
+        volatile float ret = 0;
+        for (float i = 0; i < 800; i += 1.0)
+        {
+            for (float j = 0; j < 800; j += 1.0)
+            {
+                auto iter = entity_unordered_map.find(AdaptStoreIndex(i, j, 1));
+                if (iter == entity_unordered_map.end())
+                {
+                    LogError() << "not found grid. i:" << i << ", j" << j << ", id:" << AdaptStoreIndex(i, j, 1);
+                    continue;
+                }
+                entity_unordered_map.erase(iter);
+            }
+        }
+        if (!entity_unordered_map.empty())
+        {
+            LogError() << "map not clean";
+        }
+    }
+
+
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_hash_map insert cost ");
+        for (float i = 0; i < 800; i += 1.0)
+        {
+
+            for (float j = 0; j < 800; j += 1.0)
+            {
+                EntityCell& cell = entity_hash_map[AdaptStoreIndex(i, j, 1)];
+                cell.red_cell_ = (int)i;
+            }
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_hash_map grid view cost ");
+        volatile float ret = 0;
+        for (float i = 0; i < 800; i += 1.0)
+        {
+            for (float j = 0; j < 800; j += 1.0)
+            {
+                for (size_t k = 0; k < 9; k++)
+                {
+                    s32 x = AdaptAxisIndex(i, 1);
+                    s32 y = AdaptAxisIndex(j, 1);
+                    u64 cur_id = AdaptStoreIndex(x + (k / 3) - 1, y + (k % 3) - 1);
+                    auto iter = entity_hash_map.find(cur_id);
+                    if (iter != entity_hash_map.end())
+                    {
+                        ret += iter->second.red_cell_;
+                    }
+                }
+            }
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_hash_map erase cost ");
+        volatile float ret = 0;
+        for (float i = 0; i < 800; i += 1.0)
+        {
+            for (float j = 0; j < 800; j += 1.0)
+            {
+                auto iter = entity_hash_map.find(AdaptStoreIndex(i, j, 1));
+                if (iter == entity_hash_map.end())
+                {
+                    LogError() << "not found grid. i:" << i << ", j" << j << ", id:" << AdaptStoreIndex(i, j, 1);
+                    continue;
+                }
+                entity_hash_map.erase(iter);
+            }
+        }
+        if (!entity_hash_map.empty())
+        {
+            LogError() << "map not clean";
+        }
+    }
+
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_map insert cost ");
+        for (float i = 0; i < 800; i += 1.0)
+        {
+
+            for (float j = 0; j < 800; j += 1.0)
+            {
+                EntityCell& cell = entity_map[AdaptStoreIndex(i, j, 1)];
+                cell.red_cell_ = (int)i;
+            }
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_map grid view cost ");
+        volatile float ret = 0;
+        for (float i = 0; i < 800; i += 1.0)
+        {
+            for (float j = 0; j < 800; j += 1.0)
+            {
+                for (size_t k = 0; k < 9; k++)
+                {
+                    s32 x = AdaptAxisIndex(i, 1);
+                    s32 y = AdaptAxisIndex(j, 1);
+                    u64 cur_id = AdaptStoreIndex(x + (k / 3) - 1, y + (k % 3) - 1);
+                    auto iter = entity_map.find(cur_id);
+                    if (iter != entity_map.end())
+                    {
+                        ret += iter->second.red_cell_;
+                    }
+                }
+            }
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_map erase cost ");
+        volatile float ret = 0;
+        for (float i = 0; i < 800; i += 1.0)
+        {
+            for (float j = 0; j < 800; j += 1.0)
+            {
+                auto iter = entity_map.find(AdaptStoreIndex(i, j, 1));
+                if (iter == entity_map.end())
+                {
+                    LogError() << "not found grid. i:" << i << ", j" << j << ", id:" << AdaptStoreIndex(i, j, 1);
+                    continue;
+                }
+                entity_map.erase(iter);
+            }
+        }
+        if (!entity_map.empty())
+        {
+            LogError() << "map not clean";
+        }
+    }
+
+
+    
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "std::hash<u64>");
+        volatile size_t ret = 0;
+        std::hash<u64> h;
+        for (int i = 0; i < 10000; i++)
+        {
+            ret = h(i) % 10000;
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "x,y hash");
+        volatile size_t ret = 0;
+        for (int i = 0; i < 10000; i ++)
+        {
+            ret = ((i * 73856093) ^ (i * 19349663)) & (10000 - 1);
+        }
+    }
+    if (true)
+    {
+        auto hash = [](int x, int y, u64 bucket_size)
+        {
+            return (((unsigned int)x * 73856093) ^ ((unsigned int)y * 19349663)) & (bucket_size - 1);
+        };
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "detour x y hash");
+        volatile size_t ret = 0;
+        for (int i = 0; i < 10000; i++)
+        {
+            ret = hash(i,i, 10000);
+        }
+    }
+    if (true)
+    {
+        auto hash = [](u64 input, u64 bucket_size)
+        {
+            return (((input >> 32) * 73856093) ^ ((input & 0xffffffff) * 19349663)) & (bucket_size - 1);
+        };
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "detour u64 hash");
+        volatile size_t ret = 0;
+        for (int i = 0; i < 10000; i++)
+        {
+            ret = hash(i, 10000);
+        }
+    }
+
     PERF_SERIALIZE_FN_LOG();
 
     
@@ -648,11 +919,6 @@ int main(int argc, char *argv[])
 
     }
     
-
-
-
-
-
 
 
 
