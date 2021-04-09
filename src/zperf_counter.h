@@ -114,6 +114,7 @@ enum PerfCounterType
     PERF_COUNTER_RDTSCP,
     PERF_COUNTER_RDTSC_MFENCE,
     PERF_COUNTER_RDTSC_NOFENCE,
+    PERF_COUNTER_RDTSC_PURE,
     PERF_COUNTER_MAX,
 };
 #ifndef PERF_COUNTER_DEFAULT
@@ -132,6 +133,9 @@ PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
+
+template<>
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>();
@@ -161,6 +165,9 @@ PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_STOP>();
 
 template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_NOFENCE>();
+
+template<>
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_PURE>();
 
 template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_MFENCE>();
@@ -281,6 +288,19 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>()
 #else
     unsigned long hi, lo;
     __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) :: "memory");
+    uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+    return (long long)val;
+#endif
+}
+
+template<>
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>()
+{
+#ifdef WIN32
+    return (long long)__rdtsc();
+#else
+    unsigned long hi, lo;
+    __asm__ ("rdtsc" : "=a"(lo), "=d"(hi));
     uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
     return (long long)val;
 #endif
@@ -494,6 +514,12 @@ double perf_get_time_frequency<PERF_COUNTER_RDTSC_STOP>()
 
 template<>
 double perf_get_time_frequency<PERF_COUNTER_RDTSC_NOFENCE>()
+{
+    return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
+}
+
+template<>
+double perf_get_time_frequency<PERF_COUNTER_RDTSC_PURE>()
 {
     return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 }
