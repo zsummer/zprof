@@ -85,7 +85,23 @@ int main(int argc, char *argv[])
         }
         
     }
-    
+#ifndef WIN32
+    if (true)
+    {
+        int infotype = 0x80000007;
+        int a = 0;
+        int b = 0;
+        int c = 0;
+        int d = 0;
+
+        __asm__("cpuid"
+            : "=a" (a), "=b" (b), "=c" (c), "=d" (d)   // The output variables. EAX -> a and vice versa.
+            : "0" (infotype));                         // Put the infotype into EAX.
+        LogDebug() << "edx:" << (void*)(unsigned long long)d << ", bit 8 if true is  invariant TSC.";
+    }
+
+#endif // WIN32
+
 
     if (true)
     {
@@ -844,7 +860,7 @@ int main(int argc, char *argv[])
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i++)
         {
-            ret += h(i) % 10000;
+            ret += h(i) % 16384;
         }
         cycles += ret;
     }
@@ -855,7 +871,7 @@ int main(int argc, char *argv[])
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i ++)
         {
-            ret += ((i * 73856093) ^ (i * 19349663)) & (10000 - 1);
+            ret += ((i * 73856093) ^ (i * 19349663)) & (16384 - 1);
         }
         cycles += ret;
     }
@@ -870,7 +886,7 @@ int main(int argc, char *argv[])
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i++)
         {
-            ret += hash(i,i, 10000);
+            ret += hash(i,i, 16384);
         }
         cycles += ret;
     }
@@ -885,7 +901,7 @@ int main(int argc, char *argv[])
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i++)
         {
-            ret += hash(i, 10000);
+            ret += hash(i, 16384);
         }
         cycles += ret;
     }
@@ -904,7 +920,7 @@ int main(int argc, char *argv[])
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i++)
         {
-            ret += hash(i, 10000);
+            ret += hash(i, 16384);
         }
         cycles += ret;
     }
@@ -923,7 +939,7 @@ int main(int argc, char *argv[])
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i++)
         {
-            ret = hash(i, 10000);
+            ret += hash(i, 16384);
         }
         cycles += ret;
     }
