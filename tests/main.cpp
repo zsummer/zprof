@@ -211,7 +211,14 @@ int main(int argc, char *argv[])
         }
     }
 
-
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_PURE bat 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>();
+        }
+    }
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10 * 10000, PERF_CPU_NORMAL, "c clock bat 10w");
@@ -517,40 +524,42 @@ int main(int argc, char *argv[])
             PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>() - start);
         }
     }
+
+    
     if (true)
     {
-        volatile double ret = 3.1415926;
+        cycles = 3.1415926;
         PERF_DEFINE_REGISTER(reg, "call fdiv", PERF_COUNTER_RDTSC);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
             start = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
-            ret = ret / start + i;
+            cycles = cycles / start + i;
             PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>() - start);
         }
     }
 
     if (true)
     {
-        volatile double ret = 3.1415926;
+        cycles = 3.1415926;
         PERF_DEFINE_REGISTER(reg, "call fdiv no any fence", PERF_COUNTER_RDTSC);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
             start = perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
-            ret = ret / start + i;
+            cycles = cycles / start + i;
             PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>() - start);
         }
     }
     if (true)
     {
-        volatile double ret = 3.1415926;
+        cycles = 3.1415926;
         PERF_DEFINE_REGISTER(reg, "call fmul", PERF_COUNTER_RDTSC);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
             start = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
-            ret = ret * start;
+            cycles = cycles * start;
             PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>() - start);
         }
     }
@@ -646,14 +655,10 @@ int main(int argc, char *argv[])
 
 
 
-    auto fast_hash = [](u64 input)
-    {
-        return (((input >> 32) * 73856093) ^ ((input & 0xffffffff) * 19349663));
-    };
 
     std::unordered_map<u64, EntityCell> entity_unordered_map;
-    zsummer::shm_arena::zhash_map<u64, EntityCell, 800 * 800 * 2, FastHash> * entity_hash_map_ptr = new zsummer::shm_arena::zhash_map<u64, EntityCell, 800 * 800 * 2, FastHash>();
-    zsummer::shm_arena::zhash_map<u64, EntityCell, 800 * 800 * 2, FastHash>& entity_hash_map = *entity_hash_map_ptr;
+    zsummer::shm_arena::zhash_map<u64, EntityCell, 1048576, FastHash> * entity_hash_map_ptr = new zsummer::shm_arena::zhash_map<u64, EntityCell, 1048576, FastHash>();
+    zsummer::shm_arena::zhash_map<u64, EntityCell, 1048576, FastHash>& entity_hash_map = *entity_hash_map_ptr;
     std::map<u64, EntityCell> entity_map;
     if (true)
     {
@@ -671,12 +676,12 @@ int main(int argc, char *argv[])
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_unordered_map grid view cost ");
-        volatile float ret = 0;
+        cycles = 0;
         for (float i = 0; i < 800; i += 1.0)
         {
             for (float j = 0; j < 800; j += 1.0)
             {
-                for (size_t k = 0; k < 9; k++)
+                for (int k = 0; k < 9; k++)
                 {
                     s32 x = AdaptAxisIndex(i, 1);
                     s32 y = AdaptAxisIndex(j, 1);
@@ -684,7 +689,7 @@ int main(int argc, char *argv[])
                     auto iter = entity_unordered_map.find(cur_id);
                     if (iter != entity_unordered_map.end())
                     {
-                        ret += iter->second.red_cell_;
+                        cycles += iter->second.red_cell_;
                     }
                 }
             }
@@ -693,7 +698,6 @@ int main(int argc, char *argv[])
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_unordered_map erase cost ");
-        volatile float ret = 0;
         for (float i = 0; i < 800; i += 1.0)
         {
             for (float j = 0; j < 800; j += 1.0)
@@ -731,12 +735,12 @@ int main(int argc, char *argv[])
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_hash_map grid view cost ");
-        volatile float ret = 0;
+        cycles = 0;
         for (float i = 0; i < 800; i += 1.0)
         {
             for (float j = 0; j < 800; j += 1.0)
             {
-                for (size_t k = 0; k < 9; k++)
+                for (int k = 0; k < 9; k++)
                 {
                     s32 x = AdaptAxisIndex(i, 1);
                     s32 y = AdaptAxisIndex(j, 1);
@@ -744,7 +748,7 @@ int main(int argc, char *argv[])
                     auto iter = entity_hash_map.find(cur_id);
                     if (iter != entity_hash_map.end())
                     {
-                        ret += iter->second.red_cell_;
+                        cycles += iter->second.red_cell_;
                     }
                 }
             }
@@ -753,7 +757,6 @@ int main(int argc, char *argv[])
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_hash_map erase cost ");
-        volatile float ret = 0;
         for (float i = 0; i < 800; i += 1.0)
         {
             for (float j = 0; j < 800; j += 1.0)
@@ -790,12 +793,12 @@ int main(int argc, char *argv[])
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_map grid view cost ");
-        volatile float ret = 0;
+        cycles = 0;
         for (float i = 0; i < 800; i += 1.0)
         {
             for (float j = 0; j < 800; j += 1.0)
             {
-                for (size_t k = 0; k < 9; k++)
+                for (int k = 0; k < 9; k++)
                 {
                     s32 x = AdaptAxisIndex(i, 1);
                     s32 y = AdaptAxisIndex(j, 1);
@@ -803,7 +806,7 @@ int main(int argc, char *argv[])
                     auto iter = entity_map.find(cur_id);
                     if (iter != entity_map.end())
                     {
-                        ret += iter->second.red_cell_;
+                        cycles += iter->second.red_cell_;
                     }
                 }
             }
@@ -812,7 +815,6 @@ int main(int argc, char *argv[])
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_map erase cost ");
-        volatile float ret = 0;
         for (float i = 0; i < 800; i += 1.0)
         {
             for (float j = 0; j < 800; j += 1.0)
@@ -839,19 +841,23 @@ int main(int argc, char *argv[])
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "std::hash<u64>");
         volatile size_t ret = 0;
         std::hash<u64> h;
-        for (int i = 0; i < 10000; i++)
+        volatile int loop_count = 10000;
+        for (int i = 0; i < loop_count; i++)
         {
-            ret = h(i) % 10000;
+            ret += h(i) % 10000;
         }
+        cycles += ret;
     }
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "x,y hash");
         volatile size_t ret = 0;
-        for (int i = 0; i < 10000; i ++)
+        volatile int loop_count = 10000;
+        for (int i = 0; i < loop_count; i ++)
         {
-            ret = ((i * 73856093) ^ (i * 19349663)) & (10000 - 1);
+            ret += ((i * 73856093) ^ (i * 19349663)) & (10000 - 1);
         }
+        cycles += ret;
     }
     if (true)
     {
@@ -861,10 +867,12 @@ int main(int argc, char *argv[])
         };
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "detour x y hash");
         volatile size_t ret = 0;
-        for (int i = 0; i < 10000; i++)
+        volatile int loop_count = 10000;
+        for (int i = 0; i < loop_count; i++)
         {
-            ret = hash(i,i, 10000);
+            ret += hash(i,i, 10000);
         }
+        cycles += ret;
     }
     if (true)
     {
@@ -874,12 +882,51 @@ int main(int argc, char *argv[])
         };
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "detour u64 hash");
         volatile size_t ret = 0;
-        for (int i = 0; i < 10000; i++)
+        volatile int loop_count = 10000;
+        for (int i = 0; i < loop_count; i++)
+        {
+            ret += hash(i, 10000);
+        }
+        cycles += ret;
+    }
+
+    if (true)
+    {
+        auto hash = [](u64 input, u64 bucket_size)
+        {
+            input ^= input >> 23;
+            input *= 0x2127599bf4325c37ULL;
+            input ^= input >> 47;
+            return input & (bucket_size - 1);
+        };
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "Xorshifts and one multiplication");
+        volatile size_t ret = 0;
+        volatile int loop_count = 10000;
+        for (int i = 0; i < loop_count; i++)
+        {
+            ret += hash(i, 10000);
+        }
+        cycles += ret;
+    }
+
+    if (true)
+    {
+        auto hash = [](u64 input, u64 bucket_size)
+        {
+            input *= 0xc6a4a7935bd1e995ULL;
+            input ^= input >> 47;
+            input *= 0xc6a4a7935bd1e995ULL;
+            return input & (bucket_size - 1);
+        };
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "Xorshifts and two multiplication");
+        volatile size_t ret = 0;
+        volatile int loop_count = 10000;
+        for (int i = 0; i < loop_count; i++)
         {
             ret = hash(i, 10000);
         }
+        cycles += ret;
     }
-
     PERF_SERIALIZE_FN_LOG();
 
     
@@ -919,11 +966,15 @@ int main(int argc, char *argv[])
 
     }
     
+    if (true)
+    {
+        LogDebug() << "std::hash<unsigned long long>()(1000):" << std::hash<unsigned long long>()(1000) << "std::hash<unsigned long long>()(30):" << std::hash<unsigned long long>()(30);
+        std::hash<unsigned long long> h;
+        LogDebug() << "std::hash<unsigned long long> h; h(1000):" << h(1000) << "h(30):" << h(30);
+    }
 
 
-
-
-    LogInfo() << "all test finish .";
+    LogInfo() << "all test finish .solt:" << cycles;
     return 0;
 }
 
