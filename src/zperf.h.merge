@@ -110,13 +110,15 @@ enum PerfCounterType
     PERF_COUNTER_CLOCK,
     PERF_CONNTER_CHRONO,
     PERF_COUNTER_RDTSC,
+    PERF_COUNTER_RDTSC_STOP,
     PERF_COUNTER_RDTSCP,
     PERF_COUNTER_RDTSC_MFENCE,
     PERF_COUNTER_RDTSC_NOFENCE,
+    PERF_COUNTER_RDTSC_PURE,
     PERF_COUNTER_MAX,
 };
 #ifndef PERF_COUNTER_DEFAULT
-#define PERF_COUNTER_DEFAULT PERF_COUNTER_RDTSC
+#define PERF_COUNTER_DEFAULT PERF_COUNTER_RDTSC_NOFENCE
 #endif 
 
 
@@ -127,7 +129,13 @@ template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC>();
 
 template<>
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
+
+template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
+
+template<>
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>();
@@ -152,7 +160,14 @@ template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 
 template<>
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_STOP>();
+
+
+template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_NOFENCE>();
+
+template<>
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_PURE>();
 
 template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_MFENCE>();
@@ -248,13 +263,44 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSC>()
 }
 
 template<>
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>()
+{
+#ifdef WIN32
+    //__faststorefence();
+    long long ret;
+    ret = (long long)__rdtsc();
+    _mm_lfence();
+    return ret;
+#else
+    unsigned int lo, hi;
+    __asm__ __volatile__("rdtsc;lfence" : "=a" (lo), "=d" (hi) :: "memory");
+    uint64_t val = ((uint64_t)hi << 32) | lo;
+    return (long long)val;
+#endif
+}
+
+
+template<>
 long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>()
 {
 #ifdef WIN32
     return (long long)__rdtsc();
 #else
     unsigned long hi, lo;
-    asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) :: "memory");
+    uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+    return (long long)val;
+#endif
+}
+
+template<>
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>()
+{
+#ifdef WIN32
+    return (long long)__rdtsc();
+#else
+    unsigned long hi, lo;
+    __asm__ ("rdtsc" : "=a"(lo), "=d"(hi));
     uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
     return (long long)val;
 #endif
@@ -282,7 +328,7 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSCP>()
     return (long long)__rdtscp(&ui);
 #else
     unsigned long hi, lo;
-    asm volatile("rdtscp" : "=a"(lo), "=d"(hi));
+    __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi)::"memory");
     uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
     return (long long)val;
 #endif
@@ -460,9 +506,20 @@ double perf_get_time_frequency<PERF_COUNTER_RDTSC>()
     static double frequency_per_ns = perf_get_cpu_mhz() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
     return frequency_per_ns;
 }
+template<>
+double perf_get_time_frequency<PERF_COUNTER_RDTSC_STOP>()
+{
+    return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
+}
 
 template<>
 double perf_get_time_frequency<PERF_COUNTER_RDTSC_NOFENCE>()
+{
+    return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
+}
+
+template<>
+double perf_get_time_frequency<PERF_COUNTER_RDTSC_PURE>()
 {
     return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 }
@@ -549,7 +606,6 @@ double perf_get_time_inverse_frequency()
 
 #ifndef ZPERF_SERIALIZE_H
 #define ZPERF_SERIALIZE_H
-
 
 #ifdef WIN32
 #define PERF_LINE_FEED "\r\n"
@@ -772,6 +828,7 @@ inline PerfSerializeBuffer& PerfSerializeBuffer::closing_string()
 
 #include <algorithm>
 #include <functional>
+#include <atomic>
 #ifndef ZPERF_RECORD_H
 #define ZPERF_RECORD_H
 
@@ -796,6 +853,7 @@ struct PerfDesc
     char node_name[PERF_MAX_NODE_NAME_SIZE];
     int node_name_len;
     int counter_type;
+    bool resident;
 };
 
 struct PerfCPU
@@ -862,7 +920,12 @@ public:
         INST_INNER_SERIALIZE_COST,
         INST_INNER_SELF_MEM_COST,
         INST_INNER_AUTO_TEST_COST,
-        INST_INNER_AUTO_COST,
+        INST_INNER_FULL_AUTO_COST,
+        INST_INNER_COUNTER_COST,
+        INST_INNER_ORIGIN_INC,
+        INST_INNER_ATOM_RELEAX,
+        INST_INNER_ATOM_COST,
+        INST_INNER_ATOM_SEQ_COST,
         INST_INNER_MAX,
     };
 
@@ -919,7 +982,7 @@ public:
         return inst;
     }
     inline int init_perf(const char* desc);
-    inline int regist_node(int idx, const char* desc, unsigned int counter, bool re_reg);
+    inline int regist_node(int idx, const char* desc, unsigned int counter, bool resident, bool re_reg);
     inline int rename_node(int idx, const char* desc);
     inline int bind_childs(int idx, int child);
     inline int bind_merge(int idx, int to);
@@ -944,40 +1007,39 @@ public:
         PerfNode& node = nodes_[idx];
         memset(&node.user, 0, sizeof(node.user));
     }
-
-    void reset_reserve_info()
+    PERF_ALWAYS_INLINE void reset_node(int idx)
     {
-        for (int i = node_reserve_begin_id(); i < node_reserve_end_id(); i++)
+        reset_cpu(idx);
+        reset_mem(idx);
+        reset_timer(idx);
+        reset_user(idx);
+    }
+    void clean_node_info_range(int first_idx, int end_idx, bool keep_resident = true)
+    {
+        for (int idx = first_idx; idx < end_idx; idx++)
         {
-            reset_cpu(i);
-            reset_mem(i);
-            reset_timer(i);
-            reset_user(i);
+            if (!keep_resident || !node_descs_[idx].resident)
+            {
+                reset_node(idx);
+            }
         }
+    }
+
+    void clean_reserve_info(bool keep_resident = true)
+    {
+        clean_node_info_range(node_reserve_begin_id(), node_reserve_end_id(), keep_resident);
         last_timestamp_ = time(NULL);
     }
 
-    void reset_declare_info()
+    void clean_declare_info(bool keep_resident = true)
     {
-        for (int i = node_declare_begin_id(); i < node_declare_end_id(); i++)
-        {
-            reset_cpu(i);
-            reset_mem(i);
-            reset_timer(i);
-            reset_user(i);
-        }
+        clean_node_info_range(node_declare_begin_id(), node_declare_end_id(), keep_resident);
         last_timestamp_ = time(NULL);
     }
 
-    void reset_anon_info()
+    void clean_anon_info(bool keep_resident = true)
     {
-        for (int i = node_anon_begin_id(); i < node_anon_end_id(); i++)
-        {
-            reset_cpu(i);
-            reset_mem(i);
-            reset_timer(i);
-            reset_user(i);
-        }
+        clean_node_info_range(node_anon_begin_id(), node_anon_end_id(), keep_resident);
         last_timestamp_ = time(NULL);
     }
 
@@ -1335,20 +1397,28 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     circles_per_ns_[PERF_COUNTER_CLOCK] = perf_get_time_inverse_frequency<PERF_COUNTER_CLOCK>();
     circles_per_ns_[PERF_CONNTER_CHRONO] = perf_get_time_inverse_frequency<PERF_CONNTER_CHRONO>();
     circles_per_ns_[PERF_COUNTER_RDTSC] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC>();
+    circles_per_ns_[PERF_COUNTER_RDTSC_STOP] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_STOP>();
     circles_per_ns_[PERF_COUNTER_RDTSCP] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSCP>();
     circles_per_ns_[PERF_COUNTER_RDTSC_MFENCE] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_MFENCE>();
     circles_per_ns_[PERF_COUNTER_RDTSC_NOFENCE] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_NOFENCE>();
+    circles_per_ns_[PERF_COUNTER_RDTSC_PURE] = perf_get_time_inverse_frequency<PERF_COUNTER_RDTSC_PURE>();
     circles_per_ns_[PERF_COUNTER_NULL] = circles_per_ns_[PERF_COUNTER_DEFAULT];
 
     for (int i = node_begin_id(); i < node_reserve_end_id(); i++)
     {
-        regist_node(i, "reserve", PERF_COUNTER_DEFAULT, false);
+        regist_node(i, "reserve", PERF_COUNTER_DEFAULT, false, false);
     }
 
-    regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_SELF_MEM_COST, "INST_INNER_SELF_MEM_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_AUTO_COST, "INST_INNER_AUTO_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_SELF_MEM_COST, "INST_INNER_SELF_MEM_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_AUTO_TEST_COST, "INST_INNER_AUTO_TEST_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_FULL_AUTO_COST, "INST_INNER_FULL_AUTO_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_COUNTER_COST, "INST_INNER_COUNTER_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_ORIGIN_INC, "INST_INNER_ORIGIN_INC", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_ATOM_RELEAX, "INST_INNER_ATOM_RELEAX", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_ATOM_COST, "INST_INNER_ATOM_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_ATOM_SEQ_COST, "INST_INNER_ATOM_SEQ_COST", PERF_COUNTER_DEFAULT, true, true);
 
     if (true)
     {
@@ -1362,7 +1432,6 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     {
         PerfCounter<> cost;
         cost.start();
-        
         for (int i = 0; i < 1000; i++)
         {
             PerfCounter<> test_cost;
@@ -1370,12 +1439,47 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
             test_cost.stop_and_save();
             call_cpu(INST_INNER_AUTO_TEST_COST, test_cost.cycles());
         }
-        cost.stop_and_save();
-        call_cpu(INST_INNER_AUTO_COST, 1000, cost.cycles());
-        reset_cpu(INST_INNER_AUTO_TEST_COST);
-        reset_mem(INST_INNER_AUTO_TEST_COST);
-        reset_timer(INST_INNER_AUTO_TEST_COST);
-        reset_user(INST_INNER_AUTO_TEST_COST);
+        call_cpu(INST_INNER_FULL_AUTO_COST, 1000, cost.stop_and_save().cycles());
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            call_cpu_no_sm(INST_INNER_AUTO_TEST_COST, cost.stop_and_save().cycles());
+        }
+        call_cpu(INST_INNER_COUNTER_COST, 1000, cost.stop_and_save().cycles());
+        std::atomic<long long> atomll_test(0);
+        volatile long long origin_feetch_add_test = 0;
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            origin_feetch_add_test++;
+        }
+        call_cpu(INST_INNER_ORIGIN_INC, 1000, cost.stop_and_save().cycles());
+
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            atomll_test.fetch_add(1, std::memory_order_relaxed);
+        }
+        call_cpu(INST_INNER_ATOM_RELEAX, 1000, cost.stop_and_save().cycles());
+
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            atomll_test++;
+        }
+        call_cpu(INST_INNER_ATOM_COST, 1000, cost.stop_and_save().cycles());
+
+        
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            atomll_test.fetch_add(1, std::memory_order_seq_cst);
+        }
+        call_cpu(INST_INNER_ATOM_SEQ_COST, 1000, cost.stop_and_save().cycles());
+
+        call_cpu(INST_INNER_AUTO_TEST_COST, origin_feetch_add_test);
+        call_cpu(INST_INNER_AUTO_TEST_COST, atomll_test.load());
+        reset_node(INST_INNER_AUTO_TEST_COST);
     }
 
     call_cpu(INST_INNER_INIT_COST, counter.stop_and_save().cycles());
@@ -1388,7 +1492,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
 
 
 template<int INST, int RESERVE, int DECLARE, int ANON>
-int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* desc, unsigned int counter_type, bool re_reg)
+int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* desc, unsigned int counter_type, bool resident, bool re_reg)
 {
     if (idx < node_begin_id() || idx >= node_end_id() )
     {
@@ -1411,6 +1515,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* 
     memset(&node, 0, sizeof(node));
     rename_node(idx, desc);
     node_descs_[idx].counter_type = counter_type;
+    node_descs_[idx].resident = resident;
     node.active = true;
     node.cpu.min_u = LLONG_MAX;
 
@@ -1875,7 +1980,7 @@ public:
     PerfRegister(const char* desc)
     {
         this_id_ = PerfInst.new_anon_node_id();
-        PerfInst.regist_node(this_id_, desc, T, false);
+        PerfInst.regist_node(this_id_, desc, T, true, false);
     }
 
     ~PerfRegister()
@@ -1941,8 +2046,9 @@ private:
 
 #ifdef OPEN_ZPERF
 
-#define PERF_REGIST_NODE(id, name, c, re_reg)  PerfInst.regist_node(id, name, c, re_reg)
-#define PERF_FAST_REGIST_NODE(id)  PerfInst.regist_node(id, #id, PERF_COUNTER_DEFAULT, false)
+#define PERF_REGIST_NODE(id, name, c, resident, re_reg)  PerfInst.regist_node(id, name, c, resident, re_reg)
+#define PERF_FAST_REGIST_NODE(id)  PerfInst.regist_node(id, #id, PERF_COUNTER_DEFAULT,  false, false)
+#define PERF_FAST_REGIST_RESIDENT_NODE(id)  PerfInst.regist_node(id, #id, PERF_COUNTER_DEFAULT,  true, false)
 #define PERF_BIND_CHILD(id, cid)  PerfInst.bind_childs(id, cid)
 #define PERF_BIND_MERGE(id, cid) PerfInst.bind_merge(cid, id)
 #define PERF_BIND_CHILD_AND_MERGE(id, cid) do {PERF_BIND_CHILD(id, cid); PERF_BIND_MERGE(id, cid); }while(0)
@@ -1953,9 +2059,9 @@ private:
 #define PERF_INIT(desc) PerfInst.init_perf(desc)
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
-#define PERF_RESET_RESERVE() PerfInst.reset_reserve_info()
-#define PERF_RESET_DECLARE() PerfInst.reset_declare_info()
-#define PERF_RESET_ANON() PerfInst.reset_anon_info()
+#define PERF_CLEAN_RESERVE() PerfInst.clean_reserve_info()
+#define PERF_CLEAN_DECLARE() PerfInst.clean_declare_info()
+#define PERF_CLEAN_ANON() PerfInst.clean_anon_info()
 
 #define PERF_CALL_CPU_SAMPLE(idx, cost) PerfInst.call_cpu(idx, cost)
 #define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE)  \
@@ -1993,6 +2099,7 @@ private:
 #else
 #define PERF_REGIST_NODE(id, name, pt, force)
 #define PERF_FAST_REGIST_NODE(id) 
+#define PERF_FAST_REGIST_RESIDENT_NODE(id)  
 #define PERF_BIND_CHILD(id, cid) 
 #define PERF_BIND_MERGE(id, cid) 
 #define PERF_BIND_CHILD_AND_MERGE(id, cid) 

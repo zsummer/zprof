@@ -45,6 +45,7 @@ struct PerfDesc
     char node_name[PERF_MAX_NODE_NAME_SIZE];
     int node_name_len;
     int counter_type;
+    bool resident;
 };
 
 struct PerfCPU
@@ -173,7 +174,7 @@ public:
         return inst;
     }
     inline int init_perf(const char* desc);
-    inline int regist_node(int idx, const char* desc, unsigned int counter, bool re_reg);
+    inline int regist_node(int idx, const char* desc, unsigned int counter, bool resident, bool re_reg);
     inline int rename_node(int idx, const char* desc);
     inline int bind_childs(int idx, int child);
     inline int bind_merge(int idx, int to);
@@ -205,36 +206,32 @@ public:
         reset_timer(idx);
         reset_user(idx);
     }
-    void reset_reserve_info()
+    void clean_node_info_range(int first_idx, int end_idx, bool keep_resident = true)
     {
-        for (int idx = node_reserve_begin_id(); idx < node_reserve_end_id(); idx++)
+        for (int idx = first_idx; idx < end_idx; idx++)
         {
-            reset_node(idx);
+            if (!keep_resident || !node_descs_[idx].resident)
+            {
+                reset_node(idx);
+            }
         }
+    }
+
+    void clean_reserve_info(bool keep_resident = true)
+    {
+        clean_node_info_range(node_reserve_begin_id(), node_reserve_end_id(), keep_resident);
         last_timestamp_ = time(NULL);
     }
 
-    void reset_declare_info()
+    void clean_declare_info(bool keep_resident = true)
     {
-        for (int i = node_declare_begin_id(); i < node_declare_end_id(); i++)
-        {
-            reset_cpu(i);
-            reset_mem(i);
-            reset_timer(i);
-            reset_user(i);
-        }
+        clean_node_info_range(node_declare_begin_id(), node_declare_end_id(), keep_resident);
         last_timestamp_ = time(NULL);
     }
 
-    void reset_anon_info()
+    void clean_anon_info(bool keep_resident = true)
     {
-        for (int i = node_anon_begin_id(); i < node_anon_end_id(); i++)
-        {
-            reset_cpu(i);
-            reset_mem(i);
-            reset_timer(i);
-            reset_user(i);
-        }
+        clean_node_info_range(node_anon_begin_id(), node_anon_end_id(), keep_resident);
         last_timestamp_ = time(NULL);
     }
 
@@ -601,19 +598,19 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
 
     for (int i = node_begin_id(); i < node_reserve_end_id(); i++)
     {
-        regist_node(i, "reserve", PERF_COUNTER_DEFAULT, false);
+        regist_node(i, "reserve", PERF_COUNTER_DEFAULT, false, false);
     }
 
-    regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_SELF_MEM_COST, "INST_INNER_SELF_MEM_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_AUTO_TEST_COST, "INST_INNER_AUTO_TEST_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_FULL_AUTO_COST, "INST_INNER_FULL_AUTO_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_COUNTER_COST, "INST_INNER_COUNTER_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_ORIGIN_INC, "INST_INNER_ORIGIN_INC", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_ATOM_RELEAX, "INST_INNER_ATOM_RELEAX", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_ATOM_COST, "INST_INNER_ATOM_COST", PERF_COUNTER_DEFAULT, true);
-    regist_node(INST_INNER_ATOM_SEQ_COST, "INST_INNER_ATOM_SEQ_COST", PERF_COUNTER_DEFAULT, true);
+    regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_SELF_MEM_COST, "INST_INNER_SELF_MEM_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_AUTO_TEST_COST, "INST_INNER_AUTO_TEST_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_FULL_AUTO_COST, "INST_INNER_FULL_AUTO_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_COUNTER_COST, "INST_INNER_COUNTER_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_ORIGIN_INC, "INST_INNER_ORIGIN_INC", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_ATOM_RELEAX, "INST_INNER_ATOM_RELEAX", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_ATOM_COST, "INST_INNER_ATOM_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_ATOM_SEQ_COST, "INST_INNER_ATOM_SEQ_COST", PERF_COUNTER_DEFAULT, true, true);
 
     if (true)
     {
@@ -687,7 +684,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
 
 
 template<int INST, int RESERVE, int DECLARE, int ANON>
-int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* desc, unsigned int counter_type, bool re_reg)
+int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* desc, unsigned int counter_type, bool resident, bool re_reg)
 {
     if (idx < node_begin_id() || idx >= node_end_id() )
     {
@@ -710,6 +707,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* 
     memset(&node, 0, sizeof(node));
     rename_node(idx, desc);
     node_descs_[idx].counter_type = counter_type;
+    node_descs_[idx].resident = resident;
     node.active = true;
     node.cpu.min_u = LLONG_MAX;
 

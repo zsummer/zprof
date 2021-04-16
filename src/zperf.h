@@ -124,7 +124,7 @@ public:
     PerfRegister(const char* desc)
     {
         this_id_ = PerfInst.new_anon_node_id();
-        PerfInst.regist_node(this_id_, desc, T, false);
+        PerfInst.regist_node(this_id_, desc, T, true, false);
     }
 
     ~PerfRegister()
@@ -190,8 +190,9 @@ private:
 
 #ifdef OPEN_ZPERF
 
-#define PERF_REGIST_NODE(id, name, c, re_reg)  PerfInst.regist_node(id, name, c, re_reg)
-#define PERF_FAST_REGIST_NODE(id)  PerfInst.regist_node(id, #id, PERF_COUNTER_DEFAULT, false)
+#define PERF_REGIST_NODE(id, name, c, resident, re_reg)  PerfInst.regist_node(id, name, c, resident, re_reg)
+#define PERF_FAST_REGIST_NODE(id)  PerfInst.regist_node(id, #id, PERF_COUNTER_DEFAULT,  false, false)
+#define PERF_FAST_REGIST_RESIDENT_NODE(id)  PerfInst.regist_node(id, #id, PERF_COUNTER_DEFAULT,  true, false)
 #define PERF_BIND_CHILD(id, cid)  PerfInst.bind_childs(id, cid)
 #define PERF_BIND_MERGE(id, cid) PerfInst.bind_merge(cid, id)
 #define PERF_BIND_CHILD_AND_MERGE(id, cid) do {PERF_BIND_CHILD(id, cid); PERF_BIND_MERGE(id, cid); }while(0)
@@ -202,9 +203,9 @@ private:
 #define PERF_INIT(desc) PerfInst.init_perf(desc)
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
-#define PERF_RESET_RESERVE() PerfInst.reset_reserve_info()
-#define PERF_RESET_DECLARE() PerfInst.reset_declare_info()
-#define PERF_RESET_ANON() PerfInst.reset_anon_info()
+#define PERF_CLEAN_RESERVE() PerfInst.clean_reserve_info()
+#define PERF_CLEAN_DECLARE() PerfInst.clean_declare_info()
+#define PERF_CLEAN_ANON() PerfInst.clean_anon_info()
 
 #define PERF_CALL_CPU_SAMPLE(idx, cost) PerfInst.call_cpu(idx, cost)
 #define PERF_CALL_CPU_WRAP(idx, COUNT, cost, CPU_REC_TYPE)  \
@@ -240,8 +241,9 @@ private:
 
 
 #else
-#define PERF_REGIST_NODE(id, name, pt, force)
+#define PERF_REGIST_NODE(id, name, pt, resident, force)
 #define PERF_FAST_REGIST_NODE(id) 
+#define PERF_FAST_REGIST_RESIDENT_NODE(id)  
 #define PERF_BIND_CHILD(id, cid) 
 #define PERF_BIND_MERGE(id, cid) 
 #define PERF_BIND_CHILD_AND_MERGE(id, cid) 
