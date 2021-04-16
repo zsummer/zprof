@@ -68,6 +68,45 @@ int main(int argc, char *argv[])
     }
 
     LogDebug() << " main begin test. ";
+
+
+    s32 min_x = 0;
+    s32 max_x = 0;
+    s32 min_y = 0;
+    s32 max_y = 0;
+
+    s32 new_x = 5;
+    s32 new_y = 5;
+    s32 old_x = 4;
+    s32 old_y = 7;
+
+    if (abs(new_x - old_x) < 5 && abs(new_y - old_y) < 5)
+    {
+
+        if (new_x < old_x)
+        {
+            min_x = old_x - 2;
+            max_x = new_x + 2;
+        }
+        else
+        {
+            min_x = new_x - 2;
+            max_x = old_x + 2;
+        }
+        if (new_y < old_y)
+        {
+            min_y = old_y - 2;
+            max_y = new_y + 2;
+        }
+        else
+        {
+            min_y = new_y - 2;
+            max_y = old_y + 2;
+        }
+    }
+
+
+
     if (true)
     {
         char buf[200] = {0};
@@ -77,7 +116,7 @@ int main(int argc, char *argv[])
         }
         buf[200-1] = '\0';
         
-        PerfInst.regist_node(PerfInst.node_reserve_begin_id(), buf, PERF_COUNTER_DEFAULT, true);
+        PerfInst.regist_node(PerfInst.node_reserve_begin_id(), buf, PERF_COUNTER_DEFAULT, false, true);
         if (PerfInst.node_desc(PerfInst.node_reserve_begin_id()).node_name_len != PERF_MAX_NODE_NAME_SIZE-1)
         {
             LogDebug() <<"has error";
@@ -132,7 +171,7 @@ int main(int argc, char *argv[])
         PERF_SERIALIZE_FN_LOG();
 
 
-        PERF_RESET_DECLARE();
+        PERF_CLEAN_DECLARE();
         PERF_SERIALIZE_FN_LOG();
 
 
@@ -923,6 +962,70 @@ int main(int argc, char *argv[])
             ret += hash(i, 16384);
         }
         cycles += ret;
+    }
+    if (true)
+    {
+        std::map<std::string, size_t> map_string;
+        std::unordered_map<std::string, size_t> hashmap_string;
+        std::vector<std::string> datas;
+        for (int i = 0; i < 10000; i++)
+        {
+            char buf[50];
+            sprintf(buf, "afd%04d", i);
+            datas.push_back(buf);
+        }
+        if (true)
+        {
+            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "map_string insert 10000");
+            for (size_t i = 0; i < 10000; i++)
+            {
+                map_string[datas[i]] = i;
+            }
+        }
+        if (true)
+        {
+            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "hashmap_string insert 10000");
+            for (size_t i = 0; i < 10000; i++)
+            {
+                hashmap_string[datas[i]] = i;
+            }
+        }
+
+        if (true)
+        {
+            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "map_string find 10000");
+            for (size_t i = 0; i < 10000; i++)
+            {
+                cycles += map_string.at(datas[i]);
+            }
+        }
+
+        if (true)
+        {
+            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "hashmap_string find 10000");
+            for (size_t i = 0; i < 10000; i++)
+            {
+                cycles += hashmap_string.at(datas[i]);
+            }
+        }
+
+        if (true)
+        {
+            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "map_string erase 10000");
+            for (size_t i = 0; i < 10000; i++)
+            {
+                map_string.erase(datas[i]);
+            }
+        }
+        if (true)
+        {
+            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "hashmap_string erase 10000");
+            for (size_t i = 0; i < 10000; i++)
+            {
+                hashmap_string.erase(datas[i]);
+            }
+        }
+
     }
 
     if (true)
