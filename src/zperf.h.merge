@@ -980,6 +980,10 @@ public:
         reserve_desc_ = (int)compact_buffer_.offset();
         compact_buffer_.push_string("reserve");
         compact_buffer_.push_char('\0');
+        no_name_space_ = (int)compact_buffer_.offset();
+        compact_buffer_.serialize("the string of store name is too small..");
+        no_name_space_len_ = (int)(compact_buffer_.offset() - no_name_space_);
+        compact_buffer_.push_char('\0');
         desc_ = 0;
 
     };
@@ -1310,6 +1314,8 @@ private:
     PerfSerializeBuffer compact_buffer_;
     int unknown_desc_;
     int reserve_desc_;
+    int no_name_space_;
+    int no_name_space_len_;
 };
 
 
@@ -1557,17 +1563,18 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::rename_node(int idx, const char* 
         node_descs_[idx].node_name_len = 7;
         return 0;
     }
-    if (strcmp(desc, "unknown") == 0)
-    {
-        node_descs_[idx].node_name = unknown_desc_;
-        node_descs_[idx].node_name_len = 7;
-        return 0;
-    }
+
+
     node_descs_[idx].node_name = (int)compact_buffer_.offset();// node name is "" when compact buffer full 
     compact_buffer_.push_string(desc);
     compact_buffer_.push_char('\0');
     compact_buffer_.closing_string();
     node_descs_[idx].node_name_len = (int)strlen(&compact_string_[node_descs_[idx].node_name]);
+    if (node_descs_[idx].node_name_len == 0)
+    {
+        node_descs_[idx].node_name = no_name_space_;
+        node_descs_[idx].node_name_len = no_name_space_len_;
+    }
     return 0;
 }
 
