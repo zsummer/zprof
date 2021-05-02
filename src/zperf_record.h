@@ -164,7 +164,7 @@ public:
         serialize_buff_[0] = '\0';
         init_timestamp_ = 0;
         last_timestamp_ = 0;
-        static_assert(max_compact_string_size() > 50, "");
+        static_assert(max_compact_string_size() > 150, "");
         unknown_desc_ = 0;
         compact_buffer_.push_string("unknown");
         compact_buffer_.push_char('\0');
