@@ -70,44 +70,9 @@ int main(int argc, char *argv[])
     LogDebug() << " main begin test. ";
 
 
-    s32 min_x = 0;
-    s32 max_x = 0;
-    s32 min_y = 0;
-    s32 max_y = 0;
-
-    s32 new_x = 5;
-    s32 new_y = 5;
-    s32 old_x = 4;
-    s32 old_y = 7;
-
-    if (abs(new_x - old_x) < 5 && abs(new_y - old_y) < 5)
-    {
-
-        if (new_x < old_x)
-        {
-            min_x = old_x - 2;
-            max_x = new_x + 2;
-        }
-        else
-        {
-            min_x = new_x - 2;
-            max_x = old_x + 2;
-        }
-        if (new_y < old_y)
-        {
-            min_y = old_y - 2;
-            max_y = new_y + 2;
-        }
-        else
-        {
-            min_y = new_y - 2;
-            max_y = old_y + 2;
-        }
-    }
 
 
-
-    if (true)
+    if (false)
     {
         char buf[200] = {0};
         for (size_t i = 0; i < 200; i++)
@@ -117,11 +82,7 @@ int main(int argc, char *argv[])
         buf[200-1] = '\0';
         
         PerfInst.regist_node(PerfInst.node_reserve_begin_id(), buf, PERF_COUNTER_DEFAULT, false, true);
-        if (PerfInst.node_desc(PerfInst.node_reserve_begin_id()).node_name_len != PERF_MAX_NODE_NAME_SIZE-1)
-        {
-            LogDebug() <<"has error";
-            return -1;
-        }
+
         
     }
 #ifndef WIN32

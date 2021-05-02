@@ -65,6 +65,7 @@ public:
     inline PerfSerializeBuffer& push_now_date() ;
 
     inline PerfSerializeBuffer& closing_string();
+    bool is_full() { return offset_ + 1 >= buff_len_; } //saved one char  
     char* buff() { return buff_; }
     const char* buff() const { return buff_; }
     size_t offset() { return offset_; }
