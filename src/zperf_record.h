@@ -26,10 +26,8 @@
 
 
 
-#define PERF_MAX_NODE_NAME_SIZE 128
-#define PERF_MAX_SERIALIZE_LINE_SIZE (PERF_MAX_NODE_NAME_SIZE + 200)
-#define PERF_MAX_DEPTH 5
 
+#define PERF_MAX_DEPTH 5
 
 
 enum PerfCPURecType
@@ -42,7 +40,7 @@ enum PerfCPURecType
 
 struct PerfDesc
 {
-    char node_name[PERF_MAX_NODE_NAME_SIZE];
+    int node_name;
     int node_name_len;
     int counter_type;
     bool resident;
@@ -121,23 +119,21 @@ public:
         INST_INNER_MAX,
     };
 
-    static const int PERF_RECORD_TYPE = INST;
-    static const int RESERVE_COUNT = RESERVE;
-    static const int DECLARE_COUNT = DECLARE;
-    static const int ANON_COUNT = ANON;
-    static const int SERIALIZE_BUFF_LEN = 500;
+    static constexpr int inst_id() { return INST; }
+
+
 
     static constexpr int node_reserve_begin_id() { return INST_INNER_MAX; }
-    static constexpr int node_reserve_count() { return RESERVE_COUNT; }
+    static constexpr int node_reserve_count() { return RESERVE; }
     static constexpr int node_reserve_end_id() { return node_reserve_begin_id() + node_reserve_count(); }
 
     static constexpr int node_declare_begin_id() { return node_reserve_end_id(); }
-    static constexpr int node_declare_count() { return DECLARE_COUNT; }
+    static constexpr int node_declare_count() { return DECLARE; }
     static constexpr int node_declare_end_id() { return node_declare_begin_id() + node_declare_count(); }
     inline int node_delcare_reg_end_id() { return declare_reg_end_id_; }
 
     static constexpr int node_anon_begin_id() { return node_declare_end_id(); }
-    static constexpr int node_anon_count() { return ANON_COUNT; }
+    static constexpr int node_anon_count() { return ANON; }
     static constexpr int node_anon_end_id() { return node_anon_begin_id() + node_anon_count(); }
     inline int node_anon_real_count() { return used_node_id_ - node_anon_begin_id(); }
     inline int node_anon_real_end_id() { return used_node_id_; }
@@ -147,6 +143,8 @@ public:
     static constexpr int node_count() { return node_anon_end_id() - 1; }
     static constexpr int node_end_id() { return node_anon_end_id(); }
 
+    static constexpr int max_serialize_buff_size() { return 500; }
+    static constexpr int max_compact_string_size() { return 30 * (1+node_end_id()); } //reserve node no name 
 
     static_assert(node_end_id() == INST_INNER_MAX + node_reserve_count() + node_declare_count() + node_anon_count(), "");
 
@@ -155,11 +153,10 @@ public:
     long long last_timestamp_;
 public:
 
-    PerfRecord() 
+    PerfRecord() : compact_buffer_(compact_string_, max_compact_string_size())
     {
         memset(nodes_, 0, sizeof(nodes_));
         memset(node_descs_, 0, sizeof(node_descs_));
-        desc_[0] = '\0';
         merge_to_size_ = 0;
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
         used_node_id_ = node_anon_begin_id();
@@ -167,6 +164,15 @@ public:
         serialize_buff_[0] = '\0';
         init_timestamp_ = 0;
         last_timestamp_ = 0;
+        static_assert(max_compact_string_size() > 50, "");
+        unknown_desc_ = 0;
+        compact_buffer_.push_string("unknown");
+        compact_buffer_.push_char('\0');
+        reserve_desc_ = (int)compact_buffer_.offset();
+        compact_buffer_.push_string("reserve");
+        compact_buffer_.push_char('\0');
+        desc_ = 0;
+
     };
     static inline PerfRecord& instance()
     {
@@ -471,8 +477,7 @@ public:
 
     PerfNode& node(int idx) { return nodes_[idx]; }
     PerfDesc& node_desc(int idx) { return node_descs_[idx]; }
-    const char* desc() const { return desc_; }
-    char* mutable_desc() { return desc_; }
+    const char* desc() const { return &compact_string_[desc_]; }
     double circles_per_ns(int t) { return  circles_per_ns_[t == PERF_COUNTER_NULL ? PERF_COUNTER_DEFAULT : t]; }
     int new_anon_node_id() 
     { 
@@ -485,13 +490,17 @@ public:
 private:
     PerfNode nodes_[node_end_id()];
     PerfDesc node_descs_[node_end_id()];
-    char desc_[PERF_MAX_NODE_NAME_SIZE];
+    int desc_;
     std::array<int, node_end_id()> merge_to_;
     int merge_to_size_;
     double circles_per_ns_[PERF_COUNTER_MAX];
     int declare_reg_end_id_;
     int used_node_id_;
-    char serialize_buff_[SERIALIZE_BUFF_LEN];
+    char serialize_buff_[max_serialize_buff_size()];
+    char compact_string_[max_compact_string_size()];
+    PerfSerializeBuffer compact_buffer_;
+    int unknown_desc_;
+    int reserve_desc_;
 };
 
 
@@ -570,16 +579,19 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::bind_merge(int idx, int to)
 template<int INST, int RESERVE, int DECLARE, int ANON>
 int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
 {
-    if (desc == NULL)
+    if (desc == NULL || compact_buffer_.is_full())
     {
-        desc = "default";
+        desc_ = 0;
+    }
+    else
+    {
+        desc_ = (int)compact_buffer_.offset();
+        compact_buffer_.push_string("desc");
+        compact_buffer_.push_char('\0');
+        compact_buffer_.closing_string();
     }
     PerfCounter<> counter;
     counter.start();
-    strncpy(desc_, desc, sizeof(desc_));
-    desc_[PERF_MAX_NODE_NAME_SIZE -1] = '\0';
-    static_assert(sizeof(desc_) == PERF_MAX_NODE_NAME_SIZE, "");
-    static_assert(PERF_MAX_NODE_NAME_SIZE > 0, "");
 
     last_timestamp_ = time(NULL);
     init_timestamp_ = time(NULL);
@@ -730,12 +742,23 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::rename_node(int idx, const char* 
     {
         return -3;
     }
-    
-    strncpy(node_descs_[idx].node_name, desc, sizeof(node_descs_[idx].node_name));
-    node_descs_[idx].node_name[PERF_MAX_NODE_NAME_SIZE -1] = '\0';
-    static_assert(sizeof(node_descs_[idx].node_name) == PERF_MAX_NODE_NAME_SIZE, "");
-    static_assert(PERF_MAX_NODE_NAME_SIZE > 0, "");
-    node_descs_[idx].node_name_len = (int)strlen(node_descs_[idx].node_name);
+    if (strcmp(desc, "reserve") == 0)
+    {
+        node_descs_[idx].node_name = reserve_desc_;
+        node_descs_[idx].node_name_len = 7;
+        return 0;
+    }
+    if (strcmp(desc, "unknown") == 0)
+    {
+        node_descs_[idx].node_name = unknown_desc_;
+        node_descs_[idx].node_name_len = 7;
+        return 0;
+    }
+    node_descs_[idx].node_name = (int)compact_buffer_.offset();// node name is "" when compact buffer full 
+    compact_buffer_.push_string(desc);
+    compact_buffer_.push_char('\0');
+    compact_buffer_.closing_string();
+    node_descs_[idx].node_name_len = (int)strlen(&compact_string_[node_descs_[idx].node_name]);
     return 0;
 }
 
@@ -781,7 +804,8 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     {
         return -2;
     }
-    if (buffer.buff_len() - buffer.offset() < PERF_MAX_SERIALIZE_LINE_SIZE)
+    const int min_line_size = 120;
+    if (buffer.buff_len() - buffer.offset() < min_line_size)
     {
         buffer.push_char(' ', depth * 2);
         buffer.push_string("serialize buffer too short ..." PERF_LINE_FEED);
@@ -806,7 +830,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         return 0;
     }
 
-    int name_blank = ((int)strlen(node_descs_[entry_idx].node_name) + depth * 2 + 6);
+    int name_blank = node_descs_[entry_idx].node_name_len + depth * 2 + 6;
     if (name_blank < 35)
     {
         name_blank = 35 - name_blank;
@@ -821,8 +845,8 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     if (node.cpu.c > 0)
     {
         buffer.push_char(' ', depth * 2);
-        buffer.serialize("[[ %s ]] ", node_descs_[entry_idx].node_name);
-        //buffer.serialize("[[ %03d| %s ]] ", entry_idx, node_descs_[entry_idx].node_name);
+        buffer.serialize("[[ %s ]] ", &compact_string_[node_descs_[entry_idx].node_name]);
+        //buffer.serialize("[[ %03d| %s ]] ", entry_idx, &compact_string_[node_descs_[entry_idx].node_name]);
         buffer.push_char(' ', name_blank);
         buffer.push_string("cpu: call:");
 
@@ -867,8 +891,8 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     if (node.mem.c > 0)
     {
         buffer.push_char(' ', depth * 2);
-        buffer.serialize("[[ %s ]] ", node_descs_[entry_idx].node_name);
-//        buffer.serialize("[[ %03d| %s ]] ", entry_idx, node_descs_[entry_idx].node_name);
+        buffer.serialize("[[ %s ]] ", &compact_string_[node_descs_[entry_idx].node_name]);
+//        buffer.serialize("[[ %03d| %s ]] ", entry_idx, &compact_string_[node_descs_[entry_idx].node_name]);
         buffer.push_char(' ', name_blank);
         buffer.push_string("mem: call:");
 
@@ -895,8 +919,8 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     if (node.user.c > 0)
     {
         buffer.push_char(' ', depth * 2);
-        buffer.serialize("[[ %s ]] ", node_descs_[entry_idx].node_name);
-        //        buffer.serialize("[[ %03d| %s ]] ", entry_idx, node_descs_[entry_idx].node_name);
+        buffer.serialize("[[ %s ]] ", &compact_string_[node_descs_[entry_idx].node_name]);
+        //        buffer.serialize("[[ %03d| %s ]] ", &compact_string_[entry_idx, node_descs_[entry_idx].node_name]);
         buffer.push_char(' ', name_blank);
         buffer.push_string("usr: call:");
 
