@@ -142,6 +142,7 @@ public:
     static constexpr int node_begin_id() { return INST_INNER_NULL + 1; }
     static constexpr int node_count() { return node_anon_end_id() - 1; }
     static constexpr int node_end_id() { return node_anon_end_id(); }
+    static constexpr int max_node_count() { return node_count(); }
 
     static constexpr int max_serialize_buff_size() { return 500; }
     static constexpr int max_compact_string_size() { return 30 * (1+node_end_id()); } //reserve node no name 
@@ -491,6 +492,8 @@ public:
         }
         return used_node_id_++;
     }
+public:
+    PerfSerializeBuffer& compact_buffer() { return compact_buffer_; }
 private:
     PerfNode nodes_[node_end_id()];
     PerfDesc node_descs_[node_end_id()];

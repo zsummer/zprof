@@ -74,15 +74,19 @@ int main(int argc, char *argv[])
 
     if (false)
     {
-        char buf[200] = {0};
-        for (size_t i = 0; i < 200; i++)
+        //const int test_len = (int)(PerfInst.compact_buffer().buff_len() - PerfInst.compact_buffer().offset() - 100);
+        const int test_len = 50 * 1000;
+        char* buf = new char[test_len];
+        for (size_t i = 0; i < test_len; i++)
         {
             buf[i] ='0';
         }
-        buf[200-1] = '\0';
+        buf[test_len -1] = '\0';
         
         PerfInst.regist_node(PerfInst.node_reserve_begin_id(), buf, PERF_COUNTER_DEFAULT, false, true);
-
+        PERF_CALL_CPU(PerfInst.node_reserve_begin_id(), 0);
+        delete[]buf;
+        //PERF_CALL_CPU()
         
     }
 #ifndef WIN32
