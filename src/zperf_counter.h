@@ -35,6 +35,7 @@
 #include <io.h>
 #include <shlwapi.h>
 #include <process.h>
+#include <psapi.h>
 #include <powerbase.h>
 #include <powrprof.h>
 #pragma comment(lib, "shlwapi")
@@ -380,6 +381,16 @@ long long perf_get_time_cycle<PERF_CONNTER_CHRONO>()
 
 long long perf_get_mem_use()
 {
+#ifdef WIN32
+    HANDLE hproc = GetCurrentProcess();
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(hproc, &pmc, sizeof(pmc)))
+    {
+        CloseHandle(hproc);// ignore  
+        return pmc.WorkingSetSize;
+    }
+    return 0;
+#else
     const char* file = "/proc/self/status";
     FILE* fp = fopen(file, "r");
     if (NULL == fp)
@@ -415,6 +426,7 @@ long long perf_get_mem_use()
 
     fclose(fp);
     return (long long)vm_size * 1000;
+#endif
 }
 
 #ifdef WIN32
