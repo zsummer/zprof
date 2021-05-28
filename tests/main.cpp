@@ -1011,6 +1011,13 @@ int main(int argc, char *argv[])
         }
         cycles += ret;
     }
+
+
+
+
+
+
+
     PERF_SERIALIZE_FN_LOG();
 
     
@@ -1057,8 +1064,56 @@ int main(int argc, char *argv[])
         LogDebug() << "std::hash<unsigned long long> h; h(1000):" << h(1000) << "h(30):" << h(30);
     }
 
+    if (true)
+    {
+        int max_size = 522 * 1024 * 1024;
+        int loop_ignore_bytes = 512;
+        int loop_jump = 1024;
+        char* rd_mem = new char[max_size];
+        for (int i = 0; i < max_size; i++)
+        {
+            rd_mem[i] = rand() % 256 - 128;
+        }
+        long long begin_cicle = 0;
+        long long end_cicle = 0;
+        begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+        end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
 
-    LogInfo() << "all test finish .solt:" << cycles;
+        begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+        end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
+        long long noise = end_cicle - begin_cicle;
+        LogDebug() << "noise cicles:" << noise;
+        volatile char salt = 0;
+        long long sum = 0;
+        long long count = 0;
+        for (int loop_size = 0; loop_size < max_size; )
+        {
+            loop_size *= 1.5;
+            loop_size += 1;
+
+            for (int i = 0; i < loop_size; i++)
+            {
+                if (i % loop_jump == 0)
+                {
+                    begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+                    salt += rd_mem[i];
+                    end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
+                    sum = end_cicle - begin_cicle - noise;
+                    count = 1;
+                }
+                else if ((i % loop_jump) < loop_ignore_bytes)
+                {
+                    salt += rd_mem[i];
+                }
+            }
+            count = count == 0 ? 1 : count;
+            LogDebug() << "loop bytes:" << loop_size << " used cicles:" << sum / count;
+        }
+        cycles += salt;
+        delete[] rd_mem;
+    }
+
+    LogInfo() << "all test finish .salt:" << cycles;
     return 0;
 }
 
