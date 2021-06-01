@@ -68,10 +68,74 @@ int main(int argc, char *argv[])
     }
 
     LogDebug() << " main begin test. ";
+    volatile double cycles = 0.0f;
 
 
+    if (true)
+    {
+        long long begin_cicle = 0;
+        long long end_cicle = 0;
+        long long noise = 1ULL << 32;
+        for (size_t i = 0; i < 100; i++)
+        {
+            begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+            end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
+            noise = end_cicle - begin_cicle < noise ? end_cicle - begin_cicle : noise;
+        }
 
+        LogDebug() << "noise cicles:" << noise;
 
+        volatile register char* load_mem_p = 0;
+        for (int bat = 0; bat < 27; bat++)
+        {
+            //cat /sys/devices/system/cpu/cpu1/cache/index0/coherency_line_size 
+            int stride = 512;
+            char* org_mem = new char[(1 << bat) * 8 + 1024 * 4 * 2];
+            char* align_mem_begin = org_mem + 1024 * 4 - ((u64)org_mem) % (1024 * 4);
+            char* align_mem_end = align_mem_begin + (1 << bat) * 8;
+            if (true)
+            {
+                char* p = align_mem_begin;
+                while (true)
+                {
+                    if (p + stride >= align_mem_end)
+                    {
+                        *(char**)p = align_mem_begin;
+                        break;
+                    }
+                    *(char**)p = p + stride;
+                    p = p + stride;
+                }
+            }
+
+#define	ONE	load_mem_p = *(char**)load_mem_p;
+#define	FIVE	ONE ONE ONE ONE ONE
+#define	TEN	FIVE FIVE
+#define	FIFTY	TEN TEN TEN TEN TEN
+#define	HUNDRED	FIFTY FIFTY
+#define FIVE_HUNDRED HUNDRED HUNDRED HUNDRED HUNDRED HUNDRED
+            if (true)
+            {
+                load_mem_p = align_mem_begin;
+
+                begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+ //               for (size_t i = 0; i < 100; i++)
+ //               {
+ //                   load_mem_p = *(char**)load_mem_p;
+  //              }
+                FIVE_HUNDRED;
+                end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
+
+                LogDebug() << "loop bytes:" << align_mem_end - align_mem_begin  << " used cicles:" << (end_cicle - begin_cicle)/500 <<", p=" << (void*)load_mem_p;
+            }
+
+            delete[] org_mem;
+
+        }
+
+    }
+
+    
     if (false)
     {
         //const int test_len = (int)(PerfInst.compact_buffer().buff_len() - PerfInst.compact_buffer().offset() - 100);
@@ -167,7 +231,7 @@ int main(int argc, char *argv[])
     }
 
 
-    volatile double cycles = 0.0f;
+    
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_SYS bat 1000w");
@@ -1062,55 +1126,6 @@ int main(int argc, char *argv[])
         LogDebug() << "std::hash<unsigned long long>()(1000):" << std::hash<unsigned long long>()(1000) << "std::hash<unsigned long long>()(30):" << std::hash<unsigned long long>()(30);
         std::hash<unsigned long long> h;
         LogDebug() << "std::hash<unsigned long long> h; h(1000):" << h(1000) << "h(30):" << h(30);
-    }
-
-    if (true)
-    {
-        int max_size = 522 * 1024 * 1024;
-        int loop_ignore_bytes = 512;
-        int loop_jump = 1024;
-        char* rd_mem = new char[max_size];
-        for (int i = 0; i < max_size; i++)
-        {
-            rd_mem[i] = rand() % 256 - 128;
-        }
-        long long begin_cicle = 0;
-        long long end_cicle = 0;
-        begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
-        end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
-
-        begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
-        end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
-        long long noise = end_cicle - begin_cicle;
-        LogDebug() << "noise cicles:" << noise;
-        volatile char salt = 0;
-        long long sum = 0;
-        long long count = 0;
-        for (int loop_size = 0; loop_size < max_size; )
-        {
-            loop_size *= 1.5;
-            loop_size += 1;
-
-            for (int i = 0; i < loop_size; i++)
-            {
-                if (i % loop_jump == 0)
-                {
-                    begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
-                    salt += rd_mem[i];
-                    end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
-                    sum = end_cicle - begin_cicle - noise;
-                    count = 1;
-                }
-                else if ((i % loop_jump) < loop_ignore_bytes)
-                {
-                    salt += rd_mem[i];
-                }
-            }
-            count = count == 0 ? 1 : count;
-            LogDebug() << "loop bytes:" << loop_size << " used cicles:" << sum / count;
-        }
-        cycles += salt;
-        delete[] rd_mem;
     }
 
     LogInfo() << "all test finish .salt:" << cycles;
