@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
     LogDebug() << " main begin test. ";
     volatile double cycles = 0.0f;
 
-
-    if (true)
+    //cat /sys/devices/system/cpu/cpu1/cache/index0/coherency_line_size 
+    for (int stride = 64; stride <=512; stride *=2)
     {
         long long begin_cicle = 0;
         long long end_cicle = 0;
@@ -82,16 +82,17 @@ int main(int argc, char *argv[])
             end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
             noise = end_cicle - begin_cicle < noise ? end_cicle - begin_cicle : noise;
         }
+        LogInfo() << "noise cicles:" << noise;
 
-        LogDebug() << "noise cicles:" << noise;
+        long long max_bat = 27;
+        
+        char* org_mem = new char[(1 << max_bat) * 8 + 1024 * 4 * 2];
+        char* align_mem_begin = org_mem + 1024 * 4 - ((u64)org_mem) % (1024 * 4);
 
+        double last_cicles = 0;
         volatile register char* load_mem_p = 0;
         for (int bat = 0; bat < 27; bat++)
         {
-            //cat /sys/devices/system/cpu/cpu1/cache/index0/coherency_line_size 
-            int stride = 512;
-            char* org_mem = new char[(1 << bat) * 8 + 1024 * 4 * 2];
-            char* align_mem_begin = org_mem + 1024 * 4 - ((u64)org_mem) % (1024 * 4);
             char* align_mem_end = align_mem_begin + (1 << bat) * 8;
             if (true)
             {
@@ -125,14 +126,22 @@ int main(int argc, char *argv[])
   //              }
                 FIVE_HUNDRED;
                 end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
-
-                LogDebug() << "loop bytes:" << align_mem_end - align_mem_begin  << " used cicles:" << (end_cicle - begin_cicle)/500 <<", p=" << (void*)load_mem_p;
+                if (bat == 0)
+                {
+                    last_cicles = end_cicle - begin_cicle;
+                }
+                if (last_cicles > 0.1 && (end_cicle - begin_cicle)/ last_cicles > 1.5)
+                {
+                    LogAlarm() << "stride:" << stride << " loop bytes:" << align_mem_end - align_mem_begin << " used cicles:" << (end_cicle - begin_cicle) / 500 << ", p=" << (void*)load_mem_p;
+                }
+                else
+                {
+                    LogInfo() << "stride:" << stride << " loop bytes:" << align_mem_end - align_mem_begin << " used cicles:" << (end_cicle - begin_cicle) / 500 << ", p=" << (void*)load_mem_p;
+                }
+                last_cicles = end_cicle - begin_cicle;
             }
-
-            delete[] org_mem;
-
         }
-
+        delete[] org_mem;
     }
 
     
