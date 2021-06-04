@@ -118,27 +118,30 @@ int main(int argc, char *argv[])
             if (true)
             {
                 load_mem_p = align_mem_begin;
+                long long total = 0;
+                long long count = 0;
+                for (size_t i = 0; i < 100; i++)
+                {
+                    begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+                    FIVE_HUNDRED;
+                    end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
+                    total += end_cicle - begin_cicle;
+                    count += 500;
+                }
 
-                begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
- //               for (size_t i = 0; i < 100; i++)
- //               {
- //                   load_mem_p = *(char**)load_mem_p;
-  //              }
-                FIVE_HUNDRED;
-                end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
                 if (bat == 0)
                 {
-                    last_cicles = end_cicle - begin_cicle;
+                    last_cicles = total/count;
                 }
-                if (last_cicles > 0.1 && (end_cicle - begin_cicle)/ last_cicles > 1.5)
+                if (last_cicles > 0.1 && (total / count)/ last_cicles > 1.5)
                 {
-                    LogAlarm() << "stride:" << stride << " loop bytes:" << align_mem_end - align_mem_begin << " used cicles:" << (end_cicle - begin_cicle) / 500 << ", p=" << (void*)load_mem_p;
+                    LogAlarm() << "stride:" << stride << " loop bytes:" << align_mem_end - align_mem_begin << " used cicles:" << total / count << ", p=" << (void*)load_mem_p;
                 }
                 else
                 {
-                    LogInfo() << "stride:" << stride << " loop bytes:" << align_mem_end - align_mem_begin << " used cicles:" << (end_cicle - begin_cicle) / 500 << ", p=" << (void*)load_mem_p;
+                    LogInfo() << "stride:" << stride << " loop bytes:" << align_mem_end - align_mem_begin << " used cicles:" << total / count << ", p=" << (void*)load_mem_p;
                 }
-                last_cicles = end_cicle - begin_cicle;
+                last_cicles = total / count;
             }
         }
         delete[] org_mem;
