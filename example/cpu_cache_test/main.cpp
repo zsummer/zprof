@@ -76,15 +76,19 @@ int main(int argc, char *argv[])
                 char* p = align_mem_begin;
                 while (true)
                 {
-                    if (p + stride >= align_mem_end)
+                    if (p + stride * 2 >= align_mem_end)
                     {
                         *(char**)p = align_mem_begin;
                         break;
                     }
-                    *(char**)p = p + stride;
+
+                    * (char**)p = p + stride;
                     p = p + stride;
                 }
             }
+
+
+
 
 #define	ONE	load_mem_p = *(char**)load_mem_p;
 #define	FIVE	ONE ONE ONE ONE ONE
