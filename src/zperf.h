@@ -221,6 +221,7 @@ private:
 #define PERF_DEFINE_COUNTER_INIT(tc, start)  PerfCounter<> tc(start)
 #define PERF_START_COUNTER(c) c.start()
 #define PERF_RESTART_COUNTER(c) c.start()
+#define PERF_STOP_AND_SAVE_COUNTER(c) c.stop_and_save()
 
 #define PERF_DEFINE_AUTO_RECORD(c, idx) PerfAutoRecord<> c(idx)
 
@@ -267,6 +268,7 @@ private:
 #define PERF_DEFINE_COUNTER_INIT(tc, start)  
 #define PERF_START_COUNTER(c) 
 #define PERF_RESTART_COUNTER(c) 
+#define PERF_STOP_AND_SAVE_COUNTER(c) 
 
 #define PERF_DEFINE_AUTO_RECORD(c, idx) 
 

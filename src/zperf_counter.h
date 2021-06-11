@@ -257,7 +257,7 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSC>()
     return (long long)__rdtsc();
 #else
     unsigned int lo, hi;
-    __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
+    __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) :: );
     uint64_t val = ((uint64_t)hi << 32) | lo;
     return (long long)val;
 #endif
@@ -288,7 +288,7 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>()
     return (long long)__rdtsc();
 #else
     unsigned long hi, lo;
-    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) :: "memory");
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) :: );
     uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
     return (long long)val;
 #endif
