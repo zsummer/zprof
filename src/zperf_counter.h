@@ -116,6 +116,7 @@ enum PerfCounterType
     PERF_COUNTER_RDTSC_MFENCE,
     PERF_COUNTER_RDTSC_NOFENCE,
     PERF_COUNTER_RDTSC_PURE,
+    PERF_COUNTER_RDTSC_LOCK,
     PERF_COUNTER_MAX,
 };
 #ifndef PERF_COUNTER_DEFAULT
@@ -137,6 +138,8 @@ PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>();
+template<>
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_LOCK>();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>();
@@ -169,6 +172,9 @@ PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_NOFENCE>();
 
 template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_PURE>();
+
+template<>
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_LOCK>();
 
 template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_MFENCE>();
@@ -252,7 +258,6 @@ template<>
 long long perf_get_time_cycle<PERF_COUNTER_RDTSC>()
 {
 #ifdef WIN32
-    //__faststorefence();
     _mm_lfence();
     return (long long)__rdtsc();
 #else
@@ -306,6 +311,21 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>()
     return (long long)val;
 #endif
 }
+
+template<>
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC_LOCK>()
+{
+#ifdef WIN32
+    _mm_mfence();
+    return (long long)__rdtsc();
+#else
+    unsigned long hi, lo;
+    __asm__ ("lock addq $0, 0(%%rsp); rdtsc" : "=a"(lo), "=d"(hi)::"memory");
+    uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+    return (long long)val;
+#endif
+}
+
 
 template<>
 long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>()
@@ -532,6 +552,12 @@ double perf_get_time_frequency<PERF_COUNTER_RDTSC_NOFENCE>()
 
 template<>
 double perf_get_time_frequency<PERF_COUNTER_RDTSC_PURE>()
+{
+    return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
+}
+
+template<>
+double perf_get_time_frequency<PERF_COUNTER_RDTSC_LOCK>()
 {
     return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 }

@@ -241,6 +241,15 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_LOCK bat 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_LOCK>();
+        }
+    }
+
+    if (true)
+    {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10 * 10000, PERF_CPU_NORMAL, "c clock bat 10w");
         for (size_t i = 0; i < 10 * 10000; i++)
         {
