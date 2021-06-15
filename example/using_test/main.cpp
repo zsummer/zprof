@@ -158,9 +158,9 @@ int main(int argc, char *argv[])
         long long empty_cost_ns = counter.duration_ns();
         
         //all in L1 
-        volatile long long val1 = 54321;
-        volatile long long val2 = 12345;
-        volatile long long result = 0;
+        volatile int val1 = 54321;
+        volatile int val2 = 12345;
+        volatile int result = 0;
         int rd = rand()%2;
 
         //get ternary operator cost 
