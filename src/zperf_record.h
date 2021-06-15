@@ -29,6 +29,8 @@
 
 #define PERF_MAX_DEPTH 5
 
+#define SMOOTH_CYCLES(s_cost, cost) (   (s_cost * 12 + cost * 4) >> 4   ) 
+#define SMOOTH_CYCLES_WITH_INIT(s_cost, cost) ( (s_cost) == 0 ? (cost) : SMOOTH_CYCLES(s_cost, cost) )
 
 enum PerfCPURecType
 {
@@ -254,9 +256,8 @@ public:
         PerfNode& node = nodes_[idx];
         node.cpu.c += c;
         node.cpu.sum += cost;
-        node.cpu.sm = node.cpu.sm == 0 ? dis : node.cpu.sm;
-        node.cpu.sm = (node.cpu.sm * 12 + dis * 4) >> 4;
-        node.cpu.max_u = node.cpu.max_u > dis ? node.cpu.max_u : dis;
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.max_u = node.cpu.max_u < dis ? dis : node.cpu.max_u;
         node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
         node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
         node.cpu.t_c += c;
@@ -267,8 +268,9 @@ public:
         PerfNode& node = nodes_[idx];
         node.cpu.c += 1;
         node.cpu.sum += cost;
-        node.cpu.sm = node.cpu.sm == 0 ? cost : node.cpu.sm;
-        node.cpu.sm = (node.cpu.sm * 12 + cost * 4) >> 4;
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.max_u = node.cpu.max_u < cost ? cost : node.cpu.max_u;
+        node.cpu.min_u = node.cpu.min_u < cost ? node.cpu.min_u : cost;
         node.cpu.dv += abs(cost - node.cpu.sm);
         node.cpu.t_c += 1;
         node.cpu.t_u += cost;
@@ -295,25 +297,19 @@ public:
 
     PERF_ALWAYS_INLINE void call_cpu_full(int idx, long long cost)
     {
-
         PerfNode& node = nodes_[idx];
         node.cpu.c += 1;
         node.cpu.sum += cost;
         long long dis = cost;
         long long avg = node.cpu.sum / node.cpu.c;
-        if (node.cpu.sm == 0)
-        {
-            node.cpu.sm = node.cpu.sm == 0 ? dis : node.cpu.sm;
-            node.cpu.l_sm = node.cpu.l_sm == 0 ? dis : node.cpu.l_sm;
-            node.cpu.h_sm = node.cpu.h_sm == 0 ? dis : node.cpu.h_sm;
-        }
-        long long& hlsm = dis > avg ? node.cpu.h_sm : node.cpu.l_sm;
-        hlsm = (hlsm * 12 + dis * 4) >> 4;
-        node.cpu.sm = (node.cpu.sm * 12 + cost * 4) >> 4;
+
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.h_sm = dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm;
+        node.cpu.l_sm = dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis);
         node.cpu.dv += abs(dis - node.cpu.sm);
         node.cpu.t_c += 1;
         node.cpu.t_u += cost;
-        node.cpu.max_u = node.cpu.max_u > dis ? node.cpu.max_u : dis;
+        node.cpu.max_u = node.cpu.max_u < dis ? dis : node.cpu.max_u;
         node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
     }
 
@@ -325,19 +321,14 @@ public:
         node.cpu.sum += cost;
         long long dis = cost / c;
         long long avg = node.cpu.sum / node.cpu.c;
-        if (node.cpu.sm == 0)
-        {
-            node.cpu.sm = node.cpu.sm == 0 ? dis : node.cpu.sm;
-            node.cpu.l_sm = node.cpu.l_sm == 0 ? dis : node.cpu.l_sm;
-            node.cpu.h_sm = node.cpu.h_sm == 0 ? dis : node.cpu.h_sm;
-        }
-        long long& hlsm = dis > avg ? node.cpu.h_sm : node.cpu.l_sm;
-        hlsm = (hlsm * 12 + dis * 4) >> 4;
-        node.cpu.sm = (node.cpu.sm * 12 + cost * 4) >> 4;
+
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.h_sm = dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm;
+        node.cpu.l_sm = dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis);
         node.cpu.dv += abs(dis - node.cpu.sm);
         node.cpu.t_c += c;
         node.cpu.t_u += cost;
-        node.cpu.max_u = node.cpu.max_u > dis ? node.cpu.max_u : dis;
+        node.cpu.max_u = node.cpu.max_u < dis ? dis : node.cpu.max_u;
         node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
     }
 
