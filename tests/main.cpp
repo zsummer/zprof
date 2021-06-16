@@ -197,6 +197,24 @@ int main(int argc, char *argv[])
 
     if (true)
     {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_PURE bat 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>();
+        }
+    }
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_NOFENCE bat 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
+        }
+    }
+
+    if (true)
+    {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC(lfence) bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
@@ -204,11 +222,19 @@ int main(int argc, char *argv[])
         }
     }
 
-    
-    if (false)
+    if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSCP bat 1000");
-        for (size_t i = 0; i < 1000; i++)
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_BTB(lfence) bat 1000w");
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
+        }
+    }
+
+    if (true)
+    {
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 50, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSCP bat 1000");
+        for (size_t i = 0; i < 50; i++)
         {
             cycles += perf_get_time_cycle<PERF_COUNTER_RDTSCP>();
         }
@@ -224,21 +250,15 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_NOFENCE bat 1000w");
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_MFENCE_BTB bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE_BTB>();
         }
     }
 
-    if (true)
-    {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_PURE bat 1000w");
-        for (size_t i = 0; i < 1000 * 10000; i++)
-        {
-            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>();
-        }
-    }
+
+
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSC_LOCK bat 1000w");
@@ -285,7 +305,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_SYS dis 1000w");
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_SYS dis 1000w", PERF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
@@ -296,7 +316,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_CLOCK dis 1000w");
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_CLOCK dis 1000w", PERF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
@@ -307,7 +327,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_CONNTER_CHRONO dis 1000w");
+        PERF_DEFINE_REGISTER(rec, "PERF_CONNTER_CHRONO dis 1000w", PERF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
@@ -318,7 +338,29 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSC dis 1000w");
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC_PURE dis 1000w", PERF_COUNTER_RDTSC_BTB);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_PURE>();
+            PERF_REGISTER_RECORD(rec);
+        }
+    }
+
+    if (true)
+    {
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC_NOFENCE dis 1000w", PERF_COUNTER_RDTSC_BTB);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
+            PERF_REGISTER_RECORD(rec);
+        }
+    }
+
+    if (true)
+    {
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC(lfence) dis 1000w", PERF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
@@ -326,11 +368,20 @@ int main(int argc, char *argv[])
             PERF_REGISTER_RECORD(rec);
         }
     }
-
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSCP dis 1000");
-        for (size_t i = 0; i < 1000; i++)
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC_BTB (lfence) dis 1000w", PERF_COUNTER_RDTSC_BTB);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
+            PERF_REGISTER_RECORD(rec);
+        }
+    }
+    if (true)
+    {
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSCP dis 1000", PERF_COUNTER_RDTSC_BTB);
+        for (size_t i = 0; i < 100; i++)
         {
             PERF_REGISTER_START(rec);
             cycles += perf_get_time_cycle<PERF_COUNTER_RDTSCP>();
@@ -340,7 +391,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSC_MFENCE dis 1000w");
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC_MFENCE dis 1000w", PERF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
@@ -349,21 +400,31 @@ int main(int argc, char *argv[])
         }
     }
 
-
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSC_NOFENCE dis 1000w");
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC_MFENCE_BTB dis 1000w", PERF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
-            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE_BTB>();
             PERF_REGISTER_RECORD(rec);
         }
     }
 
-    LOGD(perf_get_time_cycle<PERF_COUNTER_RDTSC>());
-     LOGD(perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>());
-   
+
+
+    if (true)
+    {
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC_LOCK dis 1000w", PERF_COUNTER_RDTSC_BTB);
+        for (size_t i = 0; i < 1000 * 10000; i++)
+        {
+            PERF_REGISTER_START(rec);
+            cycles += perf_get_time_cycle<PERF_COUNTER_RDTSC_LOCK>();
+            PERF_REGISTER_RECORD(rec);
+        }
+    }
+
+
 
     if (true)
     {
@@ -415,7 +476,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_REGISTER_DEFAULT(rec, "PERF_COUNTER_RDTSC(lfence) * 10 dis 1000w");
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSC(lfence) * 10 dis 1000w", PERF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PERF_REGISTER_START(rec);
@@ -535,17 +596,17 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_REGISTER(reg, "call empty", PERF_COUNTER_RDTSC);
+        PERF_DEFINE_REGISTER(reg, "call empty rdtsc btb", PERF_COUNTER_RDTSC_BTB);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
-            start = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
-            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>() - start);
+            start = perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
+            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>() - start);
         }
     }
     if (true)
     {
-        PERF_DEFINE_REGISTER(reg, "call nofence empty", PERF_COUNTER_RDTSC);
+        PERF_DEFINE_REGISTER(reg, "call nofence empty", PERF_COUNTER_RDTSC_NOFENCE);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
@@ -558,20 +619,20 @@ int main(int argc, char *argv[])
     if (true)
     {
         cycles = 3.1415926;
-        PERF_DEFINE_REGISTER(reg, "call fdiv", PERF_COUNTER_RDTSC);
+        PERF_DEFINE_REGISTER(reg, "call fdiv", PERF_COUNTER_RDTSC_BTB);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
-            start = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+            start = perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
             cycles = cycles / start + i;
-            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>() - start);
+            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>() - start);
         }
     }
 
     if (true)
     {
         cycles = 3.1415926;
-        PERF_DEFINE_REGISTER(reg, "call fdiv no any fence", PERF_COUNTER_RDTSC);
+        PERF_DEFINE_REGISTER(reg, "call fdiv no any fence", PERF_COUNTER_RDTSC_NOFENCE);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
@@ -583,13 +644,13 @@ int main(int argc, char *argv[])
     if (true)
     {
         cycles = 3.1415926;
-        PERF_DEFINE_REGISTER(reg, "call fmul", PERF_COUNTER_RDTSC);
+        PERF_DEFINE_REGISTER(reg, "call fmul by rdtsc btb", PERF_COUNTER_RDTSC_BTB);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
-            start = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+            start = perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
             cycles = cycles * start;
-            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>() - start);
+            PERF_CALL_CPU(reg.node_id(), perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>() - start);
         }
     }
 
