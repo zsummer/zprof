@@ -110,12 +110,15 @@ enum PerfCounterType
     PERF_COUNTER_SYS,
     PERF_COUNTER_CLOCK,
     PERF_CONNTER_CHRONO,
+
+    PERF_COUNTER_RDTSC_PURE,
+    PERF_COUNTER_RDTSC_NOFENCE,
     PERF_COUNTER_RDTSC,
-    PERF_COUNTER_RDTSC_STOP,
+    PERF_COUNTER_RDTSC_BTB,
     PERF_COUNTER_RDTSCP,
     PERF_COUNTER_RDTSC_MFENCE,
-    PERF_COUNTER_RDTSC_NOFENCE,
-    PERF_COUNTER_RDTSC_PURE,
+    PERF_COUNTER_RDTSC_MFENCE_BTB,
+    
     PERF_COUNTER_RDTSC_LOCK,
     PERF_COUNTER_MAX,
 };
@@ -131,7 +134,7 @@ template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC>();
 
 template<>
-PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_NOFENCE>();
@@ -143,6 +146,9 @@ PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_LOCK>();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>();
+
+template<>
+PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE_BTB>();
 
 template<>
 PERF_ALWAYS_INLINE long long perf_get_time_cycle<PERF_COUNTER_RDTSCP>();
@@ -164,7 +170,7 @@ template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 
 template<>
-PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_STOP>();
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_BTB>();
 
 
 template<>
@@ -178,6 +184,9 @@ PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_LOCK>();
 
 template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_MFENCE>();
+
+template<>
+PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSC_MFENCE_BTB>();
 
 template<>
 PERF_ALWAYS_INLINE double perf_get_time_frequency<PERF_COUNTER_RDTSCP>();
@@ -269,17 +278,17 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSC>()
 }
 
 template<>
-long long perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>()
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>()
 {
 #ifdef WIN32
-    //__faststorefence();
     long long ret;
+    _mm_lfence();
     ret = (long long)__rdtsc();
     _mm_lfence();
     return ret;
 #else
     unsigned int lo, hi;
-    __asm__ __volatile__("rdtsc;lfence" : "=a" (lo), "=d" (hi) :: "memory");
+    __asm__ __volatile__("lfence;rdtsc;lfence" : "=a" (lo), "=d" (hi) ::);
     uint64_t val = ((uint64_t)hi << 32) | lo;
     return (long long)val;
 #endif
@@ -329,6 +338,23 @@ long long perf_get_time_cycle<PERF_COUNTER_RDTSC_LOCK>()
 
 template<>
 long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE>()
+{
+#ifdef WIN32
+    long long ret = 0;
+    _mm_mfence();
+    ret = (long long)__rdtsc();
+    _mm_mfence();
+    return ret;
+#else
+    unsigned int lo, hi;
+    __asm__ __volatile__("mfence;rdtsc;mfence" : "=a" (lo), "=d" (hi) ::);
+    uint64_t val = ((uint64_t)hi << 32) | lo;
+    return (long long)val;
+#endif
+}
+
+template<>
+long long perf_get_time_cycle<PERF_COUNTER_RDTSC_MFENCE_BTB>()
 {
 #ifdef WIN32
     _mm_mfence();
@@ -539,7 +565,7 @@ double perf_get_time_frequency<PERF_COUNTER_RDTSC>()
     return frequency_per_ns;
 }
 template<>
-double perf_get_time_frequency<PERF_COUNTER_RDTSC_STOP>()
+double perf_get_time_frequency<PERF_COUNTER_RDTSC_BTB>()
 {
     return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 }
@@ -564,6 +590,12 @@ double perf_get_time_frequency<PERF_COUNTER_RDTSC_LOCK>()
 
 template<>
 double perf_get_time_frequency<PERF_COUNTER_RDTSC_MFENCE>()
+{
+    return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
+}
+
+template<>
+double perf_get_time_frequency<PERF_COUNTER_RDTSC_MFENCE_BTB>()
 {
     return perf_get_time_frequency<PERF_COUNTER_RDTSC>();
 }
