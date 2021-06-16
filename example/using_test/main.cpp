@@ -146,34 +146,6 @@ int main(int argc, char *argv[])
     PERF_CLEAN_DECLARE();
 
 
-
-    //单独使用性能计数器  
-    if (true)
-    {
-        PerfCounter<PERF_COUNTER_RDTSC> counter;
-        //record empty cost 
-        counter.start();
-        counter.stop_and_save();
-        long long empty_cost = counter.cycles();
-        long long empty_cost_ns = counter.duration_ns();
-        
-        //all in L1 
-        volatile int val1 = 54321;
-        volatile int val2 = 12345;
-        volatile int result = 0;
-        int rd = rand()%2;
-
-        //get ternary operator cost 
-        counter.start();
-        result = rd == 0 ? val1 : val2;
-        counter.stop_and_save();
-        (void)result;
-        
-        LogInfo() << "empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
-            << "ternary operator:" << counter.cycles() << "cycles, " << counter.duration_ns() << "ns.";
-    }
-
-
     return 0;
 }
 
