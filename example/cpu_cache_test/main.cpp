@@ -52,14 +52,6 @@ int main(int argc, char *argv[])
     {
         long long begin_cicle = 0;
         long long end_cicle = 0;
-        long long noise = 1ULL << 32;
-        for (size_t i = 0; i < 100; i++)
-        {
-            begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
-            end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
-            noise = end_cicle - begin_cicle < noise ? end_cicle - begin_cicle : noise;
-        }
-        LogInfo() << "noise cicles:" << noise;
 
         long long max_bat = 27;
         
@@ -103,9 +95,9 @@ int main(int argc, char *argv[])
                 long long count = 0;
                 for (size_t i = 0; i < 100; i++)
                 {
-                    begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC>();
+                    begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
                     FIVE_HUNDRED;
-                    end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_STOP>();
+                    end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
                     total += end_cicle - begin_cicle;
                     count += 500;
                 }
