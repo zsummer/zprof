@@ -166,8 +166,9 @@ int main(int argc, char *argv[])
        PERF_REGISTER_REC_MEM(ot.reg(), sizeof(PerfInst));
     }
 
-
     
+    PERF_DEFINE_REGISTER_DEFAULT(bat_parent, "bat_parent");
+
     if (true)
     {
         PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PERF_CPU_NORMAL, "PERF_COUNTER_SYS bat 1000w");
@@ -303,6 +304,17 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (true)
+    {
+        PERF_DEFINE_REGISTER_DEFAULT(bat_end, "bat_end");
+        for (int i = bat_parent.node_id() + 1; i < bat_end.node_id(); i++)
+        {
+            PERF_BIND_CHILD(bat_parent.node_id(), i);
+            PERF_BIND_MERGE(bat_parent.node_id(), i);
+        }
+    }
+
+    PERF_DEFINE_REGISTER_DEFAULT(dis_parent, "dis_parent");
     if (true)
     {
         PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_SYS dis 1000w", PERF_COUNTER_RDTSC_BTB);
@@ -487,7 +499,15 @@ int main(int argc, char *argv[])
             PERF_REGISTER_RECORD_WRAP(rec, 1, PERF_CPU_FAST);
         }
     }
-
+    if (true)
+    {
+        PERF_DEFINE_REGISTER_DEFAULT(dis_end, "dis_end");
+        for (int i = dis_parent.node_id() + 1; i < dis_end.node_id(); i++)
+        {
+            PERF_BIND_CHILD(dis_parent.node_id(), i);
+            PERF_BIND_MERGE(dis_parent.node_id(), i);
+        }
+    }
 
     if (true)
     {

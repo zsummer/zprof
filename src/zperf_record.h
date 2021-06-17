@@ -60,8 +60,6 @@ struct PerfCPU
     long long min_u;
     long long t_c;
     long long t_u;
-    long long merge_temp;
-    long long merge_count;
 };
 
 struct PerfTimer
@@ -76,8 +74,6 @@ struct PerfMEM
     long long delta;
     long long t_c;
     long long t_u;
-    long long merge_temp;
-    long long merge_count;
 };
 
 struct PerfUser
@@ -86,8 +82,6 @@ struct PerfUser
     long long sum;
     long long t_c;
     long long t_u;
-    long long merge_temp;
-    long long merge_count;
 };
 
 struct PerfNode
@@ -266,7 +260,6 @@ public:
         node.cpu.max_u = node.cpu.max_u < dis ? dis : node.cpu.max_u;
         node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
         node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
-        node.cpu.t_c += c;
         node.cpu.t_u += cost;
     }
     PERF_ALWAYS_INLINE void call_cpu(int idx, long long cost)
@@ -278,7 +271,6 @@ public:
         node.cpu.max_u = node.cpu.max_u < cost ? cost : node.cpu.max_u;
         node.cpu.min_u = node.cpu.min_u < cost ? node.cpu.min_u : cost;
         node.cpu.dv += abs(cost - node.cpu.sm);
-        node.cpu.t_c += 1;
         node.cpu.t_u += cost;
     }
     PERF_ALWAYS_INLINE void call_cpu_no_sm(int idx, long long cost)
@@ -287,7 +279,6 @@ public:
         node.cpu.c += 1;
         node.cpu.sum += cost;
         node.cpu.sm = cost;
-        node.cpu.t_c += 1;
         node.cpu.t_u += cost;
     }
     PERF_ALWAYS_INLINE void call_cpu_no_sm(int idx, long long count, long long cost)
@@ -297,7 +288,6 @@ public:
         node.cpu.c += count;
         node.cpu.sum += cost;
         node.cpu.sm = dis;
-        node.cpu.t_c += count;
         node.cpu.t_u += cost;
     }
 
@@ -313,7 +303,6 @@ public:
         node.cpu.h_sm = dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm;
         node.cpu.l_sm = dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis);
         node.cpu.dv += abs(dis - node.cpu.sm);
-        node.cpu.t_c += 1;
         node.cpu.t_u += cost;
         node.cpu.max_u = node.cpu.max_u < dis ? dis : node.cpu.max_u;
         node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
@@ -332,7 +321,6 @@ public:
         node.cpu.h_sm = dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm;
         node.cpu.l_sm = dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis);
         node.cpu.dv += abs(dis - node.cpu.sm);
-        node.cpu.t_c += c;
         node.cpu.t_u += cost;
         node.cpu.max_u = node.cpu.max_u < dis ? dis : node.cpu.max_u;
         node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
@@ -356,7 +344,6 @@ public:
         PerfNode& node = nodes_[idx];
         node.mem.c += c;
         node.mem.sum += add;
-        node.mem.t_c += c;
         node.mem.t_u += add;
     }
 
@@ -365,7 +352,6 @@ public:
         PerfNode& node = nodes_[idx];
         node.user.c += c;
         node.user.sum += add;
-        node.user.t_c += c;
         node.user.t_u += add;
     }
 
@@ -375,69 +361,7 @@ public:
         node.mem.c = c;
         node.mem.delta = add - node.mem.sum;
         node.mem.sum = add;
-        node.mem.t_c = c;
         node.mem.t_u = add;
-    }
-
-
-    void merge_cpu_temp(long long t_u, int to)
-    {
-        PerfNode& to_node = nodes_[to];
-        to_node.cpu.merge_temp += t_u;
-        to_node.cpu.merge_count++;
-        if (to_node.merge_child_count == to_node.cpu.merge_count)
-        {
-            if (to_node.merge_to > 0)
-            {
-                merge_cpu_temp(to_node.cpu.merge_temp, to_node.merge_to);
-            }
-            to_node.cpu.merge_count = 0;
-            if (to_node.cpu.merge_temp > 0)
-            {
-                call_cpu_full(to, to_node.cpu.merge_temp);
-                to_node.cpu.merge_temp = 0;
-            }
-        }
-    }
-
-    void merge_mem_temp(long long t_u, int to)
-    {
-        PerfNode& to_node = nodes_[to];
-        to_node.mem.merge_temp += t_u;
-        to_node.mem.merge_count++;
-        if (to_node.merge_child_count == to_node.mem.merge_count)
-        {
-            to_node.mem.merge_count = 0;
-            if (to_node.merge_to > 0)
-            {
-                merge_mem_temp(to_node.mem.merge_temp, to_node.merge_to);
-            }
-            if (to_node.mem.merge_temp > 0)
-            {
-                call_mem(to, 1, to_node.mem.merge_temp);
-                to_node.mem.merge_temp = 0;
-            }
-        }
-    }
-
-    void merge_user_temp(long long t_u, int to)
-    {
-        PerfNode& to_node = nodes_[to];
-        to_node.user.merge_temp += t_u;
-        to_node.user.merge_count++;
-        if (to_node.merge_child_count == to_node.user.merge_count)
-        {
-            if (to_node.merge_to > 0)
-            {
-                merge_user_temp(to_node.user.merge_temp, to_node.merge_to);
-            }
-            to_node.user.merge_count = 0;
-            if (to_node.user.merge_temp > 0)
-            {
-                call_user(to, 1, to_node.user.merge_temp);
-                to_node.user.merge_temp = 0;
-            }
-        }
     }
 
 
@@ -448,15 +372,111 @@ public:
         for (int i = 0; i < merge_to_size_; i++)
         {
             PerfNode& leaf = nodes_[merge_to_[i]];
-            merge_cpu_temp(leaf.cpu.t_u, leaf.merge_to);
-            merge_mem_temp(leaf.mem.t_u, leaf.merge_to);
-            merge_user_temp(leaf.user.t_u, leaf.merge_to);
-            leaf.cpu.t_c = 0;
-            leaf.cpu.t_u = 0;
-            leaf.mem.t_c = 0;
-            leaf.mem.t_u = 0;
-            leaf.user.t_c = 0;
-            leaf.user.t_u = 0;
+            PerfNode* node = NULL;
+            long long append = 0;
+            int node_id = 0;
+            if (true)
+            {
+                node = &nodes_[leaf.merge_to]; 
+                append = leaf.cpu.t_u;
+                node_id = leaf.merge_to;
+                leaf.cpu.t_u = 0;
+                do
+                {
+                    node->cpu.t_u += append;
+                    node->cpu.t_c++;
+                    if (node->cpu.t_c >= node->merge_child_count)
+                    {
+                        node->cpu.t_c = 0;
+                        if (node->cpu.t_u == 0)
+                        {
+                            break;
+                        }
+                        append = node->cpu.t_u;
+                        call_cpu_full(node_id, append);
+                        node->cpu.t_u = 0;
+                        if (node->merge_to != 0)
+                        {
+                            node_id = node->merge_to;
+                            node = &nodes_[node->merge_to];
+                            continue;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    break;
+                } while (true);
+            }
+            if (true)
+            {
+                node = &nodes_[leaf.merge_to];
+                append = leaf.mem.t_u;
+                node_id = leaf.merge_to;
+                leaf.mem.t_u = 0;
+                do
+                {
+                    node->mem.t_u += append;
+                    node->mem.t_c++;
+                    if (node->mem.t_c >= node->merge_child_count)
+                    {
+                        node->mem.t_c = 0;
+                        if (node->mem.t_u == 0)
+                        {
+                            break;
+                        }
+                        append = node->mem.t_u;
+                        call_mem(node_id, 1, append);
+                        node->mem.t_u = 0;
+                        if (node->merge_to != 0)
+                        {
+                            node_id = node->merge_to;
+                            node = &nodes_[node->merge_to];
+                            continue;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    break;
+                } while (true);
+            }
+            if (true)
+            {
+                node = &nodes_[leaf.merge_to];
+                append = leaf.user.t_u;
+                node_id = leaf.merge_to;
+                leaf.user.t_u = 0;
+                do
+                {
+                    node->user.t_u += append;
+                    node->user.t_c++;
+                    if (node->user.t_c >= node->merge_child_count)
+                    {
+                        node->user.t_c = 0;
+                        if (node->user.t_u == 0)
+                        {
+                            break;
+                        }
+                        append = node->user.t_u;
+                        call_user(node_id, 1, append);
+                        node->user.t_u = 0;
+                        if (node->merge_to != 0)
+                        {
+                            node_id = node->merge_to;
+                            node = &nodes_[node->merge_to];
+                            continue;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    break;
+                } while (true);
+            }
         }
         call_cpu(INST_INNER_MERGE_ALL_COST, cost.stop_and_save().cycles());
     }
