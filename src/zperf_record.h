@@ -61,6 +61,7 @@ struct PerfCPU
     long long t_c;
     long long t_u;
     long long merge_temp;
+    long long merge_count;
 };
 
 struct PerfTimer
@@ -76,6 +77,7 @@ struct PerfMEM
     long long t_c;
     long long t_u;
     long long merge_temp;
+    long long merge_count;
 };
 
 struct PerfUser
@@ -85,6 +87,7 @@ struct PerfUser
     long long t_c;
     long long t_u;
     long long merge_temp;
+    long long merge_count;
 };
 
 struct PerfNode
@@ -95,7 +98,7 @@ struct PerfNode
     int child_count; 
     int merge_to;
     int merge_child_count;
-    int merge_current_count;
+
     PerfCPU cpu; 
     PerfMEM mem; 
     PerfTimer timer;
@@ -381,9 +384,19 @@ public:
     {
         PerfNode& to_node = nodes_[to];
         to_node.cpu.merge_temp += t_u;
-        if (to_node.merge_to > 0)
+        to_node.cpu.merge_count++;
+        if (to_node.merge_child_count == to_node.cpu.merge_count)
         {
-            merge_cpu_temp(t_u, to_node.merge_to);
+            if (to_node.merge_to > 0)
+            {
+                merge_cpu_temp(to_node.cpu.merge_temp, to_node.merge_to);
+            }
+            to_node.cpu.merge_count = 0;
+            if (to_node.cpu.merge_temp > 0)
+            {
+                call_cpu_full(to, to_node.cpu.merge_temp);
+                to_node.cpu.merge_temp = 0;
+            }
         }
     }
 
@@ -391,9 +404,19 @@ public:
     {
         PerfNode& to_node = nodes_[to];
         to_node.mem.merge_temp += t_u;
-        if (to_node.merge_to > 0)
+        to_node.mem.merge_count++;
+        if (to_node.merge_child_count == to_node.mem.merge_count)
         {
-            merge_mem_temp(t_u, to_node.merge_to);
+            to_node.mem.merge_count = 0;
+            if (to_node.merge_to > 0)
+            {
+                merge_mem_temp(to_node.mem.merge_temp, to_node.merge_to);
+            }
+            if (to_node.mem.merge_temp > 0)
+            {
+                call_mem(to, 1, to_node.mem.merge_temp);
+                to_node.mem.merge_temp = 0;
+            }
         }
     }
 
@@ -401,60 +424,22 @@ public:
     {
         PerfNode& to_node = nodes_[to];
         to_node.user.merge_temp += t_u;
-        if (to_node.merge_to > 0)
+        to_node.user.merge_count++;
+        if (to_node.merge_child_count == to_node.user.merge_count)
         {
-            merge_user_temp(t_u, to_node.merge_to);
+            if (to_node.merge_to > 0)
+            {
+                merge_user_temp(to_node.user.merge_temp, to_node.merge_to);
+            }
+            to_node.user.merge_count = 0;
+            if (to_node.user.merge_temp > 0)
+            {
+                call_user(to, 1, to_node.user.merge_temp);
+                to_node.user.merge_temp = 0;
+            }
         }
-    }
-    void merge_proc(int idx, int to)
-    {
-        PerfNode& node = nodes_[idx];
-        if (node.cpu.t_c > 0)
-        {
-            merge_cpu_temp(node.cpu.t_u, to);
-            node.cpu.t_c = 0;
-            node.cpu.t_u = 0;
-        }
-        if (node.mem.t_c > 0)
-        {
-            merge_mem_temp(node.mem.t_u, to);
-            node.mem.t_c = 0;
-            node.mem.t_u = 0;
-        }
-        if (node.user.t_c > 0)
-        {
-            merge_user_temp(node.user.t_u, to);
-            node.user.t_c = 0;
-            node.user.t_u = 0;
-        }
-
     }
 
-    void merge_to(int idx, int to)
-    {
-        PerfNode& to_node = nodes_[to];
-        if (to_node.cpu.merge_temp > 0)
-        {
-            call_cpu_full(to, to_node.cpu.merge_temp);
-            to_node.cpu.merge_temp = 0;
-            to_node.cpu.t_c = 0;
-            to_node.cpu.t_u = 0;
-        }
-        if (to_node.mem.merge_temp > 0)
-        {
-            call_mem(to, 1, to_node.mem.merge_temp);
-            to_node.mem.merge_temp = 0;
-            to_node.mem.t_c = 0;
-            to_node.mem.t_u = 0;
-        }
-        if (to_node.user.merge_temp > 0)
-        {
-            call_user(to, 1, to_node.user.merge_temp);
-            to_node.user.merge_temp = 0;
-            to_node.user.t_c = 0;
-            to_node.user.t_u = 0;
-        }
-    }
 
     void update_merge()
     {
@@ -462,13 +447,16 @@ public:
         cost.start();
         for (int i = 0; i < merge_to_size_; i++)
         {
-            PerfNode& node = nodes_[merge_to_[i]];
-            merge_proc(merge_to_[i], node.merge_to);
-        }
-        for (int i = 0; i < merge_to_size_; i++)
-        {
-            PerfNode& node = nodes_[merge_to_[i]];
-            merge_to(merge_to_[i], node.merge_to);
+            PerfNode& leaf = nodes_[merge_to_[i]];
+            merge_cpu_temp(leaf.cpu.t_u, leaf.merge_to);
+            merge_mem_temp(leaf.mem.t_u, leaf.merge_to);
+            merge_user_temp(leaf.user.t_u, leaf.merge_to);
+            leaf.cpu.t_c = 0;
+            leaf.cpu.t_u = 0;
+            leaf.mem.t_c = 0;
+            leaf.mem.t_u = 0;
+            leaf.user.t_c = 0;
+            leaf.user.t_u = 0;
         }
         call_cpu(INST_INNER_MERGE_ALL_COST, cost.stop_and_save().cycles());
     }
