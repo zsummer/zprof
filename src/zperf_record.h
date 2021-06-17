@@ -94,6 +94,8 @@ struct PerfNode
     int first_child;
     int child_count; 
     int merge_to;
+    int merge_child_count;
+    int merge_current_count;
     PerfCPU cpu; 
     PerfMEM mem; 
     PerfTimer timer;
@@ -110,6 +112,7 @@ public:
         INST_INNER_NULL,
         INST_INNER_INIT_COST,
         INST_INNER_SERIALIZE_COST,
+        INST_INNER_MERGE_ALL_COST,
         INST_INNER_SELF_MEM_COST,
         INST_INNER_AUTO_TEST_COST,
         INST_INNER_FULL_AUTO_COST,
@@ -455,6 +458,8 @@ public:
 
     void update_merge()
     {
+        PerfCounter<PERF_COUNTER_DEFAULT> cost;
+        cost.start();
         for (int i = 0; i < merge_to_size_; i++)
         {
             PerfNode& node = nodes_[merge_to_[i]];
@@ -465,6 +470,7 @@ public:
             PerfNode& node = nodes_[merge_to_[i]];
             merge_to(merge_to_[i], node.merge_to);
         }
+        call_cpu(INST_INNER_MERGE_ALL_COST, cost.stop_and_save().cycles());
     }
     int serialize(int entry_idx, int depth, PerfSerializeBuffer& buffer, std::function<void(const PerfSerializeBuffer& buffer)> call_log = NULL);
     PerfSerializeBuffer serialize(int entry_idx, std::function<void(const PerfSerializeBuffer& buffer)> call_log = NULL);
@@ -570,6 +576,16 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::bind_merge(int idx, int to)
     {
         return -3; //regist method has memset all info ; 
     }
+    to_node.merge_child_count++;
+    for (int i = 0; i < merge_to_size_; i++)
+    {
+        if (merge_to_[i] == to)
+        {
+            node.merge_to = to;
+            merge_to_[i] = idx;
+            return 0;
+        }
+    }
     node.merge_to = to;
     merge_to_[merge_to_size_++] = idx;
     return 0;
@@ -617,6 +633,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
 
     regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_MERGE_ALL_COST, "INST_INNER_MERGE_ALL_COST", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_SELF_MEM_COST, "INST_INNER_SELF_MEM_COST", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_AUTO_TEST_COST, "INST_INNER_AUTO_TEST_COST", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_FULL_AUTO_COST, "INST_INNER_FULL_AUTO_COST", PERF_COUNTER_DEFAULT, true, true);
