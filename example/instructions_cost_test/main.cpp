@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
         //get ternary operator cost 
         counter.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
+        val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
         LogInfo() << "no fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
@@ -98,6 +99,7 @@ int main(int argc, char *argv[])
         //get ternary operator cost 
         counter.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
+        val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
         LogInfo() << "load fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
@@ -121,6 +123,7 @@ int main(int argc, char *argv[])
         //get ternary operator cost 
         counter.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
+        val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
         LogInfo() << "load fence btb rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
@@ -144,6 +147,7 @@ int main(int argc, char *argv[])
         //get ternary operator cost 
         counter.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
+        val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
         LogInfo() << "load&store fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
@@ -167,6 +171,7 @@ int main(int argc, char *argv[])
         //get ternary operator cost 
         counter.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
+        val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
         LogInfo() << "load&store fence back to back rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
@@ -191,34 +196,14 @@ int main(int argc, char *argv[])
         //get ternary operator cost 
         counter.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
+        val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
         LogInfo() << "lock rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
             << "\t\tternary operator:" << counter.cycles() - empty_cost << "cycles, " << counter.duration_ns() - empty_cost_ns << "ns." << "salt:" << val[2];
     }
 
-    if (true)
-    {
-        PerfCounter<PERF_COUNTER_RDTSC_NOFENCE> counter;
-        //record empty cost 
-        counter.start();
-        counter.stop_and_save();
-        long long empty_cost = counter.cycles();
-        long long empty_cost_ns = counter.duration_ns();
-        empty_cost = counter.cycles();
-        empty_cost_ns = counter.duration_ns();
-        //all in L1 
-        volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
-        //get ternary operator cost 
-        counter.start();
-        val[2] = val[3] == 0 ? val[0] : val[1];
-        val[1] = val[2] == 0 ? val[0] : val[1];
-        counter.stop_and_save();
-
-        LogInfo() << "nofence rdtsc two ternary: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
-            << "\t\tternary operator:" << counter.cycles() - empty_cost << "cycles, " << counter.duration_ns() - empty_cost_ns << "ns." << "salt:" << val[2];
-    }
 
     return 0;
 }
