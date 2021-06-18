@@ -85,6 +85,7 @@ struct PerfNode
 {
     bool active;  
     int parrent;
+    int jump_child;
     int first_child;
     int child_count; 
     int merge_to;
@@ -188,6 +189,7 @@ public:
         return inst;
     }
     inline int init_perf(const char* desc);
+    inline int init_jump_count();
     inline int regist_node(int idx, const char* desc, unsigned int counter, bool resident, bool re_reg);
     inline int rename_node(int idx, const char* desc);
     inline int bind_childs(int idx, int child);
@@ -678,8 +680,47 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
 }
 
 
+template<int INST, int RESERVE, int DECLARE, int ANON>
+int PerfRecord<INST, RESERVE, DECLARE, ANON>::init_jump_count()
+{
+    for (int i = node_declare_begin_id(); i < node_declare_end_id(); )
+    {
+        int next_parrent_id = i + 1;
+        while (next_parrent_id < node_declare_end_id())
+        {
+            if (nodes_[next_parrent_id].parrent == 0)
+            {
+                break;
+            }
+            next_parrent_id++;
+        }
+        for (int j = i; j < next_parrent_id; j++)
+        {
+            nodes_[j].jump_child = next_parrent_id - j - 1;
+        }
+        i = next_parrent_id;
+    }
+    for (int i = node_anon_begin_id(); i < node_anon_end_id(); )
+    {
+        int next_parrent_id = i + 1;
+        while (next_parrent_id < node_anon_end_id())
+        {
+            if (nodes_[next_parrent_id].parrent == 0)
+            {
+                break;
+            }
+            next_parrent_id++;
+        }
+        for (int j = i; j < next_parrent_id; j++)
+        {
+            nodes_[j].jump_child = next_parrent_id - j - 1;
+        }
+        i = next_parrent_id;
+    }
 
 
+    return 0;
+}
 
 template<int INST, int RESERVE, int DECLARE, int ANON>
 int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* desc, unsigned int counter_type, bool resident, bool re_reg)
@@ -1045,18 +1086,20 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
     buffer.push_string("-----------------------" PERF_LINE_FEED);
     call_log(buffer);
     buffer.reset_offset();
-    for (int i = node_declare_begin_id(); i < node_delcare_reg_end_id(); i++)
+    for (int i = node_declare_begin_id(); i < node_delcare_reg_end_id(); )
     {
         int ret = serialize(i, 0, buffer, call_log);
         (void)ret;
+        i += nodes_[i].jump_child + 1;
     }
     buffer.push_string("-----------------------" PERF_LINE_FEED);
     call_log(buffer);
     buffer.reset_offset();
-    for (int i = node_anon_begin_id(); i < node_anon_real_end_id(); i++)
+    for (int i = node_anon_begin_id(); i < node_anon_real_end_id(); )
     {
         int ret = serialize(i, 0, buffer, call_log);
         (void)ret;
+        i += nodes_[i].jump_child + 1;
     }
     call_cpu(INST_INNER_SERIALIZE_COST, counter.stop_and_save().cycles());
 

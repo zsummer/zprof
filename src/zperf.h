@@ -201,6 +201,7 @@ private:
 
 
 #define PERF_INIT(desc) PerfInst.init_perf(desc)
+#define PERF_INIT_JUMP_COUNT() PerfInst.init_jump_count()
 #define PERF_RESET_CHILD(idx) PerfInst.reset_childs(idx)
 #define PERF_UPDATE_MERGE() PerfInst.update_merge()
 #define PERF_CLEAN_RESERVE() PerfInst.clean_reserve_info()
@@ -250,6 +251,7 @@ private:
 #define PERF_BIND_CHILD_AND_MERGE(id, cid) 
 
 #define PERF_INIT(desc) 
+#define PERF_INIT_JUMP_COUNT()
 #define PERF_RESET_CHILD(idx) 
 #define PERF_UPDATE_MERGE() 
 #define PERF_RESET_RESERVE()
