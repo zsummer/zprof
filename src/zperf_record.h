@@ -1056,6 +1056,7 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
 
 
     buffer.push_string(PERF_LINE_FEED);
+    buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
 
@@ -1068,6 +1069,7 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
     buffer.push_char('\t');
     buffer.push_char('-', 30);
     buffer.push_string(PERF_LINE_FEED);
+    buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
     for (int i = INST_INNER_NULL + 1; i < INST_INNER_MAX; i++)
@@ -1076,6 +1078,7 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
         (void)ret;
     }
     buffer.push_string("-----------------------" PERF_LINE_FEED);
+    buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
     for (int i = node_reserve_begin_id(); i < node_reserve_end_id(); i++)
@@ -1084,6 +1087,7 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
         (void)ret;
     }
     buffer.push_string("-----------------------" PERF_LINE_FEED);
+    buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
     for (int i = node_declare_begin_id(); i < node_delcare_reg_end_id(); )
@@ -1093,6 +1097,7 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
         i += nodes_[i].jump_child + 1;
     }
     buffer.push_string("-----------------------" PERF_LINE_FEED);
+    buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
     for (int i = node_anon_begin_id(); i < node_anon_real_end_id(); )
@@ -1113,16 +1118,19 @@ int PerfRecord<INST, RESERVE, DECLARE, ANON>::serialize(std::function<void(const
     buffer.push_char('\t');
     buffer.push_char('-', 30);
     buffer.push_string(PERF_LINE_FEED);
+    buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
 
     buffer.push_char('1', 120);
     buffer.push_string(PERF_LINE_FEED);
+    buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
 
 
     buffer.push_string(PERF_LINE_FEED);
+    buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
 

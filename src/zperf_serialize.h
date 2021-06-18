@@ -44,18 +44,14 @@
 class PerfSerializeBuffer
 {
 public:
-    PerfSerializeBuffer(char* buff, size_t buff_size)
+    PerfSerializeBuffer() = delete;
+    explicit PerfSerializeBuffer(char* buff, size_t buff_size)
     {
         buff_ = buff;
         buff_len_ = buff_size;
         offset_ = 0;
     }
-    PerfSerializeBuffer(const PerfSerializeBuffer& buffer)
-    {
-        buff_ = buffer.buff_;
-        buff_len_ = buffer.buff_len_;
-        offset_ = buffer.offset_;
-    }
+
     inline PerfSerializeBuffer& serialize(const char* fmt, ...);
     inline PerfSerializeBuffer& push_human_count(long long count);
     inline PerfSerializeBuffer& push_human_time(long long ns);
@@ -66,7 +62,7 @@ public:
     inline PerfSerializeBuffer& push_number(unsigned long long number, int wide = 0);
     inline PerfSerializeBuffer& push_number(long long number, int wide = 0);
 
-    inline PerfSerializeBuffer& closing_string();
+    inline void closing_string();
     bool is_full() { return offset_ + 1 >= buff_len_; } //saved one char  
     char* buff() { return buff_; }
     const char* buff() const { return buff_; }
@@ -263,8 +259,6 @@ inline PerfSerializeBuffer& PerfSerializeBuffer::push_number(unsigned long long 
     }
     memcpy(buff_ + offset_, buf + write_index, buf_len - write_index);
     offset_ += buf_len - write_index;
-    size_t closed_id = offset_ >= buff_len_ ? offset_ - 1 : offset_;
-    buff_[closed_id] = '\0';
     return *this;
 }
 
@@ -293,8 +287,6 @@ inline PerfSerializeBuffer& PerfSerializeBuffer::push_string(const char* str)
     {
         buff_[offset_++] = *str++;
     }
-    size_t closed_id = offset_ >= buff_len_ ? offset_ -1 : offset_;
-    buff_[closed_id] = '\0';
     return *this;
 }
 
@@ -343,23 +335,14 @@ inline PerfSerializeBuffer& PerfSerializeBuffer::push_now_date()
     push_char('.');
     push_number((unsigned long long)precise, 3);
     push_char(']');
-    size_t closed_id = offset_ >= buff_len_ ? offset_ - 1 : offset_;
-    buff_[closed_id] = '\0';
     return *this;
 }
 
 
-inline PerfSerializeBuffer& PerfSerializeBuffer::closing_string()
+inline void PerfSerializeBuffer::closing_string()
 {
-    if (buff_len_ > 0 && buff_)
-    {
-        if (offset_ >= buff_len_)
-        {
-            offset_ = buff_len_ - 1;
-        }
-        buff_[offset_] = '\0';
-    }
-    return *this;
+    size_t closed_id = offset_ >= buff_len_ ? offset_ - 1 : offset_;
+    buff_[closed_id] = '\0';
 }
 
 #endif
