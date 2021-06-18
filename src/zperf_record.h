@@ -58,7 +58,6 @@ struct PerfCPU
     long long l_sm;
     long long max_u;
     long long min_u;
-    long long t_c;
     long long t_u;
 };
 
@@ -72,7 +71,6 @@ struct PerfMEM
     long long c;  
     long long sum;
     long long delta;
-    long long t_c;
     long long t_u;
 };
 
@@ -80,7 +78,6 @@ struct PerfUser
 {
     long long c;
     long long sum;
-    long long t_c;
     long long t_u;
 };
 
@@ -92,6 +89,7 @@ struct PerfNode
     int child_count; 
     int merge_to;
     int merge_child_count;
+    int merge_current_child_count;
 
     PerfCPU cpu; 
     PerfMEM mem; 
@@ -373,81 +371,44 @@ public:
         {
             PerfNode& leaf = nodes_[merge_to_[i]];
             PerfNode* node = NULL;
-            long long append = 0;
+            long long append_cpu = 0;
+            long long append_mem = 0;
+            long long append_user = 0;
             int node_id = 0;
             node = &nodes_[leaf.merge_to];
-            append = leaf.cpu.t_u;
+            append_cpu = leaf.cpu.t_u;
+            append_mem = leaf.mem.t_u;
+            append_user = leaf.user.t_u;
             node_id = leaf.merge_to;
             leaf.cpu.t_u = 0;
-            do
-            {
-                node->cpu.t_u += append;
-                node->cpu.t_c++;
-                if (node->cpu.t_c >= node->merge_child_count)
-                {
-                    node->cpu.t_c = 0;
-                    if (node->cpu.t_u == 0)
-                    {
-                        break;
-                    }
-                    append = node->cpu.t_u;
-                    call_cpu_full(node_id, append);
-                    node->cpu.t_u = 0;
-                    if (node->merge_to == 0)
-                    {
-                        break;
-                    }
-                    node_id = node->merge_to;
-                    node = &nodes_[node->merge_to];
-                    continue;
-                }
-                break;
-            } while (true);
-            node = &nodes_[leaf.merge_to];
-            append = leaf.mem.t_u;
-            node_id = leaf.merge_to;
             leaf.mem.t_u = 0;
-            do
-            {
-                node->mem.t_u += append;
-                node->mem.t_c++;
-                if (node->mem.t_c >= node->merge_child_count)
-                {
-                    node->mem.t_c = 0;
-                    if (node->mem.t_u == 0)
-                    {
-                        break;
-                    }
-                    append = node->mem.t_u;
-                    call_mem(node_id, 1, append);
-                    node->mem.t_u = 0;
-                    if (node->merge_to == 0)
-                    {
-                        break;
-                    }
-                    node_id = node->merge_to;
-                    node = &nodes_[node->merge_to];
-                    continue;
-                }
-                break;
-            } while (true);
-            node = &nodes_[leaf.merge_to];
-            append = leaf.user.t_u;
-            node_id = leaf.merge_to;
             leaf.user.t_u = 0;
             do
             {
-                node->user.t_u += append;
-                node->user.t_c++;
-                if (node->user.t_c >= node->merge_child_count)
+                node->cpu.t_u += append_cpu;
+                node->mem.t_u += append_mem;
+                node->user.t_u += append_user;
+                node->merge_current_child_count++;
+                if (node->merge_current_child_count >= node->merge_child_count)
                 {
-                    node->user.t_c = 0;
-                    if (node->user.t_u == 0)
+                    node->merge_current_child_count = 0;
+                    append_cpu = node->cpu.t_u;
+                    append_mem = node->mem.t_u;
+                    append_user = node->user.t_u;
+                    if (append_cpu > 0)
                     {
-                        break;
+                        call_cpu_full(node_id, append_cpu);
                     }
-                    append = node->user.t_u;
-                    call_user(node_id, 1, append);
+                    if (append_mem > 0)
+                    {
+                        call_mem(node_id, 1, append_mem);
+                    }
+                    if (append_user > 0)
+                    {
+                        call_user(node_id, 1, append_user);
+                    }
+                    node->cpu.t_u = 0;
+                    node->mem.t_u = 0;
                     node->user.t_u = 0;
                     if (node->merge_to == 0)
                     {
