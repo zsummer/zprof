@@ -53,11 +53,11 @@ struct PerfCPU
     long long c; 
     long long sum;  
     long long dv; 
-    long long sm;
-    long long h_sm;
-    long long l_sm;
-    long long max_u;
-    long long min_u;
+    int sm;
+    int h_sm;
+    int l_sm;
+    int max_u;
+    int min_u;
     long long t_u;
 };
 
@@ -177,7 +177,7 @@ public:
         compact_buffer_.push_string("reserve");
         compact_buffer_.push_char('\0');
         no_name_space_ = (int)compact_buffer_.offset();
-        compact_buffer_.serialize("the string of store name is too small..");
+        compact_buffer_.push_string("the string of store name is too small..");
         no_name_space_len_ = (int)(compact_buffer_.offset() - no_name_space_);
         compact_buffer_.push_char('\0');
         desc_ = 0;
@@ -259,9 +259,9 @@ public:
         PerfNode& node = nodes_[idx];
         node.cpu.c += c;
         node.cpu.sum += cost;
-        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.max_u = node.cpu.max_u < dis ? dis : node.cpu.max_u;
-        node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
+        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.max_u = (int)(node.cpu.max_u < dis ? dis : node.cpu.max_u);
+        node.cpu.min_u = (int)(node.cpu.min_u < dis ? node.cpu.min_u : dis);
         node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
         node.cpu.t_u += cost;
     }
@@ -270,9 +270,9 @@ public:
         PerfNode& node = nodes_[idx];
         node.cpu.c += 1;
         node.cpu.sum += cost;
-        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.max_u = node.cpu.max_u < cost ? cost : node.cpu.max_u;
-        node.cpu.min_u = node.cpu.min_u < cost ? node.cpu.min_u : cost;
+        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.max_u = (int)(node.cpu.max_u < cost ? cost : node.cpu.max_u);
+        node.cpu.min_u = (int)(node.cpu.min_u < cost ? node.cpu.min_u : cost);
         node.cpu.dv += abs(cost - node.cpu.sm);
         node.cpu.t_u += cost;
     }
@@ -281,7 +281,7 @@ public:
         PerfNode& node = nodes_[idx];
         node.cpu.c += 1;
         node.cpu.sum += cost;
-        node.cpu.sm = cost;
+        node.cpu.sm = (int)cost;
         node.cpu.t_u += cost;
     }
     PERF_ALWAYS_INLINE void call_cpu_no_sm(int idx, long long count, long long cost)
@@ -290,7 +290,7 @@ public:
         PerfNode& node = nodes_[idx];
         node.cpu.c += count;
         node.cpu.sum += cost;
-        node.cpu.sm = dis;
+        node.cpu.sm = (int)dis;
         node.cpu.t_u += cost;
     }
 
@@ -302,13 +302,13 @@ public:
         long long dis = cost;
         long long avg = node.cpu.sum / node.cpu.c;
 
-        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.h_sm = dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm;
-        node.cpu.l_sm = dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis);
+        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.h_sm = (int)(dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
+        node.cpu.l_sm = (int)(dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
         node.cpu.dv += abs(dis - node.cpu.sm);
         node.cpu.t_u += cost;
-        node.cpu.max_u = node.cpu.max_u < dis ? dis : node.cpu.max_u;
-        node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
+        node.cpu.max_u = (int)(node.cpu.max_u < dis ? dis : node.cpu.max_u);
+        node.cpu.min_u = (int)(node.cpu.min_u < dis ? node.cpu.min_u : dis);
     }
 
     PERF_ALWAYS_INLINE void call_cpu_full(int idx, long long c, long long cost)
@@ -320,13 +320,13 @@ public:
         long long dis = cost / c;
         long long avg = node.cpu.sum / node.cpu.c;
 
-        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.h_sm = dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm;
-        node.cpu.l_sm = dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis);
+        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.h_sm = (int) (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
+        node.cpu.l_sm = (int) (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
         node.cpu.dv += abs(dis - node.cpu.sm);
         node.cpu.t_u += cost;
-        node.cpu.max_u = node.cpu.max_u < dis ? dis : node.cpu.max_u;
-        node.cpu.min_u = node.cpu.min_u < dis ? node.cpu.min_u : dis;
+        node.cpu.max_u = (int)(node.cpu.max_u < dis ? dis : node.cpu.max_u);
+        node.cpu.min_u = (int)(node.cpu.min_u < dis ? node.cpu.min_u : dis);
     }
 
 
@@ -748,7 +748,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* 
     node_descs_[idx].counter_type = counter_type;
     node_descs_[idx].resident = resident;
     node.active = true;
-    node.cpu.min_u = LLONG_MAX;
+    node.cpu.min_u = INT_MAX;
 
     if (idx >= node_declare_begin_id() && idx < node_declare_end_id() && idx + 1 > declare_reg_end_id_)
     {
