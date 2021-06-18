@@ -760,10 +760,8 @@ int main(int argc, char *argv[])
 
     PERF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
+
     PERF_UPDATE_MERGE();
-
-
-
     PERF_SERIALIZE_FN_LOG();
 
     
