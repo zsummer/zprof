@@ -234,8 +234,8 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 50, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSCP bat 1000");
-        for (size_t i = 0; i < 50; i++)
+        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 20, PERF_CPU_NORMAL, "PERF_COUNTER_RDTSCP bat 20");
+        for (size_t i = 0; i < 20; i++)
         {
             cycles += perf_get_time_cycle<PERF_COUNTER_RDTSCP>();
         }
@@ -392,8 +392,8 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSCP dis 1000", PERF_COUNTER_RDTSC_BTB);
-        for (size_t i = 0; i < 100; i++)
+        PERF_DEFINE_REGISTER(rec, "PERF_COUNTER_RDTSCP dis 20", PERF_COUNTER_RDTSC_BTB);
+        for (size_t i = 0; i < 20; i++)
         {
             PERF_REGISTER_START(rec);
             cycles += perf_get_time_cycle<PERF_COUNTER_RDTSCP>();
@@ -508,6 +508,7 @@ int main(int argc, char *argv[])
             PERF_BIND_MERGE(dis_parent.node_id(), i);
         }
     }
+    PERF_INIT_JUMP_COUNT();
 
     if (true)
     {
