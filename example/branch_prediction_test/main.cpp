@@ -51,10 +51,15 @@ int main(int argc, char *argv[])
     //≥ı ºªØ   
     PERF_INIT("inner perf");
 
+#ifdef STACK_MEM
     const int ARRAY_SIZE = 8 * 1024 / sizeof(int);
     const int THRESHLOD = 1024;
     int check_array[ARRAY_SIZE];
-
+#else
+    const int ARRAY_SIZE = 128*1024 * 1024 / sizeof(int);
+    const int THRESHLOD = 1024;
+    int* check_array = new int[ARRAY_SIZE];
+#endif
 
     for (size_t i = 0; i < ARRAY_SIZE; i++)
     {
@@ -66,16 +71,21 @@ int main(int argc, char *argv[])
     val++;
     volatile int loops = ARRAY_SIZE;
     
+
     if (true)
     {
         cost.start();
         for (int i = 0; i < loops; i++)
         {
             val += check_array[i] > THRESHLOD / 2 ? check_array[i] : 0;
+            val -= check_array[i] <= THRESHLOD / 2 ? check_array[i] : 0;
         }
         cost.stop_and_save();
-        LogInfo() << "un sorted array ?: cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
+        LogInfo() << "un sorted array ternary operator cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
+
+
+
     if (true)
     {
         cost.start();
@@ -84,6 +94,10 @@ int main(int argc, char *argv[])
             if (check_array[i] > THRESHLOD / 2)
             {
                 val += check_array[i];
+            }
+            else
+            {
+                val -= check_array[i];
             }
         }
         cost.stop_and_save();
@@ -102,9 +116,13 @@ int main(int argc, char *argv[])
                     LogInfo() << "side effect" << val;
                 }
             }
+            else
+            {
+                val -= check_array[i];
+            }
         }
         cost.stop_and_save();
-        LogInfo() << "un sorted array two cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
+        LogInfo() << "un sorted array two jmp cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
 
 
@@ -117,10 +135,13 @@ int main(int argc, char *argv[])
         for (int i = 0; i < loops; i++)
         {
             val += check_array[i] > THRESHLOD / 2 ? check_array[i] : 0;
+            val -= check_array[i] <= THRESHLOD / 2 ? check_array[i] : 0;
         }
         cost.stop_and_save();
-        LogInfo() << "sorted array ?: cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
+        LogInfo() << "sorted array ternary operator cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
+
+
     if (true)
     {
         cost.start();
@@ -129,6 +150,10 @@ int main(int argc, char *argv[])
             if (check_array[i] > THRESHLOD / 2)
             {
                 val+= check_array[i];
+            }
+            else
+            {
+                val -= check_array[i];
             }
         }
         cost.stop_and_save();
@@ -146,6 +171,10 @@ int main(int argc, char *argv[])
                 {
                     LogInfo() << "side effect" << val;
                 }
+            }
+            else
+            {
+                val -= check_array[i];
             }
 
         }
