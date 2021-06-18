@@ -107,6 +107,9 @@ public:
         INST_INNER_NULL,
         INST_INNER_INIT_COST,
         INST_INNER_SERIALIZE_COST,
+        INST_INNER_SINGLE_TOTAL_COST,
+        INST_INNER_SINGLE_SERIALIZE_COST,
+        INST_INNER_SINGLE_WRITE_LOG_COST,
         INST_INNER_MERGE_ALL_COST,
         INST_INNER_SELF_MEM_COST,
         INST_INNER_AUTO_TEST_COST,
@@ -588,6 +591,9 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
 
     regist_node(INST_INNER_INIT_COST, "INST_INNER_INIT_COST", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_SERIALIZE_COST, "INST_INNER_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_SINGLE_TOTAL_COST, "INST_INNER_SINGLE_TOTAL_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_SINGLE_SERIALIZE_COST, "INST_INNER_SINGLE_SERIALIZE_COST", PERF_COUNTER_DEFAULT, true, true);
+    regist_node(INST_INNER_SINGLE_WRITE_LOG_COST, "INST_INNER_SINGLE_WRITE_LOG_COST", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_MERGE_ALL_COST, "INST_INNER_MERGE_ALL_COST", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_SELF_MEM_COST, "INST_INNER_SELF_MEM_COST", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_AUTO_TEST_COST, "INST_INNER_AUTO_TEST_COST", PERF_COUNTER_DEFAULT, true, true);
@@ -597,6 +603,12 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::init_perf(const char* desc)
     regist_node(INST_INNER_ATOM_RELEAX, "INST_INNER_ATOM_RELEAX", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_ATOM_COST, "INST_INNER_ATOM_COST", PERF_COUNTER_DEFAULT, true, true);
     regist_node(INST_INNER_ATOM_SEQ_COST, "INST_INNER_ATOM_SEQ_COST", PERF_COUNTER_DEFAULT, true, true);
+
+    bind_childs(INST_INNER_SINGLE_TOTAL_COST, INST_INNER_SINGLE_SERIALIZE_COST);
+    bind_merge(INST_INNER_SINGLE_SERIALIZE_COST, INST_INNER_SINGLE_TOTAL_COST);
+    bind_childs(INST_INNER_SINGLE_TOTAL_COST, INST_INNER_SINGLE_WRITE_LOG_COST);
+    bind_merge(INST_INNER_SINGLE_WRITE_LOG_COST, INST_INNER_SINGLE_TOTAL_COST);
+
 
     if (true)
     {
@@ -779,6 +791,7 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     {
         return -2;
     }
+
     const int min_line_size = 120;
     if (buffer.buff_len() - buffer.offset() < min_line_size)
     {
@@ -805,6 +818,9 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         return 0;
     }
 
+    PerfCounter<> cost_single_serialize;
+    cost_single_serialize.start();
+
     int name_blank = node_descs_[entry_idx].node_name_len + depth * 2 + 6;
     if (name_blank < 35)
     {
@@ -820,8 +836,11 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     if (node.cpu.c > 0)
     {
         buffer.push_char(' ', depth * 2);
-        buffer.serialize("[[ %s ]] ", &compact_string_[node_descs_[entry_idx].node_name]);
-        //buffer.serialize("[[ %03d| %s ]] ", entry_idx, &compact_string_[node_descs_[entry_idx].node_name]);
+        buffer.push_char('[', 2);
+        buffer.push_char(' ');
+        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name]);
+        buffer.push_char(' ');
+        buffer.push_char(']', 2);
         buffer.push_char(' ', name_blank);
         buffer.push_string("cpu: call:");
 
@@ -856,18 +875,27 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         }
         buffer.push_string(PERF_LINE_FEED);
         buffer.closing_string();
+        cost_single_serialize.stop_and_save();
+        call_cpu_full(INST_INNER_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
         if (call_log)
         {
+            cost_single_serialize.start();
             call_log(buffer);
             buffer.reset_offset();
+            cost_single_serialize.stop_and_save();
+            call_cpu_full(INST_INNER_SINGLE_WRITE_LOG_COST, cost_single_serialize.cycles());
         }
     }
 
     if (node.mem.c > 0)
     {
+        cost_single_serialize.start();
         buffer.push_char(' ', depth * 2);
-        buffer.serialize("[[ %s ]] ", &compact_string_[node_descs_[entry_idx].node_name]);
-//        buffer.serialize("[[ %03d| %s ]] ", entry_idx, &compact_string_[node_descs_[entry_idx].node_name]);
+        buffer.push_char('[', 2);
+        buffer.push_char(' ');
+        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name]);
+        buffer.push_char(' ');
+        buffer.push_char(']', 2);
         buffer.push_char(' ', name_blank);
         buffer.push_string("mem: call:");
 
@@ -885,17 +913,27 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         }
         buffer.push_string(PERF_LINE_FEED);
         buffer.closing_string();
+        cost_single_serialize.stop_and_save();
+        call_cpu_full(INST_INNER_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
         if (call_log)
         {
+            cost_single_serialize.start();
             call_log(buffer);
             buffer.reset_offset();
+            cost_single_serialize.stop_and_save();
+            call_cpu_full(INST_INNER_SINGLE_WRITE_LOG_COST, cost_single_serialize.cycles());
         }
+
     }
     if (node.user.c > 0)
     {
+        cost_single_serialize.start();
         buffer.push_char(' ', depth * 2);
-        buffer.serialize("[[ %s ]] ", &compact_string_[node_descs_[entry_idx].node_name]);
-        //        buffer.serialize("[[ %03d| %s ]] ", &compact_string_[entry_idx, node_descs_[entry_idx].node_name]);
+        buffer.push_char('[', 2);
+        buffer.push_char(' ');
+        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name]);
+        buffer.push_char(' ');
+        buffer.push_char(']', 2);
         buffer.push_char(' ', name_blank);
         buffer.push_string("usr: call:");
 
@@ -907,10 +945,15 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         
         buffer.push_string(PERF_LINE_FEED);
         buffer.closing_string();
+        cost_single_serialize.stop_and_save();
+        call_cpu_full(INST_INNER_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
         if (call_log)
         {
+            cost_single_serialize.start();
             call_log(buffer);
             buffer.reset_offset();
+            cost_single_serialize.stop_and_save();
+            call_cpu_full(INST_INNER_SINGLE_WRITE_LOG_COST, cost_single_serialize.cycles());
         }
     }
     if (depth > PERF_MAX_DEPTH)

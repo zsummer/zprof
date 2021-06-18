@@ -61,8 +61,10 @@ public:
     inline PerfSerializeBuffer& push_human_time(long long ns);
     inline PerfSerializeBuffer& push_human_mem(long long bytes);
     inline PerfSerializeBuffer& push_char(char ch, int repeat = 1);
-    inline PerfSerializeBuffer& push_string(const char* str) { return serialize("%s", str); };
-    inline PerfSerializeBuffer& push_now_date() ;
+    inline PerfSerializeBuffer& push_string(const char* str);
+    inline PerfSerializeBuffer& push_now_date();
+    inline PerfSerializeBuffer& push_number(unsigned long long number, int wide = 0);
+    inline PerfSerializeBuffer& push_number(long long number, int wide = 0);
 
     inline PerfSerializeBuffer& closing_string();
     bool is_full() { return offset_ + 1 >= buff_len_; } //saved one char  
@@ -117,30 +119,59 @@ PerfSerializeBuffer& PerfSerializeBuffer::push_human_count(long long count)
 {
     if (count > 1000 * 1000)
     {
-        return serialize("%lld,%03lld,%03lld", count / 1000 / 1000, (count / 1000) % 1000, count % 1000);
+        push_number((unsigned long long)(count / 1000 / 1000));
+        push_char(',');
+        push_number((unsigned long long)((count / 1000) % 1000), 3);
+        push_char(',');
+        push_number((unsigned long long)(count % 1000), 3);
+        push_number((count / 1000) % 1000, 3);
+        return *this;
     }
     else if (count > 1000)
     {
-        return serialize("%lld,%03lld", count / 1000, count % 1000);
+        push_number((unsigned long long)(count / 1000));
+        push_char(',');
+        push_number((unsigned long long)(count % 1000), 3);
+        return *this;
     }
-    return serialize("%lld", count);
+    return push_number((unsigned long long)(count));
 }
 
 PerfSerializeBuffer& PerfSerializeBuffer::push_human_time(long long ns)
 {
     if (ns > 1000 * 1000 * 1000)
     {
-        return serialize("%.3lfs", ns / 1000.0 / 1000.0 / 1000.0);
+        push_number((unsigned long long)(ns / 1000 / 1000/1000));
+        push_char('.');
+        push_number((unsigned long long)((ns / 1000/1000) % 1000), 3);
+        push_char('s');
+        return *this;
     }
     else if (ns > 1000 * 1000)
     {
-        return serialize("%.3lfms", ns / 1000.0 / 1000.0);
+        push_number((unsigned long long)(ns / 1000 / 1000));
+        push_char('.');
+        push_number((unsigned long long)((ns / 1000) % 1000), 3);
+        push_char('m');
+        push_char('s');
+        return *this;
     }
     else if (ns > 1000)
     {
-        return serialize("%.3lfus", ns / 1000.0);
+        push_number((unsigned long long)(ns / 1000 ));
+        push_char('.');
+        push_number((unsigned long long)(ns % 1000), 3);
+        push_char('u');
+        push_char('s');
+        return *this;
     }
-    return serialize("%lldns", ns);
+    else
+    {
+        push_number((unsigned long long)ns);
+        push_char('n');
+        push_char('s');
+    }
+    return *this;
 }
 
 
@@ -148,17 +179,34 @@ PerfSerializeBuffer& PerfSerializeBuffer::push_human_mem(long long bytes)
 {
     if (bytes > 1024 * 1024 * 1024)
     {
-        return serialize("%.3lfg", bytes / 1024.0 / 1024.0 / 1024.0);
+        push_number((unsigned long long)(bytes / 1024 / 1024 / 1024));
+        push_char('.');
+        push_number((unsigned long long)((bytes / 1024 / 1024) % 1024), 3);
+        push_char('G');
+        return *this;
     }
     else if (bytes > 1024 * 1024)
     {
-        return serialize("%.3lfm", bytes / 1024.0 / 1024.0);
+        push_number((unsigned long long)(bytes / 1024 / 1024));
+        push_char('.');
+        push_number((unsigned long long)((bytes / 1024) % 1024), 3);
+        push_char('M');
+        return *this;
     }
     else if (bytes > 1024)
     {
-        return serialize("%.3lfk", bytes / 1024.0);
+        push_number((unsigned long long)(bytes / 1024));
+        push_char('.');
+        push_number((unsigned long long)(bytes % 1024), 3);
+        push_char('K');
+        return *this;
     }
-    return serialize("%lldb", bytes);
+    else
+    {
+        push_number((unsigned long long)bytes);
+        push_char('B');
+    }
+    return *this;
 }
 
 inline PerfSerializeBuffer& PerfSerializeBuffer::push_char(char ch, int repeat)
@@ -168,6 +216,85 @@ inline PerfSerializeBuffer& PerfSerializeBuffer::push_char(char ch, int repeat)
         buff_[offset_++] = ch;
         repeat--;
     }
+    return *this;
+}
+
+inline PerfSerializeBuffer& PerfSerializeBuffer::push_number(unsigned long long number, int wide)
+{
+    if (buff_len_ <= offset_ + 30)
+    {
+        return *this;
+    }
+    static const char* dec_lut =
+        "00010203040506070809"
+        "10111213141516171819"
+        "20212223242526272829"
+        "30313233343536373839"
+        "40414243444546474849"
+        "50515253545556575859"
+        "60616263646566676869"
+        "70717273747576777879"
+        "80818283848586878889"
+        "90919293949596979899";
+
+    static const int buf_len = 30;
+    char buf[buf_len];
+    int write_index = buf_len;
+    unsigned long long m1 = 0;
+    unsigned long long m2 = 0;
+    do
+    {
+        m1 = number / 100;
+        m2 = number % 100;
+        m2 += m2;
+        number = m1;
+        *(buf + write_index - 1) = dec_lut[m2 + 1];
+        *(buf + write_index - 2) = dec_lut[m2];
+        write_index -= 2;
+    } while (number);
+    if (buf[write_index] == '0')
+    {
+        write_index++;
+    }
+    while (buf_len - write_index < wide)
+    {
+        write_index--;
+        buf[write_index] = '0';
+    }
+    memcpy(buff_ + offset_, buf + write_index, buf_len - write_index);
+    offset_ += buf_len - write_index;
+    size_t closed_id = offset_ >= buff_len_ ? offset_ - 1 : offset_;
+    buff_[closed_id] = '\0';
+    return *this;
+}
+
+inline PerfSerializeBuffer& PerfSerializeBuffer::push_number(long long number, int wide)
+{
+    if (buff_len_ <= offset_ + 30)
+    {
+        return *this;
+    }
+    if (number < 0)
+    {
+        buff_[offset_++] = '-';
+        number *= -1;
+        wide = wide > 1 ? wide - 1 : 0;
+    }
+    return push_number((unsigned long long)number, wide);
+}
+
+inline PerfSerializeBuffer& PerfSerializeBuffer::push_string(const char* str)
+{
+    if (str == NULL)
+    {
+        return *this;
+    }
+    while (*str != '\0' && offset_ < buff_len_)
+    {
+        buff_[offset_++] = *str++;
+    }
+    size_t closed_id = offset_ >= buff_len_ ? offset_ -1 : offset_;
+    buff_[closed_id] = '\0';
     return *this;
 }
 
@@ -204,18 +331,20 @@ inline PerfSerializeBuffer& PerfSerializeBuffer::push_now_date()
 #endif
 
     push_char('[');
-    serialize("%04d", tt.tm_year + 1900);
-    serialize("%02d", tt.tm_mon + 1);
-    serialize("%02d", tt.tm_mday);
+    push_number((unsigned long long)tt.tm_year + 1900, 4);
+    push_number((unsigned long long)tt.tm_mon + 1, 2);
+    push_number((unsigned long long)tt.tm_mday, 2);
     push_char(' ');
-    serialize("%02d", tt.tm_hour);
+    push_number((unsigned long long)tt.tm_hour, 2);
     push_char(':');
-    serialize("%02d", tt.tm_min);
+    push_number((unsigned long long)tt.tm_min, 2);
     push_char(':');
-    serialize("%02d", tt.tm_sec);
+    push_number((unsigned long long)tt.tm_sec, 2);
     push_char('.');
-    serialize("%03u", precise);
+    push_number((unsigned long long)precise, 3);
     push_char(']');
+    size_t closed_id = offset_ >= buff_len_ ? offset_ - 1 : offset_;
+    buff_[closed_id] = '\0';
     return *this;
 }
 
