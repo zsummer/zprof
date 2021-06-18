@@ -375,108 +375,90 @@ public:
             PerfNode* node = NULL;
             long long append = 0;
             int node_id = 0;
-            if (true)
+            node = &nodes_[leaf.merge_to];
+            append = leaf.cpu.t_u;
+            node_id = leaf.merge_to;
+            leaf.cpu.t_u = 0;
+            do
             {
-                node = &nodes_[leaf.merge_to]; 
-                append = leaf.cpu.t_u;
-                node_id = leaf.merge_to;
-                leaf.cpu.t_u = 0;
-                do
+                node->cpu.t_u += append;
+                node->cpu.t_c++;
+                if (node->cpu.t_c >= node->merge_child_count)
                 {
-                    node->cpu.t_u += append;
-                    node->cpu.t_c++;
-                    if (node->cpu.t_c >= node->merge_child_count)
+                    node->cpu.t_c = 0;
+                    if (node->cpu.t_u == 0)
                     {
-                        node->cpu.t_c = 0;
-                        if (node->cpu.t_u == 0)
-                        {
-                            break;
-                        }
-                        append = node->cpu.t_u;
-                        call_cpu_full(node_id, append);
-                        node->cpu.t_u = 0;
-                        if (node->merge_to != 0)
-                        {
-                            node_id = node->merge_to;
-                            node = &nodes_[node->merge_to];
-                            continue;
-                        }
-                        else
-                        {
-                            break;
-                        }
+                        break;
                     }
-                    break;
-                } while (true);
-            }
-            if (true)
+                    append = node->cpu.t_u;
+                    call_cpu_full(node_id, append);
+                    node->cpu.t_u = 0;
+                    if (node->merge_to == 0)
+                    {
+                        break;
+                    }
+                    node_id = node->merge_to;
+                    node = &nodes_[node->merge_to];
+                    continue;
+                }
+                break;
+            } while (true);
+            node = &nodes_[leaf.merge_to];
+            append = leaf.mem.t_u;
+            node_id = leaf.merge_to;
+            leaf.mem.t_u = 0;
+            do
             {
-                node = &nodes_[leaf.merge_to];
-                append = leaf.mem.t_u;
-                node_id = leaf.merge_to;
-                leaf.mem.t_u = 0;
-                do
+                node->mem.t_u += append;
+                node->mem.t_c++;
+                if (node->mem.t_c >= node->merge_child_count)
                 {
-                    node->mem.t_u += append;
-                    node->mem.t_c++;
-                    if (node->mem.t_c >= node->merge_child_count)
+                    node->mem.t_c = 0;
+                    if (node->mem.t_u == 0)
                     {
-                        node->mem.t_c = 0;
-                        if (node->mem.t_u == 0)
-                        {
-                            break;
-                        }
-                        append = node->mem.t_u;
-                        call_mem(node_id, 1, append);
-                        node->mem.t_u = 0;
-                        if (node->merge_to != 0)
-                        {
-                            node_id = node->merge_to;
-                            node = &nodes_[node->merge_to];
-                            continue;
-                        }
-                        else
-                        {
-                            break;
-                        }
+                        break;
                     }
-                    break;
-                } while (true);
-            }
-            if (true)
+                    append = node->mem.t_u;
+                    call_mem(node_id, 1, append);
+                    node->mem.t_u = 0;
+                    if (node->merge_to == 0)
+                    {
+                        break;
+                    }
+                    node_id = node->merge_to;
+                    node = &nodes_[node->merge_to];
+                    continue;
+                }
+                break;
+            } while (true);
+            node = &nodes_[leaf.merge_to];
+            append = leaf.user.t_u;
+            node_id = leaf.merge_to;
+            leaf.user.t_u = 0;
+            do
             {
-                node = &nodes_[leaf.merge_to];
-                append = leaf.user.t_u;
-                node_id = leaf.merge_to;
-                leaf.user.t_u = 0;
-                do
+                node->user.t_u += append;
+                node->user.t_c++;
+                if (node->user.t_c >= node->merge_child_count)
                 {
-                    node->user.t_u += append;
-                    node->user.t_c++;
-                    if (node->user.t_c >= node->merge_child_count)
+                    node->user.t_c = 0;
+                    if (node->user.t_u == 0)
                     {
-                        node->user.t_c = 0;
-                        if (node->user.t_u == 0)
-                        {
-                            break;
-                        }
-                        append = node->user.t_u;
-                        call_user(node_id, 1, append);
-                        node->user.t_u = 0;
-                        if (node->merge_to != 0)
-                        {
-                            node_id = node->merge_to;
-                            node = &nodes_[node->merge_to];
-                            continue;
-                        }
-                        else
-                        {
-                            break;
-                        }
+                        break;
                     }
-                    break;
-                } while (true);
-            }
+                    append = node->user.t_u;
+                    call_user(node_id, 1, append);
+                    node->user.t_u = 0;
+                    if (node->merge_to == 0)
+                    {
+                        break;
+                    }
+                    node_id = node->merge_to;
+                    node = &nodes_[node->merge_to];
+                    continue;
+                }
+                break;
+            } while (true);
         }
         call_cpu(INST_INNER_MERGE_ALL_COST, cost.stop_and_save().cycles());
     }
@@ -585,15 +567,19 @@ int PerfRecord<INST, RESERVE, DECLARE,  ANON>::bind_merge(int idx, int to)
         return -3; //regist method has memset all info ; 
     }
     to_node.merge_child_count++;
-    for (int i = 0; i < merge_to_size_; i++)
+    if (to_node.merge_child_count == 1 && to_node.merge_to != 0)
     {
-        if (merge_to_[i] == to)
+        for (int i = 0; i < merge_to_size_; i++)
         {
-            node.merge_to = to;
-            merge_to_[i] = idx;
-            return 0;
+            if (merge_to_[i] == to)
+            {
+                node.merge_to = to;
+                merge_to_[i] = idx;
+                return 0;
+            }
         }
     }
+
     node.merge_to = to;
     merge_to_[merge_to_size_++] = idx;
     return 0;
