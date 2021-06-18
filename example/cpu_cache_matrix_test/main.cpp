@@ -94,8 +94,8 @@ int main(int argc, char *argv[])
         LogError() << "test has error";
         return -1;
     }
-    LogInfo() << "cpu cache normal friendly    use cicles:" << ordered_cicles << ", read use:" << ordered_cicles * 1.0 / matrix_size << "per item";
-    LogInfo() << "cpu cache normal unfriendly  use cicles:" << jump_cicles    << ", read use:" << jump_cicles * 1.0 / matrix_size << "per item";
+    LogInfo() << "cpu cache normal friendly    use cicles:" << ordered_cicles << ", read use cycles:" << ordered_cicles * 1.0 / matrix_size << "per item";
+    LogInfo() << "cpu cache normal unfriendly  use cicles:" << jump_cicles    << ", read use cycles:" << jump_cicles * 1.0 / matrix_size << "per item";
 
     ordered_sum = 0;
     ordered_cicles = 0;
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
     jump_cicles = 0;
     
 
-#define CELL_SIZE 32
+#define CELL_SIZE 64
     cost.start();
     for (long long x = 0; x < matrix_x; x++)
     {
@@ -137,8 +137,8 @@ int main(int argc, char *argv[])
         LogError() << "test has error";
         return -1;
     }
-    LogInfo() << "cpu cache block friendly   use cicles:" << ordered_cicles << ", read use:" << ordered_cicles * 1.0 / matrix_size << "per item";
-    LogInfo() << "cpu cache block unfriendly use cicles:" << jump_cicles << ", read use:" << jump_cicles * 1.0 / matrix_size << "per item";
+    LogInfo() << "cpu cache block friendly   use cicles:" << ordered_cicles << ", read use cycles:" << ordered_cicles * 1.0 / matrix_size << "per item";
+    LogInfo() << "cpu cache block unfriendly use cicles:" << jump_cicles << ", read use cycles:" << jump_cicles * 1.0 / matrix_size << "per item";
 
 
 
@@ -290,9 +290,9 @@ int main(int argc, char *argv[])
     empty_cicles = cost.stop_and_save().cycles();
 
 
-    LogInfo() << "cpu cache brownian empty  use cicles:" << empty_cicles << ", read use:" << empty_cicles * 1.0 / matrix_y << "per item";
-    LogInfo() << "cpu cache brownian block  use cicles:" << ordered_cicles << ", read use:" << ordered_cicles * 1.0 / matrix_y << "per item";
-    LogInfo() << "cpu cache brownian normal use cicles:" << jump_cicles << ", read use:" << jump_cicles * 1.0 / matrix_y << "per item";
+    LogInfo() << "cpu cache brownian empty  use cicles:" << empty_cicles << ", read use cycles:" << empty_cicles * 1.0 / matrix_y << "per item";
+    LogInfo() << "cpu cache brownian block  use cicles:" << ordered_cicles << ", read use cycles:" << ordered_cicles * 1.0 / matrix_y << "per item";
+    LogInfo() << "cpu cache brownian normal use cicles:" << jump_cicles << ", read use cycles:" << jump_cicles * 1.0 / matrix_y << "per item";
 
 
 
