@@ -1,5 +1,5 @@
 /*
-* zperf License
+* zprof License
 * Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,12 +36,12 @@ typedef float f32;
 
 int main(int argc, char *argv[])
 {
-    PERF_INIT("inner perf");
-    PERF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PERF_CPU_NORMAL, "self use mem in main func begin and exit");
-    PERF_REGISTER_REFRESH_MEM(delta.reg(), perf_get_mem_use());
+    PROF_INIT("inner prof");
+    PROF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PROF_LEVEL_NORMAL, "self use mem in main func begin and exit");
+    PROF_REGISTER_REFRESH_MEM(delta.reg(), prof_get_mem_use());
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PERF_CPU_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
 

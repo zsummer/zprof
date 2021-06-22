@@ -1,6 +1,6 @@
 
 /*
-* zperf License
+* zprof License
 * Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-#include "zperf.h"
+#include "zprof.h"
 #include "test.h"
 
 int fence_func()
@@ -26,16 +26,16 @@ int fence_func()
 
 int test_call_cpu()
 {
-    PERF_CALL_CPU(PerfInstType::node_reserve_begin_id(), 0x12345);
+    PROF_CALL_CPU(ProfInstType::node_reserve_begin_id(), 0x12345);
     volatile int ret = fence_func();
-    PERF_CALL_CPU_SAMPLE(PerfInstType::node_reserve_begin_id(), 0x54321);
+    PROF_CALL_CPU_SAMPLE(ProfInstType::node_reserve_begin_id(), 0x54321);
     return ret;
 }
 
 void entry_mem_test()
 {
-    PERF_DEFINE_COUNTER(counter);
-    PERF_START_COUNTER(counter);
+    PROF_DEFINE_COUNTER(counter);
+    PROF_START_COUNTER(counter);
     
 
     for (size_t i = 0; i < 10000; i++)
@@ -43,20 +43,20 @@ void entry_mem_test()
         char* ptr = new char[100];
         delete[] ptr;
     }
-    PERF_CALL_CPU_WRAP(ENUM_BAT_ALLOC_FREE, 10000, counter.save().cycles(), PERF_CPU_NORMAL);
+    PROF_CALL_CPU_WRAP(ENUM_BAT_ALLOC_FREE, 10000, counter.save().cycles(), PROF_LEVEL_NORMAL);
 
-    PERF_DEFINE_AUTO_RECORD(guard, ENUM_ENTRY);
+    PROF_DEFINE_AUTO_RECORD(guard, ENUM_ENTRY);
 
     for (size_t i = 0; i < 10000; i++)
     {
-        PERF_START_COUNTER(counter);
+        PROF_START_COUNTER(counter);
         char* ptr = new char[10];
-        PERF_CALL_CPU_WRAP(ENUM_ALLOC, 1, counter.save().cycles(), PERF_CPU_NORMAL);
-        PERF_CALL_MEM(ENUM_ALLOC, 1, 10);
-        PERF_START_COUNTER(counter);
+        PROF_CALL_CPU_WRAP(ENUM_ALLOC, 1, counter.save().cycles(), PROF_LEVEL_NORMAL);
+        PROF_CALL_MEM(ENUM_ALLOC, 1, 10);
+        PROF_START_COUNTER(counter);
         delete[] ptr;
-        PERF_CALL_CPU_WRAP(ENUM_FREE, 1, counter.save().cycles(), PERF_CPU_NORMAL);
-        PERF_CALL_MEM(ENUM_FREE, 1, 10);
+        PROF_CALL_CPU_WRAP(ENUM_FREE, 1, counter.save().cycles(), PROF_LEVEL_NORMAL);
+        PROF_CALL_MEM(ENUM_FREE, 1, 10);
     }
     test_call_cpu();
 }

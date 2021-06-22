@@ -1,5 +1,5 @@
 /*
-* zperf License
+* zprof License
 * Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,14 +42,14 @@ int main(int argc, char *argv[])
 {
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PERF_CPU_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
     LogDebug() << " main begin test. ";
 
 
     //³õÊ¼»¯   
-    PERF_INIT("inner perf");
+    PROF_INIT("inner prof");
 
 #ifdef STACK_MEM
     const int ARRAY_SIZE = 8 * 1024 / sizeof(int);
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
         check_array[i] = rand()% THRESHLOD;
     }
 
-    PerfCounter<PERF_COUNTER_RDTSC_BTB> cost;
+    ProfCounter<PROF_COUNTER_RDTSC_BTB> cost;
     volatile int val = 0;
     val++;
     volatile int loops = ARRAY_SIZE;

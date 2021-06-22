@@ -1,5 +1,5 @@
 /*
-* zperf License
+* zprof License
 * Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,11 +36,11 @@ typedef float f32;
 
 int main(int argc, char *argv[])
 {
-    PERF_INIT("inner perf");
+    PROF_INIT("inner prof");
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PERF_CPU_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
 
@@ -95,9 +95,9 @@ int main(int argc, char *argv[])
                 long long count = 0;
                 for (size_t i = 0; i < 100; i++)
                 {
-                    begin_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
+                    begin_cicle = prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
                     FIVE_HUNDRED;
-                    end_cicle = perf_get_time_cycle<PERF_COUNTER_RDTSC_BTB>();
+                    end_cicle = prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
                     total += end_cicle - begin_cicle;
                     count += 500;
                 }

@@ -1,6 +1,6 @@
 
 /*
-* zperf License
+* zprof License
 * Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,11 +20,11 @@
 #ifndef  TEST_H
 #define TEST_H
 
-#include "zperf.h"
+#include "zprof.h"
 
 enum MyEnum
 {
-    ENUM_PERF_TEST = PerfInstType::node_declare_begin_id(),
+    ENUM_PROF_TEST = ProfInstType::node_declare_begin_id(),
     ENUM_BAT_ALLOC_FREE,
     ENUM_ONE_TICK,
     ENUM_ENTRY,
@@ -42,36 +42,36 @@ enum MyEnum
 };
 
 
-inline void regist_perf()
+inline void regist_prof()
 {
-    PERF_FAST_REGIST_NODE(ENUM_PERF_TEST);
-    PERF_FAST_REGIST_NODE(ENUM_ONE_TICK);
-    PERF_FAST_REGIST_NODE(ENUM_BAT_ALLOC_FREE);
-    PERF_FAST_REGIST_NODE(ENUM_ENTRY);
-    PERF_FAST_REGIST_NODE(ENUM_ALLOC_SUM);
-    PERF_FAST_REGIST_NODE(ENUM_ALLOC);
-    PERF_FAST_REGIST_NODE(ENUM_FREE_SUM);
-    PERF_FAST_REGIST_NODE(ENUM_FREE);
-    PERF_FAST_REGIST_NODE(ENUM_MERGE_ROOT);
-    PERF_FAST_REGIST_NODE(ENUM_MERGE_PARRENT);
-    PERF_FAST_REGIST_NODE(ENUM_MERGE_CHILD1);
-    PERF_FAST_REGIST_NODE(ENUM_MERGE_CHILD2);
-    PERF_FAST_REGIST_NODE(ENUM_MERGE_CHILD3);
+    PROF_FAST_REGIST_NODE(ENUM_PROF_TEST);
+    PROF_FAST_REGIST_NODE(ENUM_ONE_TICK);
+    PROF_FAST_REGIST_NODE(ENUM_BAT_ALLOC_FREE);
+    PROF_FAST_REGIST_NODE(ENUM_ENTRY);
+    PROF_FAST_REGIST_NODE(ENUM_ALLOC_SUM);
+    PROF_FAST_REGIST_NODE(ENUM_ALLOC);
+    PROF_FAST_REGIST_NODE(ENUM_FREE_SUM);
+    PROF_FAST_REGIST_NODE(ENUM_FREE);
+    PROF_FAST_REGIST_NODE(ENUM_MERGE_ROOT);
+    PROF_FAST_REGIST_NODE(ENUM_MERGE_PARRENT);
+    PROF_FAST_REGIST_NODE(ENUM_MERGE_CHILD1);
+    PROF_FAST_REGIST_NODE(ENUM_MERGE_CHILD2);
+    PROF_FAST_REGIST_NODE(ENUM_MERGE_CHILD3);
 
-    PERF_BIND_CHILD(ENUM_ENTRY, ENUM_ALLOC_SUM);
-    PERF_BIND_CHILD(ENUM_ENTRY, ENUM_FREE_SUM);
-    PERF_BIND_CHILD(ENUM_ALLOC_SUM, ENUM_ALLOC);
-    PERF_BIND_CHILD(ENUM_FREE_SUM, ENUM_FREE);
+    PROF_BIND_CHILD(ENUM_ENTRY, ENUM_ALLOC_SUM);
+    PROF_BIND_CHILD(ENUM_ENTRY, ENUM_FREE_SUM);
+    PROF_BIND_CHILD(ENUM_ALLOC_SUM, ENUM_ALLOC);
+    PROF_BIND_CHILD(ENUM_FREE_SUM, ENUM_FREE);
 
-    PERF_BIND_MERGE(ENUM_ONE_TICK, ENUM_BAT_ALLOC_FREE);
+    PROF_BIND_MERGE(ENUM_ONE_TICK, ENUM_BAT_ALLOC_FREE);
 
-    PERF_BIND_CHILD_AND_MERGE(ENUM_MERGE_ROOT, ENUM_MERGE_PARRENT);
-    PERF_BIND_CHILD_AND_MERGE(ENUM_MERGE_PARRENT, ENUM_MERGE_CHILD1);
-    PERF_BIND_CHILD_AND_MERGE(ENUM_MERGE_PARRENT, ENUM_MERGE_CHILD2);
-    PERF_BIND_CHILD_AND_MERGE(ENUM_MERGE_PARRENT, ENUM_MERGE_CHILD3);
+    PROF_BIND_CHILD_AND_MERGE(ENUM_MERGE_ROOT, ENUM_MERGE_PARRENT);
+    PROF_BIND_CHILD_AND_MERGE(ENUM_MERGE_PARRENT, ENUM_MERGE_CHILD1);
+    PROF_BIND_CHILD_AND_MERGE(ENUM_MERGE_PARRENT, ENUM_MERGE_CHILD2);
+    PROF_BIND_CHILD_AND_MERGE(ENUM_MERGE_PARRENT, ENUM_MERGE_CHILD3);
 
 
-    PERF_INIT_JUMP_COUNT();
+    PROF_INIT_JUMP_COUNT();
 }
 
 
@@ -81,14 +81,18 @@ void entry_mem_test();
 inline std::string human_time_format(long long cycles)
 {
     char buff[50];
-    PerfSerializeBuffer buffer(buff, sizeof(buff));
-    return buffer.push_human_time(cycles).buff();
+    ProfSerializeBuffer buffer(buff, sizeof(buff));
+    buffer.push_human_time(cycles);
+    buffer.closing_string();
+    return buff;
 }
 inline std::string human_count_format(long long cycles)
 {
     char buff[50];
-    PerfSerializeBuffer buffer(buff, sizeof(buff));
-    return buffer.push_human_count(cycles).buff();
+    ProfSerializeBuffer buffer(buff, sizeof(buff));
+    buffer.push_human_count(cycles);
+    buffer.closing_string();
+    return buff;
 }
 
 #endif

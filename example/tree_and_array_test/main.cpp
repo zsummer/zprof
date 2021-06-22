@@ -1,5 +1,5 @@
 /*
-* zperf License
+* zprof License
 * Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,14 +56,14 @@ public:
 
 int main(int argc, char *argv[])
 {
-    PERF_INIT("inner perf");
-    //PerfInst.init_perf("inner perf");
-    regist_perf();
-    PERF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PERF_CPU_NORMAL, "self use mem in main func begin and exit");
-    PERF_REGISTER_REFRESH_MEM(delta.reg(), perf_get_mem_use());
+    PROF_INIT("inner prof");
+    //ProfInst.init_prof("inner prof");
+    regist_prof();
+    PROF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PROF_LEVEL_NORMAL, "self use mem in main func begin and exit");
+    PROF_REGISTER_REFRESH_MEM(delta.reg(), prof_get_mem_use());
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PERF_CPU_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
 
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     std::map<u64, EntityCell> entity_map;
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_unordered_map insert cost ");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PROF_LEVEL_NORMAL, "entity_unordered_map insert cost ");
         for (float i = 0; i < 800; i += 1.0)
         {
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_unordered_map grid view cost ");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PROF_LEVEL_NORMAL, "entity_unordered_map grid view cost ");
         cycles = 0;
         for (float i = 0; i < 800; i += 1.0)
         {
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_unordered_map erase cost ");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PROF_LEVEL_NORMAL, "entity_unordered_map erase cost ");
         for (float i = 0; i < 800; i += 1.0)
         {
             for (float j = 0; j < 800; j += 1.0)
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_hash_map insert cost ");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PROF_LEVEL_NORMAL, "entity_hash_map insert cost ");
         for (float i = 0; i < 800; i += 1.0)
         {
 
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_hash_map grid view cost ");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PROF_LEVEL_NORMAL, "entity_hash_map grid view cost ");
         cycles = 0;
         for (float i = 0; i < 800; i += 1.0)
         {
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_hash_map erase cost ");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PROF_LEVEL_NORMAL, "entity_hash_map erase cost ");
         for (float i = 0; i < 800; i += 1.0)
         {
             for (float j = 0; j < 800; j += 1.0)
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_map insert cost ");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PROF_LEVEL_NORMAL, "entity_map insert cost ");
         for (float i = 0; i < 800; i += 1.0)
         {
 
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_map grid view cost ");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PROF_LEVEL_NORMAL, "entity_map grid view cost ");
         cycles = 0;
         for (float i = 0; i < 800; i += 1.0)
         {
@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PERF_CPU_NORMAL, "entity_map erase cost ");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 800 * 800, PROF_LEVEL_NORMAL, "entity_map erase cost ");
         for (float i = 0; i < 800; i += 1.0)
         {
             for (float j = 0; j < 800; j += 1.0)
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
     
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "std::hash<u64>");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "std::hash<u64>");
         volatile size_t ret = 0;
         std::hash<u64> h;
         volatile int loop_count = 10000;
@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "x,y hash");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "x,y hash");
         volatile size_t ret = 0;
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i ++)
@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
         {
             return (((unsigned int)x * 73856093) ^ ((unsigned int)y * 19349663)) & (bucket_size - 1);
         };
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "detour x y hash");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "detour x y hash");
         volatile size_t ret = 0;
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i++)
@@ -294,7 +294,7 @@ int main(int argc, char *argv[])
         {
             return (((input >> 32) * 73856093) ^ ((input & 0xffffffff) * 19349663)) & (bucket_size - 1);
         };
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "detour u64 hash");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "detour u64 hash");
         volatile size_t ret = 0;
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i++)
@@ -313,7 +313,7 @@ int main(int argc, char *argv[])
             input ^= input >> 47;
             return input & (bucket_size - 1);
         };
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "Xorshifts and one multiplication");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "Xorshifts and one multiplication");
         volatile size_t ret = 0;
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i++)
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
         }
         if (true)
         {
-            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "map_string insert 10000");
+            PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "map_string insert 10000");
             for (size_t i = 0; i < 10000; i++)
             {
                 map_string[datas[i]] = i;
@@ -343,7 +343,7 @@ int main(int argc, char *argv[])
         }
         if (true)
         {
-            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "hashmap_string insert 10000");
+            PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "hashmap_string insert 10000");
             for (size_t i = 0; i < 10000; i++)
             {
                 hashmap_string[datas[i]] = i;
@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
 
         if (true)
         {
-            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "map_string find 10000");
+            PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "map_string find 10000");
             for (size_t i = 0; i < 10000; i++)
             {
                 cycles += map_string.at(datas[i]);
@@ -361,7 +361,7 @@ int main(int argc, char *argv[])
 
         if (true)
         {
-            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "hashmap_string find 10000");
+            PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "hashmap_string find 10000");
             for (size_t i = 0; i < 10000; i++)
             {
                 cycles += hashmap_string.at(datas[i]);
@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
 
         if (true)
         {
-            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "map_string erase 10000");
+            PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "map_string erase 10000");
             for (size_t i = 0; i < 10000; i++)
             {
                 map_string.erase(datas[i]);
@@ -378,7 +378,7 @@ int main(int argc, char *argv[])
         }
         if (true)
         {
-            PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "hashmap_string erase 10000");
+            PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "hashmap_string erase 10000");
             for (size_t i = 0; i < 10000; i++)
             {
                 hashmap_string.erase(datas[i]);
@@ -396,7 +396,7 @@ int main(int argc, char *argv[])
             input *= 0xc6a4a7935bd1e995ULL;
             return input & (bucket_size - 1);
         };
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PERF_CPU_NORMAL, "Xorshifts and two multiplication");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000, PROF_LEVEL_NORMAL, "Xorshifts and two multiplication");
         volatile size_t ret = 0;
         volatile int loop_count = 10000;
         for (int i = 0; i < loop_count; i++)
@@ -412,7 +412,7 @@ int main(int argc, char *argv[])
 
 
 
-    PERF_SERIALIZE_FN_LOG();
+    PROF_SERIALIZE_FN_LOG();
 
  
     if (true)
