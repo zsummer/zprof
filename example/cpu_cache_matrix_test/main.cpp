@@ -94,8 +94,8 @@ int main(int argc, char *argv[])
         LogError() << "test has error";
         return -1;
     }
-    LogInfo() << "cpu cache normal friendly    use cicles:" << ordered_cicles << ", read use cycles:" << ordered_cicles * 1.0 / matrix_size << "per item";
-    LogInfo() << "cpu cache normal unfriendly  use cicles:" << jump_cicles    << ", read use cycles:" << jump_cicles * 1.0 / matrix_size << "per item";
+    LogInfo() << "cpu cache: order sum matrix use cicles:" << ordered_cicles << ", read use cycles:" << ordered_cicles * 1.0 / matrix_size << "per item";
+    LogInfo() << "cpu cache out order sum matrix use cicles:" << jump_cicles    << ", read use cycles:" << jump_cicles * 1.0 / matrix_size << "per item";
 
     ordered_sum = 0;
     ordered_cicles = 0;
@@ -137,8 +137,8 @@ int main(int argc, char *argv[])
         LogError() << "test has error";
         return -1;
     }
-    LogInfo() << "cpu cache block friendly   use cicles:" << ordered_cicles << ", read use cycles:" << ordered_cicles * 1.0 / matrix_size << "per item";
-    LogInfo() << "cpu cache block unfriendly use cicles:" << jump_cicles << ", read use cycles:" << jump_cicles * 1.0 / matrix_size << "per item";
+    LogInfo() << "cpu cache block : order sum matrix  use cicles:" << ordered_cicles << ", read use cycles:" << ordered_cicles * 1.0 / matrix_size << "per item";
+    LogInfo() << "cpu cache block: out order sum matrix cicles:" << jump_cicles << ", read use cycles:" << jump_cicles * 1.0 / matrix_size << "per item";
 
 
 
@@ -149,8 +149,8 @@ int main(int argc, char *argv[])
     long long sign_x = 1;
     long long y = 0;
     long long sign_y = 1;
-    long long step_x = 5;
-    long long step_y = 3;
+    long long step_x = 1;
+    long long step_y = 2;
 
     ordered_sum = 0;
     ordered_cicles = 0;
@@ -166,32 +166,32 @@ int main(int argc, char *argv[])
         {
             sign_x = -1;
             x = matrix_x - 1;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         if (x < 0 && sign_x < 0)
         {
             sign_x = 1;
             x = 0;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         if (y >= matrix_y && sign_y > 0)
         {
             sign_y = -1;
             y = matrix_y - 1;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         if (y < 0 && sign_y < 0)
         {
             sign_y = 1;
             y = 0;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
 
@@ -214,32 +214,32 @@ int main(int argc, char *argv[])
         {
             sign_x = -1;
             x = matrix_x - 1;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         if (x < 0 && sign_x < 0)
         {
             sign_x = 1;
             x = 0;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         if (y >= matrix_y && sign_y > 0)
         {
             sign_y = -1;
             y = matrix_y - 1;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         if (y < 0 && sign_y < 0)
         {
             sign_y = 1;
             y = 0;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         jump_sum += *(matrix + y * matrix_y + x);
@@ -257,32 +257,32 @@ int main(int argc, char *argv[])
         {
             sign_x = -1;
             x = matrix_x - 1;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         if (x < 0 && sign_x < 0)
         {
             sign_x = 1;
             x = 0;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         if (y >= matrix_y && sign_y > 0)
         {
             sign_y = -1;
             y = matrix_y - 1;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         if (y < 0 && sign_y < 0)
         {
             sign_y = 1;
             y = 0;
-            step_x = rand() % 6 + 1;
-            step_y = rand() % 6 + 1;
+            step_x = rand() % 2 + 1;
+            step_y = rand() % 2 + 1;
             continue;
         }
         empty_sum += x + y;
