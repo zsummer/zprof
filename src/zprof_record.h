@@ -873,48 +873,48 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
     }
 
 
-
+#define STRLEN(str) str, strlen(str)
     if (node.cpu.c > 0)
     {
         buffer.push_char(' ', depth * 2);
         buffer.push_char('[', 2);
         buffer.push_char(' ');
-        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name]);
+        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name], node_descs_[entry_idx].node_name_len);
         buffer.push_char(' ');
         buffer.push_char(']', 2);
         buffer.push_char(' ', name_blank);
-        buffer.push_string("cpu: call:");
+        buffer.push_string(STRLEN("cpu: call:"));
 
         buffer.push_human_count(node.cpu.c);
-        buffer.push_string("\t avg:");
+        buffer.push_string(STRLEN("\t avg:"));
         buffer.push_human_time((long long)(node.cpu.sum * circles_per_ns(node_descs_[entry_idx].counter_type) / node.cpu.c));
-        buffer.push_string("\t sum:");
+        buffer.push_string(STRLEN("\t sum:"));
         buffer.push_human_time((long long)(node.cpu.sum * circles_per_ns(node_descs_[entry_idx].counter_type)));
         if (node.cpu.dv > 0 || node.cpu.sm > 0)
         {
-            buffer.push_string("\t --||-- ");
-            buffer.push_string(" dv:");
+            buffer.push_string(STRLEN("\t --||-- "));
+            buffer.push_string(STRLEN(" dv:"));
             buffer.push_human_time((long long)(node.cpu.dv * circles_per_ns(node_descs_[entry_idx].counter_type) / node.cpu.c));
-            buffer.push_string(" sm:");
+            buffer.push_string(STRLEN(" sm:"));
             buffer.push_human_time((long long)(node.cpu.sm * circles_per_ns(node_descs_[entry_idx].counter_type)));
         }
         if (node.cpu.h_sm > 0 || node.cpu.l_sm > 0)
         {
-            buffer.push_string("\t --||-- ");
-            buffer.push_string(" hsm:");
+            buffer.push_string(STRLEN("\t --||-- "));
+            buffer.push_string(STRLEN(" hsm:"));
             buffer.push_human_time((long long)(node.cpu.h_sm * circles_per_ns(node_descs_[entry_idx].counter_type)));
-            buffer.push_string(" lsm:");
+            buffer.push_string(STRLEN(" lsm:"));
             buffer.push_human_time((long long)(node.cpu.l_sm * circles_per_ns(node_descs_[entry_idx].counter_type)));
         }
         if (node.cpu.min_u != LLONG_MAX && node.cpu.max_u > 0)
         {
-            buffer.push_string("\t --||-- ");
-            buffer.push_string(" max:");
+            buffer.push_string(STRLEN("\t --||-- "));
+            buffer.push_string(STRLEN(" max:"));
             buffer.push_human_time((long long)(node.cpu.max_u * circles_per_ns(node_descs_[entry_idx].counter_type)));
-            buffer.push_string(" min:");
+            buffer.push_string(STRLEN(" min:"));
             buffer.push_human_time((long long)(node.cpu.min_u * circles_per_ns(node_descs_[entry_idx].counter_type)));
         }
-        buffer.push_string(PROF_LINE_FEED);
+        buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
         call_cpu_full(INNER_PROF_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
@@ -934,25 +934,25 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         buffer.push_char(' ', depth * 2);
         buffer.push_char('[', 2);
         buffer.push_char(' ');
-        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name]);
+        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name], node_descs_[entry_idx].node_name_len);
         buffer.push_char(' ');
         buffer.push_char(']', 2);
         buffer.push_char(' ', name_blank);
-        buffer.push_string("mem: call:");
+        buffer.push_string(STRLEN("mem: call:"));
 
         buffer.push_human_count(node.mem.c);
-        buffer.push_string("\t avg:");
+        buffer.push_string(STRLEN("\t avg:"));
         buffer.push_human_mem(node.mem.sum / node.mem.c);
-        buffer.push_string("\t sum:");
+        buffer.push_string(STRLEN("\t sum:"));
         buffer.push_human_mem(node.mem.sum);
         if (node.mem.delta > 0)
         {
-            buffer.push_string("\t last sum:");
+            buffer.push_string(STRLEN("\t last sum:"));
             buffer.push_human_mem(node.mem.sum - node.mem.delta);
-            buffer.push_string("\t delta:");
+            buffer.push_string(STRLEN("\t delta:"));
             buffer.push_human_mem(node.mem.delta);
         }
-        buffer.push_string(PROF_LINE_FEED);
+        buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
         call_cpu_full(INNER_PROF_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
@@ -972,19 +972,19 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         buffer.push_char(' ', depth * 2);
         buffer.push_char('[', 2);
         buffer.push_char(' ');
-        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name]);
+        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name], node_descs_[entry_idx].node_name_len);
         buffer.push_char(' ');
         buffer.push_char(']', 2);
         buffer.push_char(' ', name_blank);
-        buffer.push_string("usr: call:");
+        buffer.push_string(STRLEN("usr: call:"));
 
         buffer.push_human_count(node.user.c);
-        buffer.push_string("\t avg:");
+        buffer.push_string(STRLEN("\t avg:"));
         buffer.push_human_count(node.user.sum / node.user.c);
-        buffer.push_string("\t sum:");
+        buffer.push_string(STRLEN("\t sum:"));
         buffer.push_human_count(node.user.sum);
         
-        buffer.push_string(PROF_LINE_FEED);
+        buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
         call_cpu_full(INNER_PROF_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());

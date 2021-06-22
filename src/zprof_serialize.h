@@ -58,6 +58,7 @@ public:
     inline ProfSerializeBuffer& push_human_mem(long long bytes);
     inline ProfSerializeBuffer& push_char(char ch, int repeat = 1);
     inline ProfSerializeBuffer& push_string(const char* str);
+    inline ProfSerializeBuffer& push_string(const char* str, size_t size);
     inline ProfSerializeBuffer& push_now_date();
     inline ProfSerializeBuffer& push_number(unsigned long long number, int wide = 0);
     inline ProfSerializeBuffer& push_number(long long number, int wide = 0);
@@ -139,21 +140,36 @@ ProfSerializeBuffer& ProfSerializeBuffer::push_human_time(long long ns)
     {
         return *this;
     }
-    unsigned long long id = 3;
-    static const struct {
-        unsigned long long rate;
-        char fc;
-        char lc;
-    } rate_array[] = { {1000 * 1000 * 1000, 's', ' '},  {1000 * 1000, 'm', 's'}, {1000, 'u', 's'}, {1, 'n', 's'} };
-
-    id = ns >= 1000 ? 2 : id;
-    id = ns >= 1000 * 1000 ? 1 : id;
-    id = ns >= 1000 * 1000 * 1000 ? 0 : id;
-    push_number((unsigned long long)(ns/rate_array[id].rate));
+    long long fr = 1;
+    long long mr = 1000;
+    char fc = 'n';
+    char lc = 's';
+    if (ns >= 1000*1000*1000)
+    {
+        fr = 1000 * 1000 * 1000;
+        mr = 1000 * 1000;
+        fc = 's';
+        lc = ' ';
+    }
+    else if (ns >= 1000*1000)
+    {
+        fr = 1000  * 1000;
+        mr = 1000;
+        fc = 'm';
+        lc = 's';
+    }
+    else if (ns >= 1000)
+    {
+        fr = 1000;
+        mr = 1;
+        fc = 'u';
+        lc = 's';
+    }
+    push_number((unsigned long long)(ns/ fr));
     buff_[offset_++] = '.';
-    push_number((unsigned long long)((ns * 1000 / rate_array[id].rate) % 1000), 3);
-    buff_[offset_++] = rate_array[id].fc;
-    buff_[offset_++] = rate_array[id].lc;
+    push_number((unsigned long long)((ns/ mr) % 1000), 3);
+    buff_[offset_++] = fc;
+    buff_[offset_++] = lc;
     return *this;
 }
 
@@ -266,6 +282,7 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_number(long long number, i
 
 inline ProfSerializeBuffer& ProfSerializeBuffer::push_string(const char* str)
 {
+    return push_string(str, strlen(str));
     if (str == NULL)
     {
         return *this;
@@ -276,7 +293,23 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_string(const char* str)
     }
     return *this;
 }
-
+inline ProfSerializeBuffer& ProfSerializeBuffer::push_string(const char* str, size_t size)
+{
+    if (str == NULL)
+    {
+        return *this;
+    }
+    size_t max_size = buff_len_ - offset_ > size ? size : buff_len_ - offset_;
+    memcpy(buff_ + offset_, str, max_size);
+    offset_ += max_size;
+    /*
+    while (*str != '\0' && offset_ < buff_len_)
+    {
+        buff_[offset_++] = *str++;
+    }
+    */
+    return *this;
+}
 inline ProfSerializeBuffer& ProfSerializeBuffer::push_now_date()
 {
     time_t timestamp = 0;

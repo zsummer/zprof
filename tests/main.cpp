@@ -137,6 +137,7 @@ int main(int argc, char *argv[])
 
 
         PROF_CLEAN_DECLARE();
+        PROF_UPDATE_MERGE();
         PROF_SERIALIZE_FN_LOG();
 
 
@@ -148,7 +149,6 @@ int main(int argc, char *argv[])
         PROF_CALL_USER(ot.node_id(), 1, 102);
         PROF_CALL_USER(ot.node_id(), 1, 103);
     }
-
 
 
 
@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (true)
+    if (false)
     {
         PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 20, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSCP bat 20");
         for (size_t i = 0; i < 20; i++)
@@ -390,7 +390,7 @@ int main(int argc, char *argv[])
             PROF_REGISTER_RECORD(rec);
         }
     }
-    if (true)
+    if (false)
     {
         PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSCP dis 20", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 20; i++)
@@ -805,6 +805,11 @@ int main(int argc, char *argv[])
         LogDebug() << "steady_clock stamp use:" << steady_clock * 1.0 << "c" << ", inner count:" << human_count_format(steady_clock);
         LogDebug() << "sys_clock stamp use:" << sys_clock * 1.0 << "c" << ", inner count:" << human_count_format(sys_clock);
 
+    }
+    for (size_t i = 0; i < 10; i++)
+    {
+        PROF_UPDATE_MERGE();
+        PROF_SERIALIZE_FN_LOG();
     }
 
 
