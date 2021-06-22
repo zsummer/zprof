@@ -1,5 +1,5 @@
 /*
-* zperf License
+* zprof License
 * Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +34,7 @@ typedef float f32;
 
 enum MyTestEnum
 {
-    MY_DECLARE_BEGIN = PerfInstType::node_declare_begin_id(),
+    MY_DECLARE_BEGIN = ProfInstType::node_declare_begin_id(),
     NORMAL_NODE, 
 
     PARRENT_1,
@@ -47,20 +47,20 @@ int main(int argc, char *argv[])
 {
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PERF_CPU_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
     LogDebug() << " main begin test. ";
 
 
     //初始化   
-    PERF_INIT("inner perf");
+    PROF_INIT("inner prof");
 
     
     //单独使用性能计数器  
     if (true)
     {
-        PerfCounter<PERF_COUNTER_RDTSC_NOFENCE> counter;
+        ProfCounter<PROF_COUNTER_RDTSC_NOFENCE> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        PerfCounter<PERF_COUNTER_RDTSC> counter;
+        ProfCounter<PROF_COUNTER_RDTSC> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        PerfCounter<PERF_COUNTER_RDTSC_BTB> counter;
+        ProfCounter<PROF_COUNTER_RDTSC_BTB> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        PerfCounter<PERF_COUNTER_RDTSC_MFENCE> counter;
+        ProfCounter<PROF_COUNTER_RDTSC_MFENCE> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        PerfCounter<PERF_COUNTER_RDTSC_MFENCE_BTB> counter;
+        ProfCounter<PROF_COUNTER_RDTSC_MFENCE_BTB> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        PerfCounter<PERF_COUNTER_RDTSC_LOCK> counter;
+        ProfCounter<PROF_COUNTER_RDTSC_LOCK> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();

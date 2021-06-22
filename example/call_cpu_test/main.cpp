@@ -1,5 +1,5 @@
 /*
-* zperf License
+* zprof License
 * Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +34,7 @@ typedef float f32;
 
 enum MyTestEnum
 {
-    MY_DECLARE_BEGIN = PerfInstType::node_declare_begin_id(),
+    MY_DECLARE_BEGIN = ProfInstType::node_declare_begin_id(),
     NORMAL_NODE, 
 
     PARRENT_1,
@@ -47,22 +47,22 @@ int main(int argc, char *argv[])
 {
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PERF_CPU_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
     LogDebug() << " main begin test. ";
 
 
     //³õÊ¼»¯   
-    PERF_INIT("inner perf");
+    PROF_INIT("inner prof");
     volatile long long cost = 123;
-    PerfInst.call_cpu_no_sm(1, 0x11223344);
-    PerfInst.call_cpu_no_sm(1, cost);
+    ProfInst.call_cpu_no_sm(1, 0x11223344);
+    ProfInst.call_cpu_no_sm(1, cost);
 
-    PerfInst.call_cpu(1, 0x11223333);
-    PerfInst.call_cpu(1, cost);
-    PerfInst.call_cpu_full(1, 0x11223322);
-    PerfInst.call_cpu_full(1, cost);
+    ProfInst.call_cpu(1, 0x11223333);
+    ProfInst.call_cpu(1, cost);
+    ProfInst.call_cpu_full(1, 0x11223322);
+    ProfInst.call_cpu_full(1, cost);
     (void)cost;
 
     return 0;

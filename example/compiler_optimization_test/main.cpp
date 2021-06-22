@@ -1,5 +1,5 @@
 /*
-* zperf License
+* zprof License
 * Copyright (C) 2014-2021 YaweiZhang <yawei.zhang@foxmail.com>.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PERF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PERF_CPU_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
     LogDebug() << " main begin test. ";

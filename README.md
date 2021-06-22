@@ -1,4 +1,4 @@
-# zperf record 
+# zprof record 
 
 ### **特点**  
 
@@ -167,4 +167,4 @@
 ### **About The Author**  
 **Author**: YaweiZhang  
 **mail**: yawei.zhang@foxmail.com  
-**github**: https://github.com/zsummer/zperf  
+**github**: https://github.com/zsummer/zprof  
