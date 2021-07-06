@@ -283,15 +283,6 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_number(long long number, i
 inline ProfSerializeBuffer& ProfSerializeBuffer::push_string(const char* str)
 {
     return push_string(str, strlen(str));
-    if (str == NULL)
-    {
-        return *this;
-    }
-    while (*str != '\0' && offset_ < buff_len_)
-    {
-        buff_[offset_++] = *str++;
-    }
-    return *this;
 }
 inline ProfSerializeBuffer& ProfSerializeBuffer::push_string(const char* str, size_t size)
 {
@@ -302,12 +293,6 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_string(const char* str, si
     size_t max_size = buff_len_ - offset_ > size ? size : buff_len_ - offset_;
     memcpy(buff_ + offset_, str, max_size);
     offset_ += max_size;
-    /*
-    while (*str != '\0' && offset_ < buff_len_)
-    {
-        buff_[offset_++] = *str++;
-    }
-    */
     return *this;
 }
 inline ProfSerializeBuffer& ProfSerializeBuffer::push_now_date()
