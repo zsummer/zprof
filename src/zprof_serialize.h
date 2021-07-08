@@ -121,7 +121,6 @@ ProfSerializeBuffer& ProfSerializeBuffer::push_human_count(long long count)
         push_number((unsigned long long)((count / 1000) % 1000), 3);
         push_char(',');
         push_number((unsigned long long)(count % 1000), 3);
-        push_number((count / 1000) % 1000, 3);
         return *this;
     }
     else if (count > 1000)
