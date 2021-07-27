@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     //ProfInst.init_prof("inner prof");
     regist_prof();
     PROF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PROF_LEVEL_NORMAL, "self use mem in main func begin and exit");
-    PROF_REGISTER_REFRESH_MEM(delta.reg(), prof_get_mem_use());
+    PROF_REGISTER_REFRESH_VM(delta.reg(), prof_get_mem_use());
     if (true)
     {
         PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         PROF_DEFINE_AUTO_SINGLE_RECORD(ot, 1, PROF_LEVEL_NORMAL, "self use mem");
-        PROF_REGISTER_REC_MEM(ot.reg(), prof_get_mem_use());
+        PROF_REGISTER_REFRESH_VM(ot.reg(), prof_get_mem_use());
     }
 
 
@@ -756,7 +756,7 @@ int main(int argc, char *argv[])
     entry_mem_test();
     PROF_UPDATE_MERGE();
     PROF_SERIALIZE_FN_LOG();
-    PROF_REGISTER_REFRESH_MEM(delta.reg(), prof_get_mem_use());
+    PROF_REGISTER_REFRESH_VM(delta.reg(), prof_get_mem_use());
 
 
     PROF_RESET_CHILD(ENUM_ENTRY);

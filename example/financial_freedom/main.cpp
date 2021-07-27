@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 {
     PROF_INIT("inner prof");
     PROF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PROF_LEVEL_NORMAL, "self use mem in main func begin and exit");
-    PROF_REGISTER_REFRESH_MEM(delta.reg(), prof_get_mem_use());
+    PROF_REGISTER_REFRESH_VM(delta.reg(), prof_get_mem_use());
     if (true)
     {
         PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");

@@ -74,6 +74,7 @@ struct ProfMEM
     long long t_u;
 };
 
+
 struct ProfUser
 {
     long long c;
@@ -96,6 +97,7 @@ struct ProfNode
     ProfMEM mem; 
     ProfTimer timer;
     ProfUser user;
+    std::pair<unsigned long long, unsigned long long> vm;
 };  
 
 
@@ -205,6 +207,11 @@ public:
         ProfNode& node = nodes_[idx];
         memset(&node.mem, 0, sizeof(node.mem));
     }
+    PROF_ALWAYS_INLINE void reset_vm(int idx)
+    {
+        ProfNode& node = nodes_[idx];
+        memset(&node.vm, 0, sizeof(node.vm));
+    }
     PROF_ALWAYS_INLINE void reset_timer(int idx)
     {
         ProfNode& node = nodes_[idx];
@@ -219,6 +226,7 @@ public:
     {
         reset_cpu(idx);
         reset_mem(idx);
+        reset_vm(idx);
         reset_timer(idx);
         reset_user(idx);
     }
@@ -349,7 +357,10 @@ public:
         node.mem.sum += add;
         node.mem.t_u += add;
     }
-
+    PROF_ALWAYS_INLINE void call_vm(int idx, const std::pair<unsigned long long, unsigned long long>& vm)
+    {
+        nodes_[idx].vm = vm;
+    }
     PROF_ALWAYS_INLINE void call_user(int idx, long long c, long long add)
     {
         ProfNode& node = nodes_[idx];
@@ -616,7 +627,7 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::init_prof(const char* desc)
     {
         ProfCounter<> self_mem_cost;
         self_mem_cost.start();
-        call_mem(INNER_PROF_SELF_MEM_COST, 1, prof_get_mem_use());
+        call_vm(INNER_PROF_SELF_MEM_COST, prof_get_mem_use());
         call_cpu(INNER_PROF_SELF_MEM_COST, self_mem_cost.stop_and_save().cycles());
     }
 
@@ -966,6 +977,35 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         }
 
     }
+
+    if (node.vm.first + node.vm.second > 0)
+    {
+        cost_single_serialize.start();
+        buffer.push_char(' ', depth * 2);
+        buffer.push_char('[', 2);
+        buffer.push_char(' ');
+        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name], node_descs_[entry_idx].node_name_len);
+        buffer.push_char(' ');
+        buffer.push_char(']', 2);
+        buffer.push_char(' ', name_blank);
+        buffer.push_string(STRLEN("mem: vm_size:"));
+        buffer.push_human_mem(node.vm.second);
+        buffer.push_string(STRLEN("\t rss:"));
+        buffer.push_human_mem(node.vm.first);
+        buffer.push_string(STRLEN(PROF_LINE_FEED));
+        buffer.closing_string();
+        cost_single_serialize.stop_and_save();
+        call_cpu_full(INNER_PROF_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
+        if (call_log)
+        {
+            cost_single_serialize.start();
+            call_log(buffer);
+            buffer.reset_offset();
+            cost_single_serialize.stop_and_save();
+            call_cpu_full(INNER_PROF_SINGLE_WRITE_LOG_COST, cost_single_serialize.cycles());
+        }
+    }
+
     if (node.user.c > 0)
     {
         cost_single_serialize.start();

@@ -148,7 +148,6 @@ public:
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL >(this_id_, COUNT, counter_.save().cycles());
     }
 
-
     void record_mem(long long mem)
     {
         ProfInst.call_mem(this_id_, 1, mem);
@@ -156,6 +155,10 @@ public:
     void refresh_mem(long long mem)
     {
         ProfInst.refresh_mem(this_id_, 1, mem);
+    }
+    void call_vm(const std::pair<unsigned long long, unsigned long long>& vm)
+    {
+        ProfInst.call_vm(this_id_, vm);
     }
     int node_id() { return this_id_; }
     ProfCounter<T>& counter() { return counter_; }
@@ -213,6 +216,7 @@ private:
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>((int)(idx), (long long)(COUNT), (long long)cost)
 #define PROF_CALL_CPU(idx, cost) PROF_CALL_CPU_WRAP((idx), 1, (cost), PROF_LEVEL_NORMAL)
 #define PROF_CALL_MEM(idx, count, mem) ProfInst.call_mem(idx, count, mem)
+#define PROF_CALL_VM(idx, vm) ProfInst.call_vm(idx, vm)
 #define PROF_REFRESH_MEM(idx, count, mem) ProfInst.refresh_mem(idx, count, mem)
 #define PROF_CALL_TIMER(idx, stamp) ProfInst.call_timer(idx, stamp)
 #define PROF_CALL_USER(idx, count, add) ProfInst.call_user(idx, count, add)
@@ -234,10 +238,11 @@ private:
 #define PROF_REGISTER_RECORD_WRAP(reg, COUNT, PROF_LEVEL) reg.record_current<COUNT, PROF_LEVEL>()
 #define PROF_REGISTER_REC_MEM(reg, add) reg.record_mem(add)
 #define PROF_REGISTER_REFRESH_MEM(reg, add) reg.refresh_mem(add)
+#define PROF_REGISTER_REFRESH_VM(reg, vm) reg.call_vm(vm)
 
 
 #define PROF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, PROF_LEVEL, desc) ProfAutoSingleRecord<COUNT, PROF_LEVEL, PROF_COUNTER_DEFAULT> rec(desc)
-#define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ ProfRegister<> __temp_prof_record_mem__(desc); PROF_CALL_MEM(__temp_prof_record_mem__.node_id(), 1, prof_get_mem_use()); }while(0)
+#define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ ProfRegister<> __temp_prof_record_mem__(desc); PROF_CALL_VM(__temp_prof_record_mem__.node_id(), prof_get_mem_use()); }while(0)
 
 
 
@@ -262,6 +267,7 @@ private:
 #define PROF_CALL_CPU(idx, cost) 
 #define PROF_CALL_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL) 
 #define PROF_CALL_MEM(idx, count, mem) 
+#define PROF_CALL_VM(idx, vm) 
 #define PROF_REFRESH_MEM(idx, count, mem) 
 #define PROF_CALL_TIMER(idx, stamp) 
 #define PROF_CALL_USER(idx, count, add)
@@ -282,6 +288,7 @@ private:
 #define PROF_REGISTER_RECORD_WRAP(reg, COUNT, PROF_LEVEL) 
 #define PROF_REGISTER_REC_MEM(reg, add) 
 #define PROF_REGISTER_REFRESH_MEM(reg, add) 
+#define PROF_REGISTER_REFRESH_VM(reg, add) 
 
 
 #define PROF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, PROF_LEVEL, desc) 

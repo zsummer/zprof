@@ -197,7 +197,7 @@ template<ProfCounterType T>
 PROF_ALWAYS_INLINE double prof_get_time_inverse_frequency();
 
 
-PROF_ALWAYS_INLINE long long prof_get_mem_use();
+PROF_ALWAYS_INLINE std::pair<unsigned long long, unsigned long long> prof_get_mem_use();
 
 
 
@@ -416,8 +416,7 @@ long long prof_get_time_cycle<PROF_CONNTER_CHRONO>()
 
 
 
-
-long long prof_get_mem_use()
+std::pair<unsigned long long, unsigned long long> prof_get_mem_use()
 {
 #ifdef WIN32
     HANDLE hproc = GetCurrentProcess();
@@ -425,19 +424,20 @@ long long prof_get_mem_use()
     if (GetProcessMemoryInfo(hproc, &pmc, sizeof(pmc)))
     {
         CloseHandle(hproc);// ignore  
-        return pmc.WorkingSetSize;
+        return std::make_pair((unsigned long long)pmc.WorkingSetSize, (unsigned long long)pmc.WorkingSetSize);
     }
-    return 0;
+    return std::make_pair(0ULL,0ULL);
 #else
     const char* file = "/proc/self/status";
     FILE* fp = fopen(file, "r");
     if (NULL == fp)
     {
-        return 0;
+        return std::make_pair(0ULL, 0ULL);
     }
 
     char line_buff[256];
-    int vm_size = 0;
+    unsigned long long vm_size = 0;
+    unsigned long long rss_size = 0;
     while (fgets(line_buff, sizeof(line_buff), fp) != NULL)
     {
         if (strstr(line_buff, "VmSize") != NULL)
@@ -458,12 +458,34 @@ long long prof_get_mem_use()
                 vm_size = 0;
                 break;
             }
+        }
+        if (strstr(line_buff, "VmRSS") != NULL)
+        {
+            const char* p = line_buff;
+            while (p < &line_buff[255] && (*p < '0' || *p > '9'))
+            {
+                p++;
+}
+            if (p == &line_buff[255])
+            {
+                break;
+            }
+
+            int ret = sscanf(p, "%d", &rss_size);
+            if (ret <= 0)
+            {
+                rss_size = 0;
+                break;
+            }
+        }
+        if (rss_size > 0 && vm_size > 0)
+        {
             break;
         }
     }
 
     fclose(fp);
-    return (long long)vm_size * 1000;
+    return std::make_pair(rss_size*1024, vm_size * 1024);
 #endif
 }
 
