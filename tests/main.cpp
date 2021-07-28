@@ -768,7 +768,7 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < 1000; i++)
     {
         auto void_call = [](const ProfSerializeBuffer& buffer) {};
-        ProfInst.serialize(void_call);
+        ProfInst.serialize(0xff, void_call);
     }
 
     if (true)
