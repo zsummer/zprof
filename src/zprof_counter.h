@@ -119,6 +119,12 @@ enum ProfCounterType
 #endif 
 
 
+struct ProfVM
+{
+    unsigned long long vm_size;
+    unsigned long long rss_size;
+};
+
 template<ProfCounterType T>
 PROF_ALWAYS_INLINE long long prof_get_time_cycle();
 
@@ -197,7 +203,7 @@ template<ProfCounterType T>
 PROF_ALWAYS_INLINE double prof_get_time_inverse_frequency();
 
 
-PROF_ALWAYS_INLINE std::pair<unsigned long long, unsigned long long> prof_get_mem_use();
+PROF_ALWAYS_INLINE ProfVM prof_get_mem_use();
 
 
 
@@ -416,7 +422,7 @@ long long prof_get_time_cycle<PROF_CONNTER_CHRONO>()
 
 
 
-std::pair<unsigned long long, unsigned long long> prof_get_mem_use()
+ProfVM prof_get_mem_use()
 {
 #ifdef WIN32
     HANDLE hproc = GetCurrentProcess();
@@ -424,20 +430,19 @@ std::pair<unsigned long long, unsigned long long> prof_get_mem_use()
     if (GetProcessMemoryInfo(hproc, &pmc, sizeof(pmc)))
     {
         CloseHandle(hproc);// ignore  
-        return std::make_pair((unsigned long long)pmc.WorkingSetSize, (unsigned long long)pmc.WorkingSetSize);
+        return { (unsigned long long)pmc.WorkingSetSize, (unsigned long long)pmc.WorkingSetSize};
     }
-    return std::make_pair(0ULL,0ULL);
+    return { 0ULL, 0ULL };
 #else
     const char* file = "/proc/self/status";
     FILE* fp = fopen(file, "r");
     if (NULL == fp)
     {
-        return std::make_pair(0ULL, 0ULL);
+        return { 0ULL, 0ULL };
     }
 
     char line_buff[256];
-    unsigned long long vm_size = 0;
-    unsigned long long rss_size = 0;
+    ProfVM vm = { 0ULL, 0ULL };
     while (fgets(line_buff, sizeof(line_buff), fp) != NULL)
     {
         if (strstr(line_buff, "VmSize") != NULL)
@@ -452,10 +457,10 @@ std::pair<unsigned long long, unsigned long long> prof_get_mem_use()
                 break;
             }
 
-            int ret = sscanf(p, "%d", &vm_size);
+            int ret = sscanf(p, "%llu", &vm.vm_size);
             if (ret <= 0)
             {
-                vm_size = 0;
+                vm.vm_size = 0;
                 break;
             }
         }
@@ -471,21 +476,21 @@ std::pair<unsigned long long, unsigned long long> prof_get_mem_use()
                 break;
             }
 
-            int ret = sscanf(p, "%d", &rss_size);
+            int ret = sscanf(p, "%llu", &vm.rss_size);
             if (ret <= 0)
             {
-                rss_size = 0;
+                vm.rss_size = 0;
                 break;
             }
         }
-        if (rss_size > 0 && vm_size > 0)
+        if (vm.rss_size > 0 && vm.vm_size > 0)
         {
             break;
         }
     }
 
     fclose(fp);
-    return std::make_pair(rss_size*1024, vm_size * 1024);
+    return { vm.vm_size * 1024, vm.rss_size * 1024 };
 #endif
 }
 

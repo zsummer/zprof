@@ -97,7 +97,7 @@ struct ProfNode
     ProfMEM mem; 
     ProfTimer timer;
     ProfUser user;
-    std::pair<unsigned long long, unsigned long long> vm;
+    ProfVM vm;
 };  
 
 
@@ -357,7 +357,7 @@ public:
         node.mem.sum += add;
         node.mem.t_u += add;
     }
-    PROF_ALWAYS_INLINE void call_vm(int idx, const std::pair<unsigned long long, unsigned long long>& vm)
+    PROF_ALWAYS_INLINE void call_vm(int idx, const ProfVM& vm)
     {
         nodes_[idx].vm = vm;
     }
@@ -978,7 +978,7 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
 
     }
 
-    if (node.vm.first + node.vm.second > 0)
+    if (node.vm.rss_size + node.vm.vm_size > 0)
     {
         cost_single_serialize.start();
         buffer.push_char(' ', depth * 2);
@@ -988,10 +988,10 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         buffer.push_char(' ');
         buffer.push_char(']', 2);
         buffer.push_char(' ', name_blank);
-        buffer.push_string(STRLEN("mem: vm_size:"));
-        buffer.push_human_mem(node.vm.second);
-        buffer.push_string(STRLEN("\t rss:"));
-        buffer.push_human_mem(node.vm.first);
+        buffer.push_string(STRLEN("vm: vm_size:"));
+        buffer.push_human_mem(node.vm.vm_size);
+        buffer.push_string(STRLEN("\t rss_size:"));
+        buffer.push_human_mem(node.vm.rss_size);
         buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         cost_single_serialize.stop_and_save();

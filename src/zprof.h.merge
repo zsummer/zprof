@@ -119,6 +119,12 @@ enum ProfCounterType
 #endif 
 
 
+struct ProfVM
+{
+    unsigned long long vm_size;
+    unsigned long long rss_size;
+};
+
 template<ProfCounterType T>
 PROF_ALWAYS_INLINE long long prof_get_time_cycle();
 
@@ -197,7 +203,7 @@ template<ProfCounterType T>
 PROF_ALWAYS_INLINE double prof_get_time_inverse_frequency();
 
 
-PROF_ALWAYS_INLINE long long prof_get_mem_use();
+PROF_ALWAYS_INLINE ProfVM prof_get_mem_use();
 
 
 
@@ -416,8 +422,7 @@ long long prof_get_time_cycle<PROF_CONNTER_CHRONO>()
 
 
 
-
-long long prof_get_mem_use()
+ProfVM prof_get_mem_use()
 {
 #ifdef WIN32
     HANDLE hproc = GetCurrentProcess();
@@ -425,19 +430,19 @@ long long prof_get_mem_use()
     if (GetProcessMemoryInfo(hproc, &pmc, sizeof(pmc)))
     {
         CloseHandle(hproc);// ignore  
-        return pmc.WorkingSetSize;
+        return { (unsigned long long)pmc.WorkingSetSize, (unsigned long long)pmc.WorkingSetSize};
     }
-    return 0;
+    return { 0ULL, 0ULL };
 #else
     const char* file = "/proc/self/status";
     FILE* fp = fopen(file, "r");
     if (NULL == fp)
     {
-        return 0;
+        return { 0ULL, 0ULL };
     }
 
     char line_buff[256];
-    int vm_size = 0;
+    ProfVM vm = { 0ULL, 0ULL };
     while (fgets(line_buff, sizeof(line_buff), fp) != NULL)
     {
         if (strstr(line_buff, "VmSize") != NULL)
@@ -452,18 +457,40 @@ long long prof_get_mem_use()
                 break;
             }
 
-            int ret = sscanf(p, "%d", &vm_size);
+            int ret = sscanf(p, "%llu", &vm.vm_size);
             if (ret <= 0)
             {
-                vm_size = 0;
+                vm.vm_size = 0;
                 break;
             }
+        }
+        if (strstr(line_buff, "VmRSS") != NULL)
+        {
+            const char* p = line_buff;
+            while (p < &line_buff[255] && (*p < '0' || *p > '9'))
+            {
+                p++;
+}
+            if (p == &line_buff[255])
+            {
+                break;
+            }
+
+            int ret = sscanf(p, "%llu", &vm.rss_size);
+            if (ret <= 0)
+            {
+                vm.rss_size = 0;
+                break;
+            }
+        }
+        if (vm.rss_size > 0 && vm.vm_size > 0)
+        {
             break;
         }
     }
 
     fclose(fp);
-    return (long long)vm_size * 1000;
+    return { vm.vm_size * 1024, vm.rss_size * 1024 };
 #endif
 }
 
@@ -1061,6 +1088,7 @@ struct ProfMEM
     long long t_u;
 };
 
+
 struct ProfUser
 {
     long long c;
@@ -1083,6 +1111,7 @@ struct ProfNode
     ProfMEM mem; 
     ProfTimer timer;
     ProfUser user;
+    ProfVM vm;
 };  
 
 
@@ -1192,6 +1221,11 @@ public:
         ProfNode& node = nodes_[idx];
         memset(&node.mem, 0, sizeof(node.mem));
     }
+    PROF_ALWAYS_INLINE void reset_vm(int idx)
+    {
+        ProfNode& node = nodes_[idx];
+        memset(&node.vm, 0, sizeof(node.vm));
+    }
     PROF_ALWAYS_INLINE void reset_timer(int idx)
     {
         ProfNode& node = nodes_[idx];
@@ -1206,6 +1240,7 @@ public:
     {
         reset_cpu(idx);
         reset_mem(idx);
+        reset_vm(idx);
         reset_timer(idx);
         reset_user(idx);
     }
@@ -1336,7 +1371,10 @@ public:
         node.mem.sum += add;
         node.mem.t_u += add;
     }
-
+    PROF_ALWAYS_INLINE void call_vm(int idx, const ProfVM& vm)
+    {
+        nodes_[idx].vm = vm;
+    }
     PROF_ALWAYS_INLINE void call_user(int idx, long long c, long long add)
     {
         ProfNode& node = nodes_[idx];
@@ -1603,7 +1641,7 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::init_prof(const char* desc)
     {
         ProfCounter<> self_mem_cost;
         self_mem_cost.start();
-        call_mem(INNER_PROF_SELF_MEM_COST, 1, prof_get_mem_use());
+        call_vm(INNER_PROF_SELF_MEM_COST, prof_get_mem_use());
         call_cpu(INNER_PROF_SELF_MEM_COST, self_mem_cost.stop_and_save().cycles());
     }
 
@@ -1953,6 +1991,35 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize(int entry_idx, int dept
         }
 
     }
+
+    if (node.vm.rss_size + node.vm.vm_size > 0)
+    {
+        cost_single_serialize.start();
+        buffer.push_char(' ', depth * 2);
+        buffer.push_char('[', 2);
+        buffer.push_char(' ');
+        buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name], node_descs_[entry_idx].node_name_len);
+        buffer.push_char(' ');
+        buffer.push_char(']', 2);
+        buffer.push_char(' ', name_blank);
+        buffer.push_string(STRLEN("vm: vm_size:"));
+        buffer.push_human_mem(node.vm.vm_size);
+        buffer.push_string(STRLEN("\t rss_size:"));
+        buffer.push_human_mem(node.vm.rss_size);
+        buffer.push_string(STRLEN(PROF_LINE_FEED));
+        buffer.closing_string();
+        cost_single_serialize.stop_and_save();
+        call_cpu_full(INNER_PROF_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
+        if (call_log)
+        {
+            cost_single_serialize.start();
+            call_log(buffer);
+            buffer.reset_offset();
+            cost_single_serialize.stop_and_save();
+            call_cpu_full(INNER_PROF_SINGLE_WRITE_LOG_COST, cost_single_serialize.cycles());
+        }
+    }
+
     if (node.user.c > 0)
     {
         cost_single_serialize.start();
@@ -2276,7 +2343,6 @@ public:
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL >(this_id_, COUNT, counter_.save().cycles());
     }
 
-
     void record_mem(long long mem)
     {
         ProfInst.call_mem(this_id_, 1, mem);
@@ -2284,6 +2350,10 @@ public:
     void refresh_mem(long long mem)
     {
         ProfInst.refresh_mem(this_id_, 1, mem);
+    }
+    void call_vm(const ProfVM& vm)
+    {
+        ProfInst.call_vm(this_id_, vm);
     }
     int node_id() { return this_id_; }
     ProfCounter<T>& counter() { return counter_; }
@@ -2341,6 +2411,7 @@ private:
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>((int)(idx), (long long)(COUNT), (long long)cost)
 #define PROF_CALL_CPU(idx, cost) PROF_CALL_CPU_WRAP((idx), 1, (cost), PROF_LEVEL_NORMAL)
 #define PROF_CALL_MEM(idx, count, mem) ProfInst.call_mem(idx, count, mem)
+#define PROF_CALL_VM(idx, vm) ProfInst.call_vm(idx, vm)
 #define PROF_REFRESH_MEM(idx, count, mem) ProfInst.refresh_mem(idx, count, mem)
 #define PROF_CALL_TIMER(idx, stamp) ProfInst.call_timer(idx, stamp)
 #define PROF_CALL_USER(idx, count, add) ProfInst.call_user(idx, count, add)
@@ -2362,10 +2433,11 @@ private:
 #define PROF_REGISTER_RECORD_WRAP(reg, COUNT, PROF_LEVEL) reg.record_current<COUNT, PROF_LEVEL>()
 #define PROF_REGISTER_REC_MEM(reg, add) reg.record_mem(add)
 #define PROF_REGISTER_REFRESH_MEM(reg, add) reg.refresh_mem(add)
+#define PROF_REGISTER_REFRESH_VM(reg, vm) reg.call_vm(vm)
 
 
 #define PROF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, PROF_LEVEL, desc) ProfAutoSingleRecord<COUNT, PROF_LEVEL, PROF_COUNTER_DEFAULT> rec(desc)
-#define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ ProfRegister<> __temp_prof_record_mem__(desc); PROF_CALL_MEM(__temp_prof_record_mem__.node_id(), 1, prof_get_mem_use()); }while(0)
+#define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ ProfRegister<> __temp_prof_record_mem__(desc); PROF_CALL_VM(__temp_prof_record_mem__.node_id(), prof_get_mem_use()); }while(0)
 
 
 
@@ -2390,6 +2462,7 @@ private:
 #define PROF_CALL_CPU(idx, cost) 
 #define PROF_CALL_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL) 
 #define PROF_CALL_MEM(idx, count, mem) 
+#define PROF_CALL_VM(idx, vm) 
 #define PROF_REFRESH_MEM(idx, count, mem) 
 #define PROF_CALL_TIMER(idx, stamp) 
 #define PROF_CALL_USER(idx, count, add)
@@ -2410,6 +2483,7 @@ private:
 #define PROF_REGISTER_RECORD_WRAP(reg, COUNT, PROF_LEVEL) 
 #define PROF_REGISTER_REC_MEM(reg, add) 
 #define PROF_REGISTER_REFRESH_MEM(reg, add) 
+#define PROF_REGISTER_REFRESH_VM(reg, add) 
 
 
 #define PROF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, PROF_LEVEL, desc) 

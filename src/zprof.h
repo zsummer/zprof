@@ -156,7 +156,7 @@ public:
     {
         ProfInst.refresh_mem(this_id_, 1, mem);
     }
-    void call_vm(const std::pair<unsigned long long, unsigned long long>& vm)
+    void call_vm(const ProfVM& vm)
     {
         ProfInst.call_vm(this_id_, vm);
     }
