@@ -1188,7 +1188,7 @@ int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std:
     call_log(buffer);
     buffer.reset_offset();
 
-    buffer.push_char('1', 120);
+    buffer.push_char('=', 120);
     buffer.push_string(PROF_LINE_FEED);
     buffer.closing_string();
     call_log(buffer);
