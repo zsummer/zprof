@@ -214,6 +214,8 @@ private:
 #define PROF_CALL_CPU_SAMPLE(idx, cost) ProfInst.call_cpu(idx, cost)
 #define PROF_CALL_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL)  \
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>((int)(idx), (long long)(COUNT), (long long)cost)
+#define PROF_CALL_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)  \
+        ProfRecordWrap<true, PROF_LEVEL>((int)(idx), (long long)(count), (long long)cost)
 #define PROF_CALL_CPU(idx, cost) PROF_CALL_CPU_WRAP((idx), 1, (cost), PROF_LEVEL_NORMAL)
 #define PROF_CALL_MEM(idx, count, mem) ProfInst.call_mem(idx, count, mem)
 #define PROF_CALL_VM(idx, vm) ProfInst.call_vm(idx, vm)
@@ -266,6 +268,7 @@ private:
 #define PROF_CALL_CPU_SAMPLE(idx, cost) 
 #define PROF_CALL_CPU(idx, cost) 
 #define PROF_CALL_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL) 
+#define PROF_CALL_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)
 #define PROF_CALL_MEM(idx, count, mem) 
 #define PROF_CALL_VM(idx, vm) 
 #define PROF_REFRESH_MEM(idx, count, mem) 
