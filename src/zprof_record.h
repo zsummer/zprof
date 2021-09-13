@@ -118,7 +118,7 @@ public:
         INNER_PROF_NULL,
         INNER_PROF_INIT_COST,
         INNER_PROF_SERIALIZE_COST,
-        INNER_PROF_SINGLE_TOTAL_COST,
+        INNER_PROF_SERIALIZE_MERGE_COST,
         INNER_PROF_SINGLE_SERIALIZE_COST,
         INNER_PROF_SINGLE_WRITE_LOG_COST,
         INNER_PROF_MERGE_ALL_COST,
@@ -612,7 +612,7 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::init_prof(const char* desc)
 
     regist_node(INNER_PROF_INIT_COST, "INNER_PROF_INIT_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_SERIALIZE_COST, "INNER_PROF_SERIALIZE_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_SINGLE_TOTAL_COST, "INNER_PROF_SINGLE_TOTAL_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist_node(INNER_PROF_SERIALIZE_MERGE_COST, "INNER_PROF_SERIALIZE_MERGE_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_SINGLE_SERIALIZE_COST, "INNER_PROF_SINGLE_SERIALIZE_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_SINGLE_WRITE_LOG_COST, "INNER_PROF_SINGLE_WRITE_LOG_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_MERGE_ALL_COST, "INNER_PROF_MERGE_ALL_COST", PROF_COUNTER_DEFAULT, true, true);
@@ -625,10 +625,10 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::init_prof(const char* desc)
     regist_node(INNER_PROF_ATOM_COST, "INNER_PROF_ATOM_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_ATOM_SEQ_COST, "INNER_PROF_ATOM_SEQ_COST", PROF_COUNTER_DEFAULT, true, true);
 
-    bind_childs(INNER_PROF_SINGLE_TOTAL_COST, INNER_PROF_SINGLE_SERIALIZE_COST);
-    bind_merge(INNER_PROF_SINGLE_SERIALIZE_COST, INNER_PROF_SINGLE_TOTAL_COST);
-    bind_childs(INNER_PROF_SINGLE_TOTAL_COST, INNER_PROF_SINGLE_WRITE_LOG_COST);
-    bind_merge(INNER_PROF_SINGLE_WRITE_LOG_COST, INNER_PROF_SINGLE_TOTAL_COST);
+    bind_childs(INNER_PROF_SERIALIZE_MERGE_COST, INNER_PROF_SINGLE_SERIALIZE_COST);
+    bind_merge(INNER_PROF_SINGLE_SERIALIZE_COST, INNER_PROF_SERIALIZE_MERGE_COST);
+    bind_childs(INNER_PROF_SERIALIZE_MERGE_COST, INNER_PROF_SINGLE_WRITE_LOG_COST);
+    bind_merge(INNER_PROF_SINGLE_WRITE_LOG_COST, INNER_PROF_SERIALIZE_MERGE_COST);
 
 
     if (true)
@@ -908,7 +908,7 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
             buffer.push_human_time((long long)(node.cpu.sum * circles_per_ns(node_descs_[entry_idx].counter_type)));
         }
 
-        buffer.push_string(STRLEN(" --|*\t|-- "));
+        buffer.push_string(STRLEN(" --|*\t\t|-- "));
         if (node.cpu.dv > 0 || node.cpu.sm > 0)
         {
             buffer.push_human_time((long long)(node.cpu.dv * circles_per_ns(node_descs_[entry_idx].counter_type) / node.cpu.c));
@@ -962,19 +962,20 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
         if (true)
         {
             buffer.push_human_count(node.mem.c);
-            buffer.push_string(STRLEN("\t avg:"));
+            buffer.push_string(STRLEN("c, "));
             buffer.push_human_mem(node.mem.sum / node.mem.c);
-            buffer.push_string(STRLEN("\t sum:"));
+            buffer.push_string(STRLEN(", "));
             buffer.push_human_mem(node.mem.sum);
         }
 
+        buffer.push_string(STRLEN(" --||-- "));
         if (node.mem.delta > 0)
         {
-            buffer.push_string(STRLEN("\t last sum:"));
             buffer.push_human_mem(node.mem.sum - node.mem.delta);
-            buffer.push_string(STRLEN("\t delta:"));
+            buffer.push_string(STRLEN(", "));
             buffer.push_human_mem(node.mem.delta);
         }
+        buffer.push_string(STRLEN(" --|"));
         buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
@@ -994,16 +995,23 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
     {
         cost_single_serialize.start();
         buffer.push_char(' ', depth * 2);
-        buffer.push_char('[', 2);
-        buffer.push_char(' ');
+        buffer.push_string(STRLEN("|"));
+        buffer.push_number((unsigned long long)entry_idx, 3);
+        buffer.push_string(STRLEN("| "));
         buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name], node_descs_[entry_idx].node_name_len);
-        buffer.push_char(' ');
-        buffer.push_char(']', 2);
-        buffer.push_char(' ', name_blank);
-        buffer.push_string(STRLEN("vm: vm_size:"));
-        buffer.push_human_mem(node.vm.vm_size);
-        buffer.push_string(STRLEN("\t rss_size:"));
-        buffer.push_human_mem(node.vm.rss_size);
+        buffer.push_char('-', name_blank);
+        buffer.push_string(STRLEN(" |"));
+
+
+        buffer.push_string(STRLEN("\tvm*|-- vm:"));
+        if (true)
+        {
+            buffer.push_human_mem(node.vm.vm_size);
+            buffer.push_string(STRLEN(", rss:"));
+            buffer.push_human_mem(node.vm.rss_size);
+        }
+
+        buffer.push_string(STRLEN(" --|"));
         buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
@@ -1022,20 +1030,25 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
     {
         cost_single_serialize.start();
         buffer.push_char(' ', depth * 2);
-        buffer.push_char('[', 2);
-        buffer.push_char(' ');
+        buffer.push_string(STRLEN("|"));
+        buffer.push_number((unsigned long long)entry_idx, 3);
+        buffer.push_string(STRLEN("| "));
         buffer.push_string(&compact_string_[node_descs_[entry_idx].node_name], node_descs_[entry_idx].node_name_len);
-        buffer.push_char(' ');
-        buffer.push_char(']', 2);
-        buffer.push_char(' ', name_blank);
-        buffer.push_string(STRLEN("usr: call:"));
+        buffer.push_char('-', name_blank);
+        buffer.push_string(STRLEN(" |"));
 
-        buffer.push_human_count(node.user.c);
-        buffer.push_string(STRLEN("\t avg:"));
-        buffer.push_human_count(node.user.sum / node.user.c);
-        buffer.push_string(STRLEN("\t sum:"));
-        buffer.push_human_count(node.user.sum);
-        
+
+        buffer.push_string(STRLEN("\tuser*|-- "));
+        if (true)
+        {
+            buffer.push_human_count(node.user.c);
+            buffer.push_string(STRLEN("c, "));
+            buffer.push_human_count(node.user.sum / node.user.c);
+            buffer.push_string(STRLEN(", "));
+            buffer.push_human_count(node.user.sum);
+        }
+
+        buffer.push_string(STRLEN(" --|"));
         buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
@@ -1098,37 +1111,40 @@ ProfSerializeBuffer ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(in
 template<int INST, int RESERVE, int DECLARE, int ANON>
 int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
 {
-    ProfCounter<> counter;
-    counter.start();
-   
-    ProfSerializeBuffer buffer(serialize_buff_, sizeof(serialize_buff_));
     if (!call_log)
     {
         return -1;
     }
+    ProfCounter<> cost;
+    cost.start();
+    ProfSerializeBuffer buffer(serialize_buff_, sizeof(serialize_buff_));
 
-
-    buffer.push_string(PROF_LINE_FEED);
+    buffer.reset_offset();
+    buffer.push_string(STRLEN(PROF_LINE_FEED));
     buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
 
 
-    buffer.push_char('-', 30);
+    buffer.push_char('=', 30);
     buffer.push_char('\t');
     buffer.push_string(desc());
-    buffer.push_string(" begin serialize: ");
+    buffer.push_string(STRLEN(" begin serialize: "));
     buffer.push_now_date();
     buffer.push_char('\t');
-    buffer.push_char('-', 30);
-    buffer.push_string(PROF_LINE_FEED);
+    buffer.push_char('=', 30);
+    buffer.push_string(STRLEN(PROF_LINE_FEED));
+    buffer.push_string(STRLEN("| -- index -- | ---    cpu  ------------ | ----------   hits, avg, sum   ---------- | ------ dv, sm ------ | ---- max, min ---- |  --- hsm, lsm --- | " PROF_LINE_FEED));
+    buffer.push_string(STRLEN("| -- index -- | ---    mem  ----------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | " PROF_LINE_FEED));
+    buffer.push_string(STRLEN("| -- index -- | ---    vm  ----------- | ----------   vm, rss   ---------- | " PROF_LINE_FEED));
+    buffer.push_string(STRLEN("| -- index -- | ---    user  ----------- | ----------   hits, avg, sum   ---------- | " PROF_LINE_FEED));
     buffer.closing_string();
     call_log(buffer);
 
     if (flags & PROF_SER_INNER)
     {
-        buffer.push_string("| --------------    name -------------- | ----------   hits,    avg,    sum   ---------- | ------ dv,  sm ------ | ---- max,  min ---- |  --- hsm,  lsm --- | ");
-        buffer.push_string(PROF_LINE_FEED);
+        buffer.reset_offset();
+        buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         call_log(buffer);
         buffer.reset_offset();
@@ -1139,10 +1155,24 @@ int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std:
         }
     }
 
+    if (flags & PROF_SER_ANON)
+    {
+        buffer.reset_offset();
+        buffer.push_string(STRLEN(PROF_LINE_FEED));
+        buffer.closing_string();
+        buffer.reset_offset();
+        for (int i = node_anon_begin_id(); i < node_anon_real_end_id(); )
+        {
+            int ret = serialize_root(i, 0, buffer, call_log);
+            (void)ret;
+            i += nodes_[i].jump_child + 1;
+        }
+    }
+
     if (flags & PROF_SER_RESERVE)
     {
-        buffer.push_string("| --------------    name -------------- | ----------   hits,    avg,    sum   ---------- | ------ dv,  sm ------ | ---- max,  min ---- |  --- hsm,  lsm --- | ");
-        buffer.push_string(PROF_LINE_FEED);
+        buffer.reset_offset();
+        buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         buffer.reset_offset();
         for (int i = node_reserve_begin_id(); i < node_reserve_end_id(); i++)
@@ -1154,8 +1184,8 @@ int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std:
     
     if (flags & PROF_SER_DELCARE)
     {
-        buffer.push_string("| --------------    name -------------- | ----------   hits,    avg,    sum   ---------- | ------ dv,  sm ------ | ---- max,  min ---- |  --- hsm,  lsm --- | ");
-        buffer.push_string(PROF_LINE_FEED);
+        buffer.reset_offset();
+        buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
         buffer.reset_offset();
         for (int i = node_declare_begin_id(); i < node_delcare_reg_end_id(); )
@@ -1166,46 +1196,31 @@ int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std:
         }
     }
 
-    if (flags & PROF_SER_ANON)
-    {
-        buffer.push_string("| --------------    name -------------- | ----------   hits,    avg,    sum   ---------- | ------ dv,  sm ------ | ---- max,  min ---- |  --- hsm,  lsm --- | ");
-        buffer.push_string(PROF_LINE_FEED);
-        buffer.closing_string();
-        buffer.reset_offset();
-        for (int i = node_anon_begin_id(); i < node_anon_real_end_id(); )
-        {
-            int ret = serialize_root(i, 0, buffer, call_log);
-            (void)ret;
-            i += nodes_[i].jump_child + 1;
-        }
-    }
-
-    call_cpu(INNER_PROF_SERIALIZE_COST, counter.stop_and_save().cycles());
-
-    buffer.push_char('-', 30);
+    buffer.reset_offset();
+    buffer.push_char('=', 30);
     buffer.push_char('\t');
     buffer.push_string(" end : ");
     buffer.push_now_date();
     buffer.push_char('\t');
-    buffer.push_char('-', 30);
-    buffer.push_string(PROF_LINE_FEED);
+    buffer.push_char('=', 30);
+    buffer.push_string(STRLEN(PROF_LINE_FEED));
     buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
-
+    /*
     buffer.push_char('=', 120);
-    buffer.push_string(PROF_LINE_FEED);
+    buffer.push_string(STRLEN(PROF_LINE_FEED));
+    buffer.closing_string();
+    call_log(buffer);
+    buffer.reset_offset();
+    */
+
+    buffer.push_string(STRLEN(PROF_LINE_FEED));
     buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
 
-
-    buffer.push_string(PROF_LINE_FEED);
-    buffer.closing_string();
-    call_log(buffer);
-    buffer.reset_offset();
-
-
+    call_cpu(INNER_PROF_SERIALIZE_COST, cost.stop_and_save().cycles());
     return 0;
 }
 
