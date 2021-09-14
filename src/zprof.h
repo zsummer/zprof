@@ -195,6 +195,7 @@ private:
 
 #define PROF_REGIST_NODE(id, name, c, resident, re_reg)  ProfInst.regist_node(id, name, c, resident, re_reg)
 #define PROF_FAST_REGIST_NODE(id)  ProfInst.regist_node(id, #id, PROF_COUNTER_DEFAULT,  false, false)
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist_node(id, name, PROF_COUNTER_DEFAULT,  false, false)
 #define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist_node(id, #id, PROF_COUNTER_DEFAULT,  true, false)
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid)
 #define PROF_BIND_MERGE(id, cid) ProfInst.bind_merge(cid, id)
@@ -229,6 +230,7 @@ private:
 #define PROF_START_COUNTER(c) c.start()
 #define PROF_RESTART_COUNTER(c) c.start()
 #define PROF_STOP_AND_SAVE_COUNTER(c) c.stop_and_save()
+#define PROF_STOP_AND_RECORD(idx, c) PROF_CALL_CPU_WRAP((idx), 1, (c).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
 
 #define PROF_DEFINE_AUTO_RECORD(c, idx) ProfAutoRecord<> c(idx)
 
@@ -252,6 +254,7 @@ private:
 #else
 #define PROF_REGIST_NODE(id, name, pt, resident, force)
 #define PROF_FAST_REGIST_NODE(id) 
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  
 #define PROF_FAST_REGIST_RESIDENT_NODE(id)  
 #define PROF_BIND_CHILD(id, cid) 
 #define PROF_BIND_MERGE(id, cid) 
@@ -280,6 +283,7 @@ private:
 #define PROF_START_COUNTER(c) 
 #define PROF_RESTART_COUNTER(c) 
 #define PROF_STOP_AND_SAVE_COUNTER(c) 
+#define PROF_STOP_AND_RECORD(idx, c) 
 
 #define PROF_DEFINE_AUTO_RECORD(c, idx) 
 
