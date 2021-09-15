@@ -1223,6 +1223,7 @@ public:
     {
         ProfNode& node = nodes_[idx];
         memset(&node.cpu, 0, sizeof(node.cpu));
+        node.cpu.min_u = INT_MAX;
     }
     PROF_ALWAYS_INLINE void reset_mem(int idx)
     {
@@ -1923,19 +1924,19 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
         }
 
         buffer.push_string(STRLEN(" --|*\t\t|-- "));
-        if (node.cpu.dv > 0 || node.cpu.sm > 0)
-        {
-            buffer.push_human_time((long long)(node.cpu.dv * circles_per_ns(node_descs_[entry_idx].counter_type) / node.cpu.c));
-            buffer.push_string(STRLEN(", "));
-            buffer.push_human_time((long long)(node.cpu.sm * circles_per_ns(node_descs_[entry_idx].counter_type)));
-        }
-
-        buffer.push_string(STRLEN(" --||-- "));
         if (node.cpu.min_u != LLONG_MAX && node.cpu.max_u > 0)
         {
             buffer.push_human_time((long long)(node.cpu.max_u * circles_per_ns(node_descs_[entry_idx].counter_type)));
             buffer.push_string(STRLEN(", "));
             buffer.push_human_time((long long)(node.cpu.min_u * circles_per_ns(node_descs_[entry_idx].counter_type)));
+        }
+
+        buffer.push_string(STRLEN(" --|  |-- "));
+        if (node.cpu.dv > 0 || node.cpu.sm > 0)
+        {
+            buffer.push_human_time((long long)(node.cpu.dv * circles_per_ns(node_descs_[entry_idx].counter_type) / node.cpu.c));
+            buffer.push_string(STRLEN(", "));
+            buffer.push_human_time((long long)(node.cpu.sm * circles_per_ns(node_descs_[entry_idx].counter_type)));
         }
 
         buffer.push_string(STRLEN(" --||-- "));
@@ -2148,7 +2149,7 @@ int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std:
     buffer.push_char('\t');
     buffer.push_char('=', 30);
     buffer.push_string(STRLEN(PROF_LINE_FEED));
-    buffer.push_string(STRLEN("| -- index -- | ---    cpu  ------------ | ----------   hits, avg, sum   ---------- | ------ dv, sm ------ | ---- max, min ---- |  --- hsm, lsm --- | " PROF_LINE_FEED));
+    buffer.push_string(STRLEN("| -- index -- | ---    cpu  ------------ | ----------   hits, avg, sum   ---------- | ---- max, min ---- | ------ dv, sm ------ |  --- hsm, lsm --- | " PROF_LINE_FEED));
     buffer.push_string(STRLEN("| -- index -- | ---    mem  ----------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | " PROF_LINE_FEED));
     buffer.push_string(STRLEN("| -- index -- | ---    vm  ----------- | ----------   vm, rss   ---------- | " PROF_LINE_FEED));
     buffer.push_string(STRLEN("| -- index -- | ---    user  ----------- | ----------   hits, avg, sum   ---------- | " PROF_LINE_FEED));
