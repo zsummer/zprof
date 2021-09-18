@@ -202,6 +202,7 @@ public:
     inline int init_jump_count();
     inline int regist_node(int idx, const char* desc, unsigned int counter, bool resident, bool re_reg);
     inline int rename_node(int idx, const char* desc);
+    inline const char* node_name(int idx);
     inline int bind_childs(int idx, int child);
     inline int bind_merge(int idx, int to);
 
@@ -811,6 +812,21 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::rename_node(int idx, const char* 
 }
 
 
+template<int INST, int RESERVE, int DECLARE, int ANON>
+const char* ProfRecord<INST, RESERVE, DECLARE, ANON>::node_name(int idx)
+{
+    if (idx < node_begin_id() || idx >= node_end_id())
+    {
+        return "";
+    }
+    ProfDesc& desc = node_descs_[idx];
+    if (desc.node_name >= max_compact_string_size())
+    {
+        return "";
+    }
+    return &compact_string_[desc.node_name];
+};
+
 
 template<int INST, int RESERVE, int DECLARE, int ANON>
 void ProfRecord<INST, RESERVE, DECLARE,  ANON>::reset_childs(int idx, int depth)
@@ -1136,9 +1152,12 @@ int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std:
     buffer.push_char('=', 30);
     buffer.push_string(STRLEN(PROF_LINE_FEED));
     buffer.push_string(STRLEN("| -- index -- | ---    cpu  ------------ | ----------   hits, avg, sum   ---------- | ---- max, min ---- | ------ dv, sm ------ |  --- hsm, lsm --- | " PROF_LINE_FEED));
-    buffer.push_string(STRLEN("| -- index -- | ---    mem  ----------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | " PROF_LINE_FEED));
-    buffer.push_string(STRLEN("| -- index -- | ---    vm  ----------- | ----------   vm, rss   ---------- | " PROF_LINE_FEED));
-    buffer.push_string(STRLEN("| -- index -- | ---    user  ----------- | ----------   hits, avg, sum   ---------- | " PROF_LINE_FEED));
+    buffer.push_string(STRLEN("| -- index -- | ---    mem  ---------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | " PROF_LINE_FEED));
+    buffer.push_string(STRLEN("| -- index -- | ---    vm  ------------ | ----------   vm, rss   ------------------ | " ));
+    buffer.closing_string();
+    call_log(buffer);
+    buffer.reset_offset();
+    buffer.push_string(STRLEN("| -- index -- | ---    user  ----------- | -----------  hits, avg, sum   ---------- | " PROF_LINE_FEED));
     buffer.closing_string();
     call_log(buffer);
 
