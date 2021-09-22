@@ -1020,12 +1020,13 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
         buffer.push_string(STRLEN(" |"));
 
 
-        buffer.push_string(STRLEN("\tvm*|-- vm:"));
+        buffer.push_string(STRLEN("\t vm*|-- "));
         if (true)
         {
             buffer.push_human_mem(node.vm.vm_size);
-            buffer.push_string(STRLEN(", rss:"));
+            buffer.push_string(STRLEN("(vm), "));
             buffer.push_human_mem(node.vm.rss_size);
+            buffer.push_string(STRLEN("(rss)"));
         }
 
         buffer.push_string(STRLEN(" --|"));
