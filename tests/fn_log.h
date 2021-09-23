@@ -68,7 +68,7 @@
 #include <memory>
 #include <atomic>
 
-#ifdef _WIN32
+#ifdef WIN32
 #ifndef KEEP_INPUT_QUICK_EDIT
 #define KEEP_INPUT_QUICK_EDIT false
 #endif
@@ -171,7 +171,7 @@ namespace FNLog
     {
         if (file_ != nullptr)
         {
-#if !defined(__APPLE__) && !defined(_WIN32) 
+#if !defined(__APPLE__) && !defined(WIN32) 
             if (file_ != nullptr)
             {
                 int fd = fileno(file_);
@@ -247,7 +247,7 @@ namespace FNLog
 
     bool FileHandler::is_dir(const std::string& path)
     {
-#ifdef _WIN32
+#ifdef WIN32
         return PathIsDirectoryA(path.c_str()) ? true : false;
 #else
         DIR* pdir = opendir(path.c_str());
@@ -266,7 +266,7 @@ namespace FNLog
 
     bool FileHandler::is_file(const std::string& path)
     {
-#ifdef _WIN32
+#ifdef WIN32
         return ::_access(path.c_str(), 0) == 0;
 #else
         return ::access(path.c_str(), F_OK) == 0;
@@ -288,7 +288,7 @@ namespace FNLog
             if (cur.length() > 0 && !is_dir(cur))
             {
                 bool ret = false;
-#ifdef _WIN32
+#ifdef WIN32
                 ret = CreateDirectoryA(cur.c_str(), nullptr) ? true : false;
 #else
                 ret = (mkdir(cur.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) == 0);
@@ -309,7 +309,7 @@ namespace FNLog
     {
         std::string pid = "0";
         char buf[260] = { 0 };
-#ifdef _WIN32
+#ifdef WIN32
         DWORD winPID = GetCurrentProcessId();
         sprintf(buf, "%06u", winPID);
         pid = buf;
@@ -324,7 +324,7 @@ namespace FNLog
     {
         std::string name = "process";
         char buf[260] = { 0 };
-#ifdef _WIN32
+#ifdef WIN32
         if (GetModuleFileNameA(nullptr, buf, 259) > 0)
         {
             name = buf;
@@ -373,7 +373,7 @@ namespace FNLog
 
     struct tm FileHandler::time_to_tm(time_t t)
     {
-#ifdef _WIN32
+#ifdef WIN32
 #if _MSC_VER < 1400 //VS2003
         return *localtime(&t);
 #else //vs2005->vs2013->
@@ -444,19 +444,23 @@ namespace FNLog
 class UDPHandler
 {
 public:
-#ifndef _WIN32
-    using SOCKET = int;
-    static const int INVALID_SOCKET = -1;
+#ifndef WIN32
+    using FNLOG_SOCKET = int;
+    static const int FNLOG_INVALID_SOCKET = -1;
+#else
+    using FNLOG_SOCKET = SOCKET;
+    static const SOCKET FNLOG_INVALID_SOCKET = INVALID_SOCKET;
 #endif 
 
 public:
     UDPHandler()
     {
-        handler_ = INVALID_SOCKET;
+        chunk_1_[0] = '\0';
+        handler_ = FNLOG_INVALID_SOCKET;
     }
     ~UDPHandler()
     {
-        if (handler_ != INVALID_SOCKET)
+        if (handler_ != FNLOG_INVALID_SOCKET)
         {
             close();
         }
@@ -464,7 +468,7 @@ public:
 
     bool is_open()
     {
-        return handler_ != INVALID_SOCKET;
+        return handler_ != FNLOG_INVALID_SOCKET;
     }
 
     void open()
@@ -474,20 +478,20 @@ public:
 
     void close()
     {
-        if (handler_ != INVALID_SOCKET)
+        if (handler_ != FNLOG_INVALID_SOCKET)
         {
-#ifndef _WIN32
+#ifndef WIN32
             ::close(handler_);
 #else
             closesocket(handler_);
 #endif 
-            handler_ = INVALID_SOCKET;
+            handler_ = FNLOG_INVALID_SOCKET;
         }
     }
 
     void write(unsigned int ip, unsigned short port, const char* data, int len)
     {
-        if (handler_ == INVALID_SOCKET)
+        if (handler_ == FNLOG_INVALID_SOCKET)
         {
             return;
         }
@@ -503,7 +507,7 @@ public:
  
 public:
     char chunk_1_[128];
-    SOCKET handler_;
+    FNLOG_SOCKET handler_;
 };
 
 
@@ -558,11 +562,11 @@ public:
 #endif
 
 #ifndef FN_LOG_MAX_LOG_SIZE
-#define FN_LOG_MAX_LOG_SIZE 1000
+#define FN_LOG_MAX_LOG_SIZE 10000
 #endif
 
 #ifndef FN_LOG_MAX_LOG_QUEUE_SIZE //the size need big than push log thread count
-#define FN_LOG_MAX_LOG_QUEUE_SIZE 10000
+#define FN_LOG_MAX_LOG_QUEUE_SIZE 1000
 #endif
 
 
@@ -598,9 +602,13 @@ namespace FNLog
         LOG_PREFIX_TIMESTAMP = 0x1,
         LOG_PREFIX_PRIORITY = 0x2,
         LOG_PREFIX_THREAD = 0x4,
-        LOG_PREFIX_FILE = 0x8,
-        LOG_PREFIX_FUNCTION = 0x10,
-        LOG_PREFIX_ALL = 0xff
+        LOG_PREFIX_NAME = 0x8,
+        LOG_PREFIX_DESC = 0x10,
+        LOG_PREFIX_FILE = 0x20,
+        LOG_PREFIX_FUNCTION = 0x40,
+        LOG_PREFIX_ALL = 0xff,
+        //LOG_PREFIX_DEFAULT = LOG_PREFIX_ALL,
+        LOG_PREFIX_DEFAULT = LOG_PREFIX_TIMESTAMP | LOG_PREFIX_PRIORITY | LOG_PREFIX_FILE | LOG_PREFIX_FUNCTION,
     };
 
 
@@ -623,12 +631,19 @@ namespace FNLog
         static const int LOG_SIZE = FN_LOG_MAX_LOG_SIZE;
     public:
         std::atomic_int    data_mark_; //0 invalid, 1 hold, 2 ready
-        int    channel_id_;
-        int    priority_;
-        int    category_;
+        int     channel_id_;
+        int     priority_;
+        int     category_; 
+        long long     identify_;
+        int     code_line_;
+        int     code_func_len_;
+        int     code_file_len_;
+        const char* code_func_;
+        const char* code_file_;
         long long timestamp_;        //create timestamp
         int precise_; //create time millionsecond suffix
         unsigned int thread_;
+        int prefix_len_;
         int content_len_;
         char content_[LOG_SIZE]; //content
     };
@@ -640,6 +655,7 @@ namespace FNLog
         DEVICE_OUT_SCREEN,
         DEVICE_OUT_FILE,
         DEVICE_OUT_UDP,
+        DEVICE_OUT_VIRTUAL,
     };
 
 
@@ -649,6 +665,10 @@ namespace FNLog
         DEVICE_CFG_PRIORITY,  
         DEVICE_CFG_CATEGORY,  
         DEVICE_CFG_CATEGORY_EXTEND, 
+        DEVICE_CFG_CATEGORY_FILTER,
+        DEVICE_CFG_IDENTIFY,
+        DEVICE_CFG_IDENTIFY_EXTEND,
+        DEVICE_CFG_IDENTIFY_FILTER,
         DEVICE_CFG_FILE_LIMIT_SIZE, 
         DEVICE_CFG_FILE_ROLLBACK, 
         DEVICE_CFG_UDP_IP,
@@ -676,10 +696,10 @@ namespace FNLog
     public:
         static const int MAX_PATH_SYS_LEN = 255;
         static const int MAX_PATH_LEN = 200;
-        static const int MAX_NAME_LEN = 50;
+        static const int MAX_LOGGER_NAME_LEN = 50;
         static const int MAX_ROLLBACK_LEN = 4;
         static const int MAX_ROLLBACK_PATHS = 5;
-        static_assert(MAX_PATH_LEN + MAX_NAME_LEN + MAX_ROLLBACK_LEN < MAX_PATH_SYS_LEN, "");
+        static_assert(MAX_PATH_LEN + MAX_LOGGER_NAME_LEN + MAX_ROLLBACK_LEN < MAX_PATH_SYS_LEN, "");
         static_assert(LogData::LOG_SIZE > MAX_PATH_SYS_LEN*2, "unsafe size"); // promise format length: date, time, source file path, function length.
         static_assert(MAX_ROLLBACK_PATHS < 10, "");
         using ConfigFields = std::array<std::atomic_llong, DEVICE_CFG_MAX_ID>;
@@ -688,7 +708,7 @@ namespace FNLog
     public:
         int device_id_;
         unsigned int out_type_;
-        char out_file_[MAX_NAME_LEN];
+        char out_file_[MAX_LOGGER_NAME_LEN];
         char out_path_[MAX_PATH_LEN];
         ConfigFields config_fields_;
         LogFields log_fields_;
@@ -706,6 +726,10 @@ namespace FNLog
         CHANNEL_CFG_PRIORITY, 
         CHANNEL_CFG_CATEGORY,  
         CHANNEL_CFG_CATEGORY_EXTEND, 
+        CHANNEL_CFG_CATEGORY_FILTER,
+        CHANNEL_CFG_IDENTIFY,
+        CHANNEL_CFG_IDENTIFY_EXTEND,
+        CHANNEL_CFG_IDENTIFY_FILTER,
         CHANNEL_CFG_MAX_ID
     };
 
@@ -820,7 +844,8 @@ namespace FNLog
     public:
         static const int MAX_CHANNEL_SIZE = SHMLogger::MAX_CHANNEL_SIZE;
         static const int HOTUPDATE_INTERVEL = FN_LOG_HOTUPDATE_INTERVEL;
-
+        static const int MAX_LOGGER_DESC_LEN = 50;
+        static const int MAX_LOGGER_NAME_LEN = 250;
         using ReadLocks = std::array<std::mutex, MAX_CHANNEL_SIZE>;
         using ReadGuard = AutoGuard<std::mutex>;
 
@@ -843,7 +868,10 @@ namespace FNLog
         std::string yaml_path_;
         unsigned int logger_state_;
         StateLock state_lock;
-
+        char desc_[MAX_LOGGER_DESC_LEN];
+        int desc_len_;
+        char name_[MAX_LOGGER_NAME_LEN];
+        int name_len_;
         SHMLogger* shm_;
 
         ReadLocks read_locks_;
@@ -997,9 +1025,15 @@ namespace FNLog
         RK_SYNC,
         RK_DISABLE,
         RK_HOT_UPDATE,
+        RK_LOGGER_NAME,
+        PK_LOGGER_DESC,
         RK_PRIORITY,
         RK_CATEGORY,
         RK_CATEGORY_EXTEND,
+        RK_CATEGORY_FILTER,
+        RK_IDENTIFY,
+        RK_IDENTIFY_EXTEND,
+        RK_IDENTIFY_FILTER,
         RK_OUT_TYPE,
         RK_FILE,
         RK_PATH,
@@ -1008,7 +1042,7 @@ namespace FNLog
         RK_UDP_ADDR,
     };
 
-#if __GNUG__ && __GNUC__ >= 5
+#if __GNUG__ && __GNUC__ >= 6
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
@@ -1029,9 +1063,9 @@ namespace FNLog
             }
             else if (*(begin + 1) == 'a')
             {
-                if (end - begin > (int)sizeof("category") - 1)
+                if (end - begin > (int)sizeof("category_e") - 1)
                 {
-                    return RK_CATEGORY_EXTEND;
+                    return *(begin + 9) == 'e' ? RK_CATEGORY_EXTEND : RK_CATEGORY_FILTER;
                 }
                 else
                 {
@@ -1053,8 +1087,33 @@ namespace FNLog
             return RK_FILE;
         case 'h':
             return RK_HOT_UPDATE;
+        case 'i':
+            if (end - begin > (int)sizeof("identify_e") - 1)
+            {
+                return *(begin + 9) == 'e' ? RK_IDENTIFY_EXTEND : RK_IDENTIFY_FILTER;
+            }
+            else
+            {
+                return RK_IDENTIFY;
+            }
+            break;
         case 'l':
-            return RK_LIMIT_SIZE;
+            if (*(begin + 1) == 'i')
+            {
+                return RK_LIMIT_SIZE;
+            }
+            else if (end - begin > 8)
+            {
+                if (*(begin + 7) == 'n')
+                {
+                    return RK_LOGGER_NAME;
+                }
+                if (*(begin + 7) == 'd')
+                {
+                    return PK_LOGGER_DESC;
+                }
+            }
+            break;
         case 'p':
             if (*(begin + 1) == 'r')
             {
@@ -1119,6 +1178,22 @@ namespace FNLog
         return true;
     }
 
+    inline bool ParseString(const char* begin, const char* end, char * buffer, int buffer_len, int& write_len)
+    {
+        write_len = 0;
+        if (end <= begin)
+        {
+            return false;
+        }
+        write_len = buffer_len - 1;
+        if (end - begin < write_len)
+        {
+            write_len = (int)(end - begin);
+        }
+        memcpy(buffer, begin, write_len);
+        buffer[write_len] = '\0';
+        return true;
+    }
     inline ChannelType ParseChannelType(const char* begin, const char* end)
     {
         if (end <= begin || *begin != 's')
@@ -1144,6 +1219,8 @@ namespace FNLog
             return DEVICE_OUT_UDP;
         case 's':case 'S':
             return DEVICE_OUT_SCREEN;
+        case 'v':case 'V':
+            return DEVICE_OUT_VIRTUAL;
         }
         return DEVICE_OUT_NULL;
     }
@@ -1187,6 +1264,30 @@ namespace FNLog
         return;
     }
 
+    inline unsigned long long ParseBitArray(const char* begin, const char* end)
+    {
+        unsigned long long bitmap = 0;
+        if (end <= begin)
+        {
+            return bitmap;
+        }
+        const char* offset = begin;
+        while (offset < end)
+        {
+            if (*offset >= '0' && *offset <= '9')
+            {
+                int bit_offset = atoi(offset);
+                bitmap |= (1ULL << bit_offset);
+                while (offset < end && (*offset >= '0' && *offset <= '9'))
+                {
+                    offset++;
+                }
+                continue;
+            }
+            offset++;
+        }
+        return bitmap;
+    }
     struct Line
     {
         int blank_;
@@ -1209,6 +1310,10 @@ namespace FNLog
         SHMLogger::Channels channels_;
         int channel_size_;
         bool hot_update_;
+        char desc_[Logger::MAX_LOGGER_DESC_LEN];
+        int desc_len_;
+        char name_[Logger::MAX_LOGGER_NAME_LEN];
+        int name_len_;
     };
 
     inline void InitState(LexState& state)
@@ -1322,7 +1427,7 @@ namespace FNLog
                 if ((ch >= 'a' && ch <= 'z')
                     || (ch >= 'A' && ch <= 'Z')
                     || (ch >= '0' && ch <= '9')
-                    || ch == '_' || ch == '-' || ch == ':' || ch == '/' || ch == '.' || ch == '$' || ch == '~')
+                    || ch == '_' || ch == '-' || ch == ':' || ch == '/' || ch == '.' || ch == ',' || ch == '$' || ch == '~')
                 {
                     switch (ls.line_.block_type_)
                     {
@@ -1400,6 +1505,17 @@ namespace FNLog
             case RK_CATEGORY_EXTEND:
                 device.config_fields_[DEVICE_CFG_CATEGORY_EXTEND] = atoll(ls.line_.val_begin_);
                 break;
+            case RK_CATEGORY_FILTER:
+                device.config_fields_[DEVICE_CFG_CATEGORY_FILTER] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+            case RK_IDENTIFY:
+                device.config_fields_[DEVICE_CFG_IDENTIFY] = atoll(ls.line_.val_begin_);
+                break;
+            case RK_IDENTIFY_EXTEND:
+                device.config_fields_[DEVICE_CFG_IDENTIFY_EXTEND] = atoll(ls.line_.val_begin_);
+                break;
+            case RK_IDENTIFY_FILTER:
+                device.config_fields_[DEVICE_CFG_IDENTIFY_FILTER] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
             case RK_LIMIT_SIZE:
                 device.config_fields_[DEVICE_CFG_FILE_LIMIT_SIZE] = atoll(ls.line_.val_begin_) * 1000*1000;
                 break;
@@ -1415,7 +1531,7 @@ namespace FNLog
                 }
                 break;
             case RK_FILE:
-                if (ls.line_.val_end_ - ls.line_.val_begin_ < Device::MAX_NAME_LEN - 1
+                if (ls.line_.val_end_ - ls.line_.val_begin_ < Device::MAX_LOGGER_NAME_LEN - 1
                     && ls.line_.val_end_ - ls.line_.val_begin_ >= 1)
                 {
                     memcpy(device.out_file_, ls.line_.val_begin_, ls.line_.val_end_ - ls.line_.val_begin_);
@@ -1482,6 +1598,18 @@ namespace FNLog
             case RK_CATEGORY_EXTEND:
                 channel.config_fields_[CHANNEL_CFG_CATEGORY_EXTEND] = atoi(ls.line_.val_begin_);
                 break;
+            case RK_CATEGORY_FILTER:
+                channel.config_fields_[CHANNEL_CFG_CATEGORY_FILTER] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
+            case RK_IDENTIFY:
+                channel.config_fields_[CHANNEL_CFG_IDENTIFY] = atoi(ls.line_.val_begin_);
+                break;
+            case RK_IDENTIFY_EXTEND:
+                channel.config_fields_[CHANNEL_CFG_IDENTIFY_EXTEND] = atoi(ls.line_.val_begin_);
+                break;
+            case RK_IDENTIFY_FILTER:
+                channel.config_fields_[CHANNEL_CFG_IDENTIFY_FILTER] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
             case RK_DEVICE:
                 if (ls.line_.line_type_ != LINE_ARRAY)
                 {
@@ -1534,6 +1662,8 @@ namespace FNLog
         ls.current_ = ls.first_;
         ls.line_.line_type_ = LINE_NULL;
         ls.line_number_ = 1;
+        ls.desc_len_ = 0;
+        ls.name_len_ = 0;
         do
         {
             const char* current = ls.current_;
@@ -1557,6 +1687,12 @@ namespace FNLog
             {
             case RK_HOT_UPDATE:
                 ls.hot_update_ = ParseBool(ls.line_.val_begin_, ls.line_.val_end_);//"disable"
+                break;
+            case RK_LOGGER_NAME:
+                ParseString(ls.line_.val_begin_, ls.line_.val_end_, ls.name_, Logger::MAX_LOGGER_NAME_LEN, ls.name_len_);
+                break;
+            case PK_LOGGER_DESC:
+                ParseString(ls.line_.val_begin_, ls.line_.val_end_, ls.desc_, Logger::MAX_LOGGER_DESC_LEN, ls.desc_len_);
                 break;
             case RK_CHANNEL:
                 if (ls.line_.line_type_ != LINE_ARRAY)
@@ -1595,7 +1731,7 @@ namespace FNLog
         return PEC_NONE;
     }
 
-#if __GNUG__ && __GNUC__ >= 5
+#if __GNUG__ && __GNUC__ >= 6
 #pragma GCC diagnostic pop
 #endif
 
@@ -1653,7 +1789,7 @@ namespace FNLog
 {
 
 
-#ifndef _WIN32
+#ifndef WIN32
     struct PriorityRender
     {
         const char* const priority_name_;
@@ -1795,7 +1931,7 @@ namespace FNLog
 
 
         int real_wide = 0;
-#ifndef _WIN32
+#ifndef WIN32
         real_wide = sizeof(number) * 8 - __builtin_clzll(number);
 #else
         unsigned long win_index = 0;
@@ -1860,7 +1996,7 @@ namespace FNLog
             "0123456789abcdefghijk";
 
         int real_wide = 0;
-#ifndef _WIN32
+#ifndef WIN32
         real_wide = sizeof(number) * 8 - __builtin_clzll(number);
 #else
         unsigned long win_index = 0;
@@ -1887,160 +2023,63 @@ namespace FNLog
         int fp_class = std::fpclassify(number);
         switch (fp_class)
         {
-        case FP_NAN:
-            memcpy(dst, "nan", 3);
-            return 3;
+        case FP_SUBNORMAL:
+        case FP_ZERO:
+            *dst = '0';
+            return 1;
         case FP_INFINITE:
             memcpy(dst, "inf", 3);
             return 3;
+        case FP_NAN:
+            memcpy(dst, "nan", 3);
+            return 3;
+        case FP_NORMAL:
+            break;
+        default:
+            return 0;
         }
 
 
         double fabst = std::fabs(number);
 
-        
         if (fabst < 0.0001 || fabst > 0xFFFFFFFFFFFFFFFULL)
         {
-            char * buf = gcvt(number, 16, dst);
+            char* buf = gcvt(number, 16, dst);
             (void)buf;
             return (int)strlen(dst);
         }
-
-        if (number < 0.0)
+        bool is_neg = std::signbit(number);
+        int neg_offset = 0;
+        if (is_neg)
         {
-            double intpart = 0;
-            unsigned long long fractpart = (unsigned long long)(modf(fabst, &intpart) * 10000);
             *dst = '-';
-            int writed_len = 1 + write_dec_unsafe<0>(dst + 1, (unsigned long long)intpart);
-            if (fractpart > 0)
-            {
-                *(dst + writed_len) = '.';
-                return writed_len + 1 + write_dec_unsafe<4>(dst + writed_len + 1, (unsigned long long)fractpart);
-            }
-            return writed_len;
+            neg_offset = 1;
         }
 
         double intpart = 0;
         unsigned long long fractpart = (unsigned long long)(modf(fabst, &intpart) * 10000);
-        int writed_len = write_dec_unsafe<0>(dst, (unsigned long long)intpart);
+        int base_offset = write_dec_unsafe<0>(dst + neg_offset, (unsigned long long)intpart);
         if (fractpart > 0)
         {
-            *(dst + writed_len) = '.';
-            writed_len++;
-            int wide = 4;
-            int fp = (int)fractpart;
-            while (fp % 10 == 0 && wide > 1)
+            *(dst + neg_offset + base_offset) = '.';
+            int fractpat_offset = 1 + write_dec_unsafe<4>(dst + neg_offset + base_offset + 1, (unsigned long long)fractpart);
+            for (int i = neg_offset + base_offset + fractpat_offset - 1; i > neg_offset + base_offset + 2; i--)
             {
-                wide--;
-                fp /= 10;
-            }
-            writed_len += wide;
-            fp = (int)fractpart;
-            switch (wide)
-            {
-            case 1:
-                *(dst + writed_len - 1) = "0123456789"[fp / 1000];
-                break;
-            case 2:
-                *(dst + writed_len - 2) = "0123456789"[fp / 1000];
-                *(dst + writed_len - 1) = "0123456789"[fp / 100 % 10];
-                break;
-            case 3:
-                *(dst + writed_len - 3) = "0123456789"[fp / 1000];
-                *(dst + writed_len - 2) = "0123456789"[fp / 100 % 10];
-                *(dst + writed_len - 1) = "0123456789"[fp / 10 % 10];
-                break;
-            case 4:
-                *(dst + writed_len - 4) = "0123456789"[fp / 1000];
-                *(dst + writed_len - 3) = "0123456789"[fp / 100 % 10];
-                *(dst + writed_len - 2) = "0123456789"[fp / 10 % 10];
-                *(dst + writed_len - 1) = "0123456789"[fp % 10];
-                break;
-            default:
+                if (*(dst + i) == '0')
+                {
+                    fractpat_offset--;
+                    continue;
+                }
                 break;
             }
+            return neg_offset + base_offset + fractpat_offset;
         }
-        return writed_len;
+        return neg_offset + base_offset;
     }
 
     inline int write_float_unsafe(char* dst, float number)
     {
-        if (std::isnan(number))
-        {
-            memcpy(dst, "nan", 3);
-            return 3;
-        }
-        else if (std::isinf(number))
-        {
-            memcpy(dst, "inf", 3);
-            return 3;
-        }
-
-        double fabst = std::fabs(number);
-
-
-        if (fabst < 0.0001 || fabst > 0xFFFFFFFULL)
-        {
-            char* buf = gcvt(number, 7, dst);
-            (void)buf;
-            return (int)strlen(dst);
-        }
-
-        if (number < 0.0)
-        {
-            double intpart = 0;
-            unsigned long long fractpart = (unsigned long long)(modf(fabst, &intpart) * 10000);
-            *dst = '-';
-            int writed_len = 1 + write_dec_unsafe<0>(dst + 1, (unsigned long long)intpart);
-            if (fractpart > 0)
-            {
-                *(dst + writed_len) = '.';
-                return writed_len + 1 + write_dec_unsafe<4>(dst + writed_len + 1, (unsigned long long)fractpart);
-            }
-            return writed_len;
-        }
-
-        double intpart = 0;
-        unsigned long long fractpart = (unsigned long long)(modf(fabst, &intpart) * 10000);
-        int writed_len = write_dec_unsafe<0>(dst, (unsigned long long)intpart);
-        if (fractpart > 0)
-        {
-            *(dst + writed_len) = '.';
-            writed_len++;
-            int wide = 4;
-            int fp = (int)fractpart;
-            while (fp %10 == 0 && wide > 1)
-            {
-                wide--;
-                fp /= 10;
-            }
-            writed_len += wide;
-            fp = (int)fractpart;
-            switch (wide)
-            {
-            case 1:
-                *(dst + writed_len - 1) = "0123456789"[fp / 1000];
-                break;
-            case 2:
-                *(dst + writed_len - 2) = "0123456789"[fp / 1000];
-                *(dst + writed_len - 1) = "0123456789"[fp / 100 % 10];
-                break;
-            case 3:
-                *(dst + writed_len - 3) = "0123456789"[fp / 1000];
-                *(dst + writed_len - 2) = "0123456789"[fp / 100 % 10];
-                *(dst + writed_len - 1) = "0123456789"[fp / 10 % 10];
-                break;
-            case 4:
-                *(dst + writed_len - 4) = "0123456789"[fp / 1000];
-                *(dst + writed_len - 3) = "0123456789"[fp / 100 % 10];
-                *(dst + writed_len - 2) = "0123456789"[fp / 10 % 10];
-                *(dst + writed_len - 1) = "0123456789"[fp % 10];
-                break;
-            default:
-                break;
-            }
-        }
-        return writed_len;
+        return write_double_unsafe(dst, number);
     }
 
     inline int write_date_unsafe(char* dst, long long timestamp, unsigned int precise)
@@ -2104,8 +2143,6 @@ namespace FNLog
     inline int write_log_thread_unsafe(char* dst, unsigned int thread_id)
     {
         int write_bytes = 0;
-        *(dst + write_bytes) = ' ';
-        write_bytes++;
         *(dst + write_bytes) = '[';
         write_bytes++;
         write_bytes += write_dec_unsafe<0>(dst + write_bytes, (unsigned long long) thread_id);
@@ -2178,7 +2215,7 @@ namespace FNLog
 
 namespace FNLog
 {
-#if __GNUG__ && __GNUC__ >= 5
+#if __GNUG__ && __GNUC__ >= 6
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
@@ -2216,7 +2253,16 @@ namespace FNLog
             printf("%s\n", os.str().c_str());
             return ret;
         }
-
+        if (ls->name_len_ > 0)
+        {
+            memcpy(logger.name_, ls->name_, ls->name_len_+1);
+            logger.name_len_ = ls->name_len_;
+        }
+        if (ls->desc_len_ > 0)
+        {
+            memcpy(logger.desc_, ls->desc_, ls->desc_len_+1);
+            logger.desc_len_ = ls->desc_len_;
+        }
         logger.yaml_path_ = path;
         logger.hot_update_ = ls->hot_update_;
         logger.shm_->channel_size_ = ls->channel_size_;
@@ -2322,6 +2368,10 @@ namespace FNLog
         {
             return ret;
         }
+        if (!logger.hot_update_)
+        {
+            return -8;
+        }
         logger.hot_update_ = ls->hot_update_;
 
         static_assert(std::is_same<decltype(logger.shm_->channels_[channel_id].config_fields_), decltype(ls->channels_[channel_id].config_fields_)>::value, "");
@@ -2331,7 +2381,7 @@ namespace FNLog
         Channel& src_chl = ls->channels_[channel_id];
         if (dst_chl.channel_id_ != src_chl.channel_id_ || src_chl.channel_id_ != channel_id)
         {
-            return - 7;
+            return -10;
         }
         for (int field_id = 0; field_id < CHANNEL_CFG_MAX_ID; field_id++)
         {
@@ -2345,21 +2395,21 @@ namespace FNLog
             Device& src_dvc = src_chl.devices_[device_id];
             if (src_dvc.device_id_ != device_id)
             {
-                return -8;
+                return -11;
             }
             if (device_id < dst_chl.device_size_)
             {
                 Device& dst_dvc = dst_chl.devices_[device_id];
                 if (dst_dvc.device_id_ != device_id)
                 {
-                    return -9;
+                    return -12;
                 }
                 memcpy(&dst_dvc.config_fields_, &src_dvc.config_fields_, sizeof(dst_dvc.config_fields_));
                 continue;
             }
             if (dst_chl.device_size_ != device_id)
             {
-                return -10;
+                return -13;
             }
             memcpy(&dst_chl.devices_[dst_chl.device_size_++], &src_dvc, sizeof(src_dvc));
             
@@ -2368,7 +2418,7 @@ namespace FNLog
         return 0;
     }
 
-#if __GNUG__ && __GNUC__ >= 5
+#if __GNUG__ && __GNUC__ >= 6
 #pragma GCC diagnostic pop
 #endif
 }
@@ -2589,7 +2639,7 @@ namespace FNLog
 
         path += name;
 
-        if (path.length() >= Device::MAX_PATH_LEN + Device::MAX_NAME_LEN)
+        if (path.length() >= Device::MAX_PATH_LEN + Device::MAX_LOGGER_NAME_LEN)
         {
             AtomicStoreL(device, DEVICE_LOG_LAST_TRY_CREATE_ERROR, 1);
             AtomicStoreL(device, DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP, log.timestamp_);
@@ -2781,7 +2831,7 @@ namespace FNLog
         {
             priority = PRIORITY_ALARM;
         }
-#ifndef _WIN32
+#ifndef WIN32
         printf("%s%s\e[0m", PRIORITY_RENDER[priority].scolor_, log.content_);
 #else
 
@@ -2808,6 +2858,79 @@ namespace FNLog
 
 
 
+}
+
+
+#endif
+/*
+ *
+ * MIT License
+ *
+ * Copyright (C) 2021 YaweiZhang <yawei.zhang@foxmail.com>.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * ===============================================================================
+ *
+ * (end of COPYRIGHT)
+ */
+
+
+ /*
+  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
+  * VERSION:  1.0.0
+  * PURPOSE:  fn-log is a cpp-based logging utility.
+  * CREATION: 2019.4.20
+  * RELEASED: 2019.6.27
+  * QQGROUP:  524700770
+  */
+
+
+#pragma once
+#ifndef _FN_LOG_OUT_VIRTUAL_DEVICE_H_
+#define _FN_LOG_OUT_VIRTUAL_DEVICE_H_
+
+
+namespace FNLog
+{
+    using VirtualDevicePtr = void (*)(const LogData& log);
+
+    inline VirtualDevicePtr& RefVirtualDevice()
+    {
+        static VirtualDevicePtr g_virtual_device_ptr = NULL;
+        return g_virtual_device_ptr;
+    }
+    inline void SetVirtualDevice(VirtualDevicePtr vdp)
+    {
+        RefVirtualDevice() = vdp;
+    }
+
+    inline void EnterProcOutVirtualDevice(Logger& logger, int channel_id, int device_id, LogData& log)
+    {
+        if (RefVirtualDevice())
+        {
+            Device& device = logger.shm_->channels_[channel_id].devices_[device_id];
+            AtomicAddL(device, DEVICE_LOG_TOTAL_WRITE_LINE);
+            AtomicAddLV(device, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
+            (*RefVirtualDevice())(log);
+        }
+    }
 }
 
 
@@ -2876,6 +2999,9 @@ namespace FNLog
         case DEVICE_OUT_UDP:
             EnterProcOutUDPDevice(logger, channel_id, device_id, log);
             break;
+        case DEVICE_OUT_VIRTUAL:
+            EnterProcOutVirtualDevice(logger, channel_id, device_id, log);
+            break;        
         default:
             break;
         }
@@ -2895,13 +3021,28 @@ namespace FNLog
             {
                 continue;
             }
-            if (AtomicLoadC(device, DEVICE_CFG_CATEGORY) > 0)
+            long long begin_category = AtomicLoadC(device, DEVICE_CFG_CATEGORY);
+            long long category_count = AtomicLoadC(device, DEVICE_CFG_CATEGORY_EXTEND);
+            unsigned long long category_filter = (unsigned long long)AtomicLoadC(device, DEVICE_CFG_CATEGORY_FILTER);
+            long long begin_identify = AtomicLoadC(device, DEVICE_CFG_IDENTIFY);
+            long long identify_count =AtomicLoadC(device, DEVICE_CFG_IDENTIFY_EXTEND);
+            unsigned long long identify_filter = (unsigned long long)AtomicLoadC(device, DEVICE_CFG_IDENTIFY_FILTER);
+
+            if (category_count > 0 && (log.category_ < begin_category || log.category_ >= begin_category + category_count))
             {
-                if (log.category_ < AtomicLoadC(device, DEVICE_CFG_CATEGORY)
-                    || log.category_ > AtomicLoadC(device, DEVICE_CFG_CATEGORY) + AtomicLoadC(device, DEVICE_CFG_CATEGORY_EXTEND))
-                {
-                    continue;
-                }
+                continue;
+            }
+            if (identify_count > 0 && (log.identify_ < begin_identify || log.identify_ >= begin_identify + identify_count))
+            {
+                continue;
+            }
+            if (category_filter && (category_filter & ((1ULL) << (unsigned int)log.category_)) == 0)
+            {
+                continue;
+            }
+            if (identify_filter && (identify_filter & ((1ULL) << (unsigned int)log.identify_)) == 0)
+            {
+                continue;
             }
             EnterProcDevice(logger, channel.channel_id_, device_id, log);
         }
@@ -3001,15 +3142,22 @@ namespace FNLog
     
     
 
-    inline void InitLogData(Logger& logger, LogData& log, int channel_id, int priority, int category, unsigned int prefix)
+    inline void InitLogData(Logger& logger, LogData& log, int channel_id, int priority, int category, unsigned long long identify, unsigned int prefix)
     {
         log.channel_id_ = channel_id;
         log.priority_ = priority;
         log.category_ = category;
+        log.identify_ = identify;
+        log.code_line_ = 0;
+        log.code_func_len_ = 0;
+        log.code_file_len_ = 0;
+        log.code_file_ = "";
+        log.code_func_ = "";
+        log.prefix_len_ = 0;
         log.content_len_ = 0;
         log.content_[log.content_len_] = '\0';
 
-#ifdef _WIN32
+#ifdef WIN32
         FILETIME ft;
         GetSystemTimeAsFileTime(&ft);
         unsigned long long now = ft.dwHighDateTime;
@@ -3027,12 +3175,8 @@ namespace FNLog
         log.precise_ = tm.tv_usec / 1000;
 #endif
         log.thread_ = 0;
-        if (prefix == LOG_PREFIX_NULL)
-        {
-            return;
-        }
 
-#ifdef _WIN32
+#ifdef WIN32
         static thread_local unsigned int therad_id = GetCurrentThreadId();
         log.thread_ = therad_id;
 #elif defined(__APPLE__)
@@ -3043,23 +3187,12 @@ namespace FNLog
         static thread_local unsigned int therad_id = (unsigned int)syscall(SYS_gettid);
         log.thread_ = therad_id;
 #endif
-        if (prefix & LOG_PREFIX_TIMESTAMP)
-        {
-            log.content_len_ += write_date_unsafe(log.content_ + log.content_len_, log.timestamp_, log.precise_);
-        }
-        if (prefix & LOG_PREFIX_PRIORITY)
-        {
-            log.content_len_ += write_log_priority_unsafe(log.content_ + log.content_len_, log.priority_);
-        }
-        if (prefix & LOG_PREFIX_THREAD)
-        {
-            log.content_len_ += write_log_thread_unsafe(log.content_ + log.content_len_, log.thread_);
-        }
         log.content_[log.content_len_] = '\0';
+        log.prefix_len_ = log.content_len_;
         return;
     }
 
-    inline int HoldChannel(Logger& logger, int channel_id, int priority, int category)
+    inline int HoldChannel(Logger& logger, int channel_id, int priority, int category, long long identify)
     {
         if (channel_id >= logger.shm_->channel_size_ || channel_id < 0)
         {
@@ -3079,14 +3212,47 @@ namespace FNLog
         {
             return -4;
         }
-        if (AtomicLoadC(channel, CHANNEL_CFG_CATEGORY) > 0)
+        long long begin_category = AtomicLoadC(channel, CHANNEL_CFG_CATEGORY);
+        long long category_count = AtomicLoadC(channel, CHANNEL_CFG_CATEGORY_EXTEND);
+        unsigned long long category_filter = (unsigned long long)AtomicLoadC(channel, CHANNEL_CFG_CATEGORY_FILTER);
+        long long begin_identify = AtomicLoadC(channel, CHANNEL_CFG_IDENTIFY);
+        long long identify_count = AtomicLoadC(channel, CHANNEL_CFG_IDENTIFY_EXTEND);
+        unsigned long long identify_filter = (unsigned long long)AtomicLoadC(channel, CHANNEL_CFG_IDENTIFY_FILTER);
+
+        if (category_count > 0 && (category < begin_category || category >= begin_category + category_count))
         {
-            if (category < AtomicLoadC(channel, CHANNEL_CFG_CATEGORY)
-                || category > AtomicLoadC(channel, CHANNEL_CFG_CATEGORY) + AtomicLoadC(channel, CHANNEL_CFG_CATEGORY_EXTEND))
+            return -5;
+        }
+        if (identify_count > 0 && (identify < begin_identify || identify >= begin_identify + identify_count))
+        {
+            return -6;
+        }
+        if (category_filter && (category_filter & ((1ULL) << (unsigned int)category)) == 0)
+        {
+            return -7;
+        }
+        if (identify_filter && (identify_filter & ((1ULL) << (unsigned int)identify)) == 0)
+        {
+            return -8;
+        }
+
+        bool need_write = false;
+
+        for (int i = 0; i < logger.shm_->channels_[channel_id].device_size_; i++)
+        {
+            if (logger.shm_->channels_[channel_id].devices_[i].config_fields_[FNLog::DEVICE_CFG_ABLE] && priority >= logger.shm_->channels_[channel_id].devices_[i].config_fields_[FNLog::DEVICE_CFG_PRIORITY])
             {
-                return -5;
+                need_write = true;
+                break;
             }
         }
+        if (!need_write)
+        {
+            return -10;
+        }
+
+
+
         int state = 0;
         do
         {
@@ -3121,7 +3287,7 @@ namespace FNLog
                 break;
             }
         } while (true);
-        return -10;
+        return -11;
     }
 
     inline int PushChannel(Logger& logger, int channel_id, int hold_idx)
@@ -3225,7 +3391,7 @@ namespace FNLog
 namespace FNLog
 {
 
-#if __GNUG__ && __GNUC__ >= 5
+#if __GNUG__ && __GNUC__ >= 6
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
@@ -3596,10 +3762,26 @@ namespace FNLog
         }
     }
 
+    inline bool FastCheckPriorityPass(Logger& logger, int channel_id, int priority, int category, long long identify)
+    {
+        (void)identify;
+        if (logger.shm_->channel_size_ <= channel_id || priority < logger.shm_->channels_[channel_id].config_fields_[FNLog::CHANNEL_CFG_PRIORITY])
+        {
+            return true;
+        }
+        for (int i = 0; i < logger.shm_->channels_[channel_id].device_size_; i++)
+        {
+            if (logger.shm_->channels_[channel_id].devices_[i].config_fields_[FNLog::DEVICE_CFG_ABLE] && priority >= logger.shm_->channels_[channel_id].devices_[i].config_fields_[FNLog::DEVICE_CFG_PRIORITY])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 
     inline void LoadSharedMemory(Logger& logger)
     {
-#if FN_LOG_USE_SHM && !defined(_WIN32)
+#if FN_LOG_USE_SHM && !defined(WIN32)
         SHMLogger* shm = nullptr;
         int idx = shmget(FN_LOG_SHM_KEY, 0, 0);
         if (idx < 0 && errno != ENOENT)
@@ -3697,7 +3879,7 @@ namespace FNLog
     }
     inline void UnloadSharedMemory(Logger& logger)
     {
-#if FN_LOG_USE_SHM && !defined(_WIN32)
+#if FN_LOG_USE_SHM && !defined(WIN32)
         if (logger.shm_)
         {
             int idx = logger.shm_->shm_id_;
@@ -3718,9 +3900,17 @@ namespace FNLog
     {
         logger.hot_update_ = false;
         logger.logger_state_ = LOGGER_STATE_UNINIT;
+        memset(logger.desc_, 0, Logger::MAX_LOGGER_DESC_LEN);
+        logger.desc_len_ = 0;
+        memset(logger.name_, 0, Logger::MAX_LOGGER_NAME_LEN);
+        logger.name_len_ = 0;
+        std::string name = FileHandler::process_name();
+        name = name.substr(0, Logger::MAX_LOGGER_NAME_LEN - 1);
+        memcpy(logger.name_, name.c_str(), name.length() + 1);
+        logger.name_len_ = (int)name.length();
         LoadSharedMemory(logger);
 
-#if ((defined _WIN32) && !KEEP_INPUT_QUICK_EDIT)
+#if ((defined WIN32) && !KEEP_INPUT_QUICK_EDIT)
         HANDLE input_handle = ::GetStdHandle(STD_INPUT_HANDLE);
         if (input_handle != INVALID_HANDLE_VALUE)
         {
@@ -3754,7 +3944,7 @@ namespace FNLog
         UnloadSharedMemory(*this);
     }
 
-#if __GNUG__ && __GNUC__ >= 5
+#if __GNUG__ && __GNUC__ >= 6
 #pragma GCC diagnostic pop
 #endif
 
@@ -3825,13 +4015,13 @@ namespace FNLog
             other.hold_idx_ = -1;
         }
 
-        explicit LogStream(Logger& logger, int channel_id, int priority, int category, 
+        explicit LogStream(Logger& logger, int channel_id, int priority, int category, long long identify,
             const char * const file_name, int file_name_len, int line,
             const char * const func_name, int func_name_len, unsigned int prefix)
         {
             logger_ = nullptr;
             log_data_ = nullptr;
-            int hold_idx = HoldChannel(logger, channel_id, priority, category);
+            int hold_idx = HoldChannel(logger, channel_id, priority, category, identify);
             if (hold_idx < 0)
             {
                 return;
@@ -3839,7 +4029,7 @@ namespace FNLog
 
             try
             {
-                InitLogData(logger, logger.shm_->ring_buffers_[channel_id].buffer_[hold_idx], channel_id, priority, category, prefix);
+                InitLogData(logger, logger.shm_->ring_buffers_[channel_id].buffer_[hold_idx], channel_id, priority, category, identify, prefix);
             }
             catch (const std::exception&)
             {
@@ -3849,13 +4039,43 @@ namespace FNLog
             logger_ = &logger;
             log_data_ = &logger.shm_->ring_buffers_[channel_id].buffer_[hold_idx];
             hold_idx_ = hold_idx;
+            log_data_->code_line_ = line;
+            log_data_->code_func_ = func_name;
+            log_data_->code_func_len_ = func_name_len;
+            log_data_->code_file_ = file_name;
+            log_data_->code_file_len_ = file_name_len;
             if (prefix == LOG_PREFIX_NULL)
             {
                 return;
             }
+            if (prefix & LOG_PREFIX_TIMESTAMP)
+            {
+                log_data_->content_len_ += write_date_unsafe(log_data_->content_ + log_data_->content_len_, log_data_->timestamp_, log_data_->precise_);
+            }
+            if (prefix & LOG_PREFIX_PRIORITY)
+            {
+                log_data_->content_len_ += write_log_priority_unsafe(log_data_->content_ + log_data_->content_len_, log_data_->priority_);
+            }
+            if (prefix & LOG_PREFIX_THREAD)
+            {
+                log_data_->content_len_ += write_log_thread_unsafe(log_data_->content_ + log_data_->content_len_, log_data_->thread_);
+            }
+            if (prefix & LOG_PREFIX_NAME)
+            {
+                write_char_unsafe('[');
+                write_buffer_unsafe(logger.name_, logger.name_len_);
+                write_char_unsafe(']');
+            }
+            if (prefix & LOG_PREFIX_DESC)
+            {
+                write_char_unsafe('[');
+                write_buffer_unsafe(logger.desc_, logger.desc_len_);
+                write_char_unsafe(']');
+            }
             if (prefix & LOG_PREFIX_FILE)
             {
-                write_char_unsafe(' ');
+                write_char_unsafe('[');
+                write_char_unsafe('(');
                 if (file_name && file_name_len > 0)
                 {
                     int jump_bytes = short_path(file_name, file_name_len);
@@ -3865,14 +4085,14 @@ namespace FNLog
                 {
                     write_buffer_unsafe("nofile", 6);
                 }
+                write_char_unsafe(')');
                 write_char_unsafe(':');
-                write_char_unsafe('<');
                 *this << (unsigned long long)line;
-                write_char_unsafe('>');
-                write_char_unsafe(' ');
+                write_char_unsafe(']');
             }
             if (prefix & LOG_PREFIX_FUNCTION)
             {
+                write_char_unsafe('(');
                 if (func_name && func_name_len > 0)
                 {
                     write_buffer_unsafe(func_name, func_name_len);
@@ -3881,8 +4101,10 @@ namespace FNLog
                 {
                     write_buffer_unsafe("null", 4);
                 }
-                write_char_unsafe(' ');
+                write_char_unsafe(')');
             }
+            write_char_unsafe(' ');
+            log_data_->prefix_len_ = log_data_->content_len_;
         }
         
         ~LogStream()
@@ -4269,34 +4491,34 @@ namespace FNLog
 
 //--------------------BASE STREAM MACRO ---------------------------
 
-#define LOG_STREAM_ORIGIN(logger, channel, priority, category, prefix) \
-FNLog::LogStream(logger, channel, priority, category, \
+#define LOG_STREAM_ORIGIN(logger, channel, priority, category, identify, prefix) \
+FNLog::LogStream(logger, channel, priority, category, identify,\
 __FILE__, sizeof(__FILE__) - 1, \
 __LINE__, __FUNCTION__, sizeof(__FUNCTION__) -1, prefix)
 
-#define LOG_STREAM_DEFAULT_LOGGER(channel, priority, category, prefix) \
-    LOG_STREAM_ORIGIN(FNLog::GetDefaultLogger(), channel, priority, category, prefix)
+#define LOG_STREAM_DEFAULT_LOGGER(channel, priority, category, identify, prefix) \
+    LOG_STREAM_ORIGIN(FNLog::GetDefaultLogger(), channel, priority, category, identify, prefix)
 
-#define LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel, priority, category) \
-    LOG_STREAM_DEFAULT_LOGGER(channel, priority, category, FNLog::LOG_PREFIX_ALL)
+#define LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel, priority, category, identify) \
+    LOG_STREAM_DEFAULT_LOGGER(channel, priority, category, identify, FNLog::LOG_PREFIX_DEFAULT)
 
 
 //--------------------CPP STREAM STYLE FORMAT ---------------------------
-#define LogTraceStream(channel_id, category) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_TRACE, category)
-#define LogDebugStream(channel_id, category) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_DEBUG, category)
-#define LogInfoStream(channel_id,  category) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_INFO,  category)
-#define LogWarnStream(channel_id,  category) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_WARN,  category)
-#define LogErrorStream(channel_id, category) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ERROR, category)
-#define LogAlarmStream(channel_id, category) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ALARM, category)
-#define LogFatalStream(channel_id, category) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_FATAL, category)
+#define LogTraceStream(channel_id, category, identify) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_TRACE, category, identify)
+#define LogDebugStream(channel_id, category, identify) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_DEBUG, category, identify)
+#define LogInfoStream(channel_id,  category, identify) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_INFO,  category, identify)
+#define LogWarnStream(channel_id,  category, identify) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_WARN,  category, identify)
+#define LogErrorStream(channel_id, category, identify) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ERROR, category, identify)
+#define LogAlarmStream(channel_id, category, identify) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ALARM, category, identify)
+#define LogFatalStream(channel_id, category, identify) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_FATAL, category, identify)
 
-#define LogTrace() LogTraceStream(0, 0)
-#define LogDebug() LogDebugStream(0, 0)
-#define LogInfo()  LogInfoStream(0, 0)
-#define LogWarn()  LogWarnStream(0, 0)
-#define LogError() LogErrorStream(0, 0)
-#define LogAlarm() LogAlarmStream(0, 0)
-#define LogFatal() LogFatalStream(0, 0)
+#define LogTrace() LogTraceStream(0, 0, 0)
+#define LogDebug() LogDebugStream(0, 0, 0)
+#define LogInfo()  LogInfoStream(0, 0, 0)
+#define LogWarn()  LogWarnStream(0, 0, 0)
+#define LogError() LogErrorStream(0, 0, 0)
+#define LogAlarm() LogAlarmStream(0, 0, 0)
+#define LogFatal() LogFatalStream(0, 0, 0)
 
 
 //--------------------CPP TEMPLATE STYLE FORMAT ---------------------------
@@ -4312,47 +4534,51 @@ FNLog::LogStream& LogTemplatePack(FNLog::LogStream&& ls, Args&& ... args)
     return ls;
 }
 
-#define LogTracePack(channel_id, category, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_TRACE, category), ##__VA_ARGS__)
-#define LogDebugPack(channel_id, category, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_DEBUG, category), ##__VA_ARGS__)
-#define LogInfoPack(channel_id,  category, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_INFO,  category), ##__VA_ARGS__)
-#define LogWarnPack(channel_id,  category, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_WARN,  category), ##__VA_ARGS__)
-#define LogErrorPack(channel_id, category, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ERROR, category), ##__VA_ARGS__)
-#define LogAlarmPack(channel_id, category, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ALARM, category), ##__VA_ARGS__)
-#define LogFatalPack(channel_id, category, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_FATAL, category), ##__VA_ARGS__)
+#define LogTracePack(channel_id, category, identify, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_TRACE, category, identify), ##__VA_ARGS__)
+#define LogDebugPack(channel_id, category, identify, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_DEBUG, category, identify), ##__VA_ARGS__)
+#define LogInfoPack(channel_id,  category, identify, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_INFO,  category, identify), ##__VA_ARGS__)
+#define LogWarnPack(channel_id,  category, identify, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_WARN,  category, identify), ##__VA_ARGS__)
+#define LogErrorPack(channel_id, category, identify, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ERROR, category, identify), ##__VA_ARGS__)
+#define LogAlarmPack(channel_id, category, identify, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ALARM, category, identify), ##__VA_ARGS__)
+#define LogFatalPack(channel_id, category, identify, ...)  LogTemplatePack(LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_FATAL, category, identify), ##__VA_ARGS__)
 
-#define PackTrace(...) LogTracePack(0, 0, ##__VA_ARGS__)
-#define PackDebug(...) LogDebugPack(0, 0, ##__VA_ARGS__)
-#define PackInfo( ...) LogInfoPack( 0, 0, ##__VA_ARGS__)
-#define PackWarn( ...) LogWarnPack( 0, 0, ##__VA_ARGS__)
-#define PackError(...) LogErrorPack(0, 0, ##__VA_ARGS__)
-#define PackAlarm(...) LogAlarmPack(0, 0, ##__VA_ARGS__)
-#define PackFatal(...) LogFatalPack(0, 0, ##__VA_ARGS__)
+#define PackTrace(...) LogTracePack(0, 0, 0, ##__VA_ARGS__)
+#define PackDebug(...) LogDebugPack(0, 0, 0, ##__VA_ARGS__)
+#define PackInfo( ...) LogInfoPack( 0, 0, 0, ##__VA_ARGS__)
+#define PackWarn( ...) LogWarnPack( 0, 0, 0, ##__VA_ARGS__)
+#define PackError(...) LogErrorPack(0, 0, 0, ##__VA_ARGS__)
+#define PackAlarm(...) LogAlarmPack(0, 0, 0, ##__VA_ARGS__)
+#define PackFatal(...) LogFatalPack(0, 0, 0, ##__VA_ARGS__)
 
 
 //--------------------CPP MACRO STREAM STYLE FORMAT ---------------------------
 
-#define LOG_TRACE(channel_id, category, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_TRACE, category) << log
-#define LOG_DEBUG(channel_id, category, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_DEBUG, category) << log
-#define LOG_INFO(channel_id,  category, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_INFO,  category) << log
-#define LOG_WARN(channel_id,  category, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_WARN,  category) << log
-#define LOG_ERROR(channel_id, category, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ERROR, category) << log
-#define LOG_ALARM(channel_id, category, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ALARM, category) << log
-#define LOG_FATAL(channel_id, category, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_FATAL, category) << log
+#define LOG_TRACE(channel_id, category, identify, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_TRACE, category, identify) << log
+#define LOG_DEBUG(channel_id, category, identify, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_DEBUG, category, identify) << log
+#define LOG_INFO(channel_id,  category, identify, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_INFO,  category, identify) << log
+#define LOG_WARN(channel_id,  category, identify, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_WARN,  category, identify) << log
+#define LOG_ERROR(channel_id, category, identify, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ERROR, category, identify) << log
+#define LOG_ALARM(channel_id, category, identify, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_ALARM, category, identify) << log
+#define LOG_FATAL(channel_id, category, identify, log) LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel_id, FNLog::PRIORITY_FATAL, category, identify) << log
 
-#define LOGT(log) LOG_TRACE(0, 0, log)
-#define LOGD(log) LOG_DEBUG(0, 0, log)
-#define LOGI(log) LOG_INFO(0, 0, log)
-#define LOGW(log) LOG_WARN(0, 0, log)
-#define LOGE(log) LOG_ERROR(0, 0, log)
-#define LOGA(log) LOG_ALARM(0, 0, log)
-#define LOGF(log) LOG_FATAL(0, 0, log)
+#define LOGT(log) LOG_TRACE(0, 0, 0, log)
+#define LOGD(log) LOG_DEBUG(0, 0, 0, log)
+#define LOGI(log) LOG_INFO(0,  0, 0, log)
+#define LOGW(log) LOG_WARN(0,  0, 0, log)
+#define LOGE(log) LOG_ERROR(0, 0, 0, log)
+#define LOGA(log) LOG_ALARM(0, 0, 0, log)
+#define LOGF(log) LOG_FATAL(0, 0, 0, log)
 
 
 //--------------------C STYLE FORMAT ---------------------------
-#ifdef _WIN32
-#define LOG_FORMAT(channel_id, priority, category, prefix, logformat, ...) \
+#ifdef WIN32
+#define LOG_FORMAT(channel_id, priority, category, identify, prefix, logformat, ...) \
 do{ \
-    FNLog::LogStream __log_stream(LOG_STREAM_DEFAULT_LOGGER(channel_id, priority, category, prefix));\
+    if (FNLog::FastCheckPriorityPass(FNLog::GetDefaultLogger(), channel_id, priority, category, identify))  \
+    { \
+        break;   \
+    } \
+    FNLog::LogStream __log_stream(LOG_STREAM_DEFAULT_LOGGER(channel_id, priority, category, identify, prefix));\
     if (__log_stream.log_data_)\
     {\
         int __log_len = _snprintf_s(__log_stream.log_data_ ->content_ + __log_stream.log_data_ ->content_len_, FNLog::LogData::LOG_SIZE - __log_stream.log_data_ ->content_len_, _TRUNCATE, logformat, ##__VA_ARGS__); \
@@ -4361,9 +4587,13 @@ do{ \
     }\
 } while (0)
 #else
-#define LOG_FORMAT(channel_id, priority, category, prefix, logformat, ...) \
+#define LOG_FORMAT(channel_id, priority, category, identify, prefix, logformat, ...) \
 do{ \
-    FNLog::LogStream __log_stream(LOG_STREAM_DEFAULT_LOGGER(channel_id, priority, category, prefix));\
+    if (FNLog::FastCheckPriorityPass(FNLog::GetDefaultLogger(), channel_id, priority, category, identify))  \
+    { \
+        break;   \
+    } \
+    FNLog::LogStream __log_stream(LOG_STREAM_DEFAULT_LOGGER(channel_id, priority, category, identify, prefix));\
     if (__log_stream.log_data_)\
     {\
         int __log_len = snprintf(__log_stream.log_data_ ->content_ + __log_stream.log_data_ ->content_len_, FNLog::LogData::LOG_SIZE - __log_stream.log_data_ ->content_len_, logformat, ##__VA_ARGS__); \
@@ -4373,20 +4603,20 @@ do{ \
 } while (0)
 #endif
 
-#define LOGFMT_TRACE(channel_id, category, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_TRACE, category, FNLog::LOG_PREFIX_ALL, fmt, ##__VA_ARGS__)
-#define LOGFMT_DEBUG(channel_id, category, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_DEBUG, category, FNLog::LOG_PREFIX_ALL, fmt, ##__VA_ARGS__)
-#define LOGFMT_INFO( channel_id, category, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_INFO,  category, FNLog::LOG_PREFIX_ALL, fmt, ##__VA_ARGS__)
-#define LOGFMT_WARN( channel_id, category, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_WARN,  category, FNLog::LOG_PREFIX_ALL, fmt, ##__VA_ARGS__)
-#define LOGFMT_ERROR(channel_id, category, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_ERROR, category, FNLog::LOG_PREFIX_ALL, fmt, ##__VA_ARGS__)
-#define LOGFMT_ALARM(channel_id, category, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_ALARM, category, FNLog::LOG_PREFIX_ALL, fmt, ##__VA_ARGS__)
-#define LOGFMT_FATAL(channel_id, category, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_FATAL, category, FNLog::LOG_PREFIX_ALL, fmt, ##__VA_ARGS__)
-#define LOGFMTT(fmt, ...) LOGFMT_TRACE(0, 0, fmt,  ##__VA_ARGS__)
-#define LOGFMTD(fmt, ...) LOGFMT_DEBUG(0, 0, fmt,  ##__VA_ARGS__)
-#define LOGFMTI(fmt, ...) LOGFMT_INFO( 0, 0, fmt,  ##__VA_ARGS__)
-#define LOGFMTW(fmt, ...) LOGFMT_WARN( 0, 0, fmt,  ##__VA_ARGS__)
-#define LOGFMTE(fmt, ...) LOGFMT_ERROR(0, 0, fmt,  ##__VA_ARGS__)
-#define LOGFMTA(fmt, ...) LOGFMT_ALARM(0, 0, fmt,  ##__VA_ARGS__)
-#define LOGFMTF(fmt, ...) LOGFMT_FATAL(0, 0, fmt,  ##__VA_ARGS__)
+#define LOGFMT_TRACE(channel_id, category, identify, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_TRACE, category, identify, FNLog::LOG_PREFIX_DEFAULT, fmt, ##__VA_ARGS__)
+#define LOGFMT_DEBUG(channel_id, category, identify, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_DEBUG, category, identify, FNLog::LOG_PREFIX_DEFAULT, fmt, ##__VA_ARGS__)
+#define LOGFMT_INFO( channel_id, category, identify, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_INFO,  category, identify, FNLog::LOG_PREFIX_DEFAULT, fmt, ##__VA_ARGS__)
+#define LOGFMT_WARN( channel_id, category, identify, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_WARN,  category, identify, FNLog::LOG_PREFIX_DEFAULT, fmt, ##__VA_ARGS__)
+#define LOGFMT_ERROR(channel_id, category, identify, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_ERROR, category, identify, FNLog::LOG_PREFIX_DEFAULT, fmt, ##__VA_ARGS__)
+#define LOGFMT_ALARM(channel_id, category, identify, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_ALARM, category, identify, FNLog::LOG_PREFIX_DEFAULT, fmt, ##__VA_ARGS__)
+#define LOGFMT_FATAL(channel_id, category, identify, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_FATAL, category, identify, FNLog::LOG_PREFIX_DEFAULT, fmt, ##__VA_ARGS__)
+#define LOGFMTT(fmt, ...) LOGFMT_TRACE(0, 0, 0, fmt,  ##__VA_ARGS__)
+#define LOGFMTD(fmt, ...) LOGFMT_DEBUG(0, 0, 0, fmt,  ##__VA_ARGS__)
+#define LOGFMTI(fmt, ...) LOGFMT_INFO( 0, 0, 0, fmt,  ##__VA_ARGS__)
+#define LOGFMTW(fmt, ...) LOGFMT_WARN( 0, 0, 0, fmt,  ##__VA_ARGS__)
+#define LOGFMTE(fmt, ...) LOGFMT_ERROR(0, 0, 0, fmt,  ##__VA_ARGS__)
+#define LOGFMTA(fmt, ...) LOGFMT_ALARM(0, 0, 0, fmt,  ##__VA_ARGS__)
+#define LOGFMTF(fmt, ...) LOGFMT_FATAL(0, 0, 0, fmt,  ##__VA_ARGS__)
 
 
 #endif

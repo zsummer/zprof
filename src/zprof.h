@@ -307,7 +307,7 @@ private:
 
 
 #define PROF_SERIALIZE_FN_LOG()    ProfInst.serialize(0xff, [](const ProfSerializeBuffer& buffer) \
-                {LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset()); })
+                {LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset()); })
 
 
 
