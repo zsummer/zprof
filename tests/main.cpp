@@ -811,7 +811,10 @@ int main(int argc, char *argv[])
         PROF_UPDATE_MERGE();
         PROF_SERIALIZE_FN_LOG();
     }
-
+    for (size_t i = 0; i < 1000; i++)
+    {
+        ProfInst.serialize(0xff, [](const ProfSerializeBuffer& buffer) {});
+    }
 
     LogInfo() << "all test finish .salt:" << cycles;
     return 0;

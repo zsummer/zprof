@@ -52,7 +52,7 @@ public:
         offset_ = 0;
     }
 
-    inline ProfSerializeBuffer& serialize(const char* fmt, ...);
+
     inline ProfSerializeBuffer& push_human_count(long long count);
     inline ProfSerializeBuffer& push_human_time(long long ns);
     inline ProfSerializeBuffer& push_human_mem(long long bytes);
@@ -79,38 +79,6 @@ private:
 };
 
 
-
-ProfSerializeBuffer& ProfSerializeBuffer::serialize(const char* fmt, ...)
-{
-    if (buff_ == NULL)
-    {
-        return *this;
-    }
-    if (buff_len_ == 0)
-    {
-        return *this;
-    }
-    if (buff_len_ <= offset_)
-    {
-        return *this;
-    }
-
-    int ret = 0;
-    va_list argp;
-    va_start(argp, fmt);
-#if WIN32
-    ret = _vsnprintf_s(buff_ + offset_, buff_len_ - offset_, _TRUNCATE, fmt, argp);
-#else
-    ret = vsnprintf(buff_ + offset_, buff_len_ - offset_, fmt, argp);
-#endif // WIN32
-    va_end(argp);
-    if (ret < 0)
-    {
-        return *this;
-    }
-    offset_ += ret;
-    return *this;
-}
 
 ProfSerializeBuffer& ProfSerializeBuffer::push_human_count(long long count)
 {
