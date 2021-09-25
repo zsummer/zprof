@@ -5,7 +5,7 @@ export LC_ALL=C
 
 echo "#ifdef __GNUG__" > src/zprof.h.bak
 echo "#pragma GCC push_options" >> src/zprof.h.bak
-echo "#pragma GCC optimize ("O2")" >> src/zprof.h.bak
+echo "#pragma GCC optimize (\"O2\")" >> src/zprof.h.bak
 echo "#endif" >> src/zprof.h.bak
 cat src/zprof_counter.h  |sed `echo -e 's/\xEF\xBB\xBF//'` >> src/zprof.h.bak
 cat src/zprof_serialize.h  |sed `echo -e 's/\xEF\xBB\xBF//'` >> src/zprof.h.bak
