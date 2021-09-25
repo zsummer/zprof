@@ -1,3 +1,7 @@
+#ifdef __GNUG__
+#pragma GCC push_options
+#pragma GCC optimize (O2)
+#endif
 /*
  *
  * MIT License
@@ -582,6 +586,7 @@ public:
 #define FN_LOG_SHM_KEY 0x9110
 #endif 
 
+//#define FN_LOG_USING_ATOM_CFG
 
 namespace FNLog
 {
@@ -702,7 +707,11 @@ namespace FNLog
         static_assert(MAX_PATH_LEN + MAX_LOGGER_NAME_LEN + MAX_ROLLBACK_LEN < MAX_PATH_SYS_LEN, "");
         static_assert(LogData::LOG_SIZE > MAX_PATH_SYS_LEN*2, "unsafe size"); // promise format length: date, time, source file path, function length.
         static_assert(MAX_ROLLBACK_PATHS < 10, "");
+#ifdef FN_LOG_USING_ATOM_CFG
         using ConfigFields = std::array<std::atomic_llong, DEVICE_CFG_MAX_ID>;
+#else
+        using ConfigFields = long long[DEVICE_CFG_MAX_ID];
+#endif // FN_LOG_USING_ATOM_CFG
         using LogFields = std::array<std::atomic_llong, DEVICE_LOG_MAX_ID>;
 
     public:
@@ -770,7 +779,12 @@ namespace FNLog
     struct Channel
     {
     public:
+#ifdef FN_LOG_USING_ATOM_CFG
         using ConfigFields = std::array<std::atomic_llong, CHANNEL_CFG_MAX_ID>;
+#else
+        using ConfigFields = long long[CHANNEL_CFG_MAX_ID];
+#endif // FN_LOG_USING_ATOM_CFG
+
         using LogFields = std::array<std::atomic_llong, CHANNEL_LOG_MAX_ID>;
         static const int MAX_DEVICE_SIZE = 20;
 
@@ -894,11 +908,13 @@ namespace FNLog
         return x < y ? y : x;
     }
 
-    template <class M>
-    inline long long AtomicLoadC(M& m, unsigned eid)
-    {
-        return m.config_fields_[eid].load(std::memory_order_relaxed);
-    }
+
+#ifdef FN_LOG_USING_ATOM_CFG
+    #define AtomicLoadC(m, eid) m.config_fields_[eid].load(std::memory_order_relaxed)
+#else
+#define AtomicLoadC(m, eid) m.config_fields_[eid]
+#endif // FN_LOG_USING_ATOM_CFG
+
 
     template <class M>
     inline long long AtomicLoadL(M& m, unsigned eid)
@@ -1225,7 +1241,7 @@ namespace FNLog
         return DEVICE_OUT_NULL;
     }
 
-    inline void ParseAddres(const char* begin, const char* end, std::atomic_llong& ip, std::atomic_llong& port)
+    inline void ParseAddres(const char* begin, const char* end, long long & ip, long long& port)
     {
         ip = 0;
         port = 0;
@@ -1539,7 +1555,15 @@ namespace FNLog
                 }
                 break;
             case RK_UDP_ADDR:
-                ParseAddres(ls.line_.val_begin_, ls.line_.val_end_, device.config_fields_[DEVICE_CFG_UDP_IP], device.config_fields_[DEVICE_CFG_UDP_PORT]);
+                if (true)
+                {
+                    long long ip = 0;
+                    long long port = 0;
+                    ParseAddres(ls.line_.val_begin_, ls.line_.val_end_, ip, port);
+                    device.config_fields_[DEVICE_CFG_UDP_IP] = ip;
+                    device.config_fields_[DEVICE_CFG_UDP_PORT] = port;
+                }
+                
                 if (device.config_fields_[DEVICE_CFG_UDP_IP] == 0)
                 {
                     return PEC_ILLEGAL_ADDR_IP;
@@ -2386,7 +2410,7 @@ namespace FNLog
         for (int field_id = 0; field_id < CHANNEL_CFG_MAX_ID; field_id++)
         {
             //this is multi-thread safe op. 
-            dst_chl.config_fields_[field_id] = src_chl.config_fields_[field_id].load();
+            dst_chl.config_fields_[field_id] = AtomicLoadC(src_chl, field_id);
         }
 
         //single thread op.
@@ -3191,26 +3215,28 @@ namespace FNLog
         log.prefix_len_ = log.content_len_;
         return;
     }
-
-    inline int HoldChannel(Logger& logger, int channel_id, int priority, int category, long long identify)
+#ifdef __GNUG__
+#pragma GCC push_options
+#pragma GCC optimize ("O2")
+#endif
+    inline bool BlockInput(Logger& logger, int channel_id, int priority, int category, long long identify)
     {
         if (channel_id >= logger.shm_->channel_size_ || channel_id < 0)
         {
-            return -1;
+            return true;
         }
         if (logger.logger_state_ != LOGGER_STATE_RUNNING)
         {
-            return -2;
+            return true;
         }
         Channel& channel = logger.shm_->channels_[channel_id];
-        RingBuffer& ring_buffer = logger.shm_->ring_buffers_[channel_id];
         if (channel.channel_state_ != CHANNEL_STATE_RUNNING)
         {
-            return -3;
+            return true;
         }
         if (priority < AtomicLoadC(channel, CHANNEL_CFG_PRIORITY))
         {
-            return -4;
+            return true;
         }
         long long begin_category = AtomicLoadC(channel, CHANNEL_CFG_CATEGORY);
         long long category_count = AtomicLoadC(channel, CHANNEL_CFG_CATEGORY_EXTEND);
@@ -3221,38 +3247,76 @@ namespace FNLog
 
         if (category_count > 0 && (category < begin_category || category >= begin_category + category_count))
         {
-            return -5;
+            return true;
         }
         if (identify_count > 0 && (identify < begin_identify || identify >= begin_identify + identify_count))
         {
-            return -6;
+            return true;
         }
         if (category_filter && (category_filter & ((1ULL) << (unsigned int)category)) == 0)
         {
-            return -7;
+            return true;
         }
         if (identify_filter && (identify_filter & ((1ULL) << (unsigned int)identify)) == 0)
         {
-            return -8;
+            return true;
         }
 
         bool need_write = false;
-
-        for (int i = 0; i < logger.shm_->channels_[channel_id].device_size_; i++)
+        
+        for (int i = 0; i < channel.device_size_; i++)
         {
-            if (logger.shm_->channels_[channel_id].devices_[i].config_fields_[FNLog::DEVICE_CFG_ABLE] && priority >= logger.shm_->channels_[channel_id].devices_[i].config_fields_[FNLog::DEVICE_CFG_PRIORITY])
+            Device::ConfigFields& fields = channel.devices_[i].config_fields_;
+            long long field_able = fields[FNLog::DEVICE_CFG_ABLE];
+            long long field_priority = fields[FNLog::DEVICE_CFG_PRIORITY];
+            long long field_begin_category = fields[FNLog::DEVICE_CFG_CATEGORY];
+            long long field_category_count = fields[FNLog::DEVICE_CFG_CATEGORY_EXTEND];
+            unsigned long long field_category_filter = (unsigned long long)fields[FNLog::DEVICE_CFG_CATEGORY_FILTER];
+            long long field_begin_identify = fields[FNLog::DEVICE_CFG_IDENTIFY];
+            long long field_identify_count = fields[FNLog::DEVICE_CFG_IDENTIFY_EXTEND];
+            unsigned long long field_identify_filter = (unsigned long long)fields[FNLog::DEVICE_CFG_IDENTIFY_FILTER];
+
+            if (field_able && priority >= field_priority)
             {
+                if (field_category_count > 0 && (category < field_begin_category || category >= field_begin_category + field_category_count))
+                {
+                    continue;
+                }
+                if (field_identify_count > 0 && (identify < field_begin_identify || identify >= field_begin_identify + field_identify_count))
+                {
+                    continue;
+                }
+                if (field_category_filter &&  (field_category_filter & ((1ULL) << (unsigned int)category)) == 0)
+                {
+                    continue;
+                }
+                if (field_identify_filter &&  (field_identify_filter & ((1ULL) << (unsigned int)identify)) == 0)
+                {
+                    continue;
+                }
                 need_write = true;
                 break;
             }
         }
         if (!need_write)
         {
-            return -10;
+            return true;
         }
-
-
-
+        
+        return false;
+    }
+#ifdef __GNUG__
+#pragma GCC pop_options
+#endif
+    inline int HoldChannel(Logger& logger, int channel_id, int priority, int category, long long identify)
+    {
+        if (BlockInput(logger, channel_id, priority, category, identify))
+        {
+            return -1;
+        }
+        Channel& channel = logger.shm_->channels_[channel_id];
+        RingBuffer& ring_buffer = logger.shm_->ring_buffers_[channel_id];
+        
         int state = 0;
         do
         {
@@ -3742,7 +3806,7 @@ namespace FNLog
         for (int i = 0; i < logger.shm_->channel_size_; i++)
         {
             auto& channel = logger.shm_->channels_[i];
-            channel.config_fields_[cce].store(v);
+            channel.config_fields_[cce] = v;
         }
     }
 
@@ -3756,28 +3820,12 @@ namespace FNLog
                 auto& device = channel.devices_[j];
                 if (device.out_type_ == out_type || out_type == DEVICE_OUT_NULL)
                 {
-                    device.config_fields_[dce].store(v);
+                    device.config_fields_[dce] = v;
                 }
             }
         }
     }
 
-    inline bool FastCheckPriorityPass(Logger& logger, int channel_id, int priority, int category, long long identify)
-    {
-        (void)identify;
-        if (logger.shm_->channel_size_ <= channel_id || priority < logger.shm_->channels_[channel_id].config_fields_[FNLog::CHANNEL_CFG_PRIORITY])
-        {
-            return true;
-        }
-        for (int i = 0; i < logger.shm_->channels_[channel_id].device_size_; i++)
-        {
-            if (logger.shm_->channels_[channel_id].devices_[i].config_fields_[FNLog::DEVICE_CFG_ABLE] && priority >= logger.shm_->channels_[channel_id].devices_[i].config_fields_[FNLog::DEVICE_CFG_PRIORITY])
-            {
-                return false;
-            }
-        }
-        return true;
-    }
 
     inline void LoadSharedMemory(Logger& logger)
     {
@@ -3999,6 +4047,7 @@ namespace FNLog
 
 namespace FNLog
 {
+
     class LogStream
     {
     public:
@@ -4574,7 +4623,7 @@ FNLog::LogStream& LogTemplatePack(FNLog::LogStream&& ls, Args&& ... args)
 #ifdef WIN32
 #define LOG_FORMAT(channel_id, priority, category, identify, prefix, logformat, ...) \
 do{ \
-    if (FNLog::FastCheckPriorityPass(FNLog::GetDefaultLogger(), channel_id, priority, category, identify))  \
+    if (FNLog::BlockInput(FNLog::GetDefaultLogger(), channel_id, priority, category, identify))  \
     { \
         break;   \
     } \
@@ -4589,7 +4638,7 @@ do{ \
 #else
 #define LOG_FORMAT(channel_id, priority, category, identify, prefix, logformat, ...) \
 do{ \
-    if (FNLog::FastCheckPriorityPass(FNLog::GetDefaultLogger(), channel_id, priority, category, identify))  \
+    if (FNLog::BlockInput(FNLog::GetDefaultLogger(), channel_id, priority, category, identify))  \
     { \
         break;   \
     } \
@@ -4696,4 +4745,7 @@ namespace FNLog
 
 }
 
+#endif
+#ifdef __GNUG__
+#pragma GCC pop_options
 #endif
