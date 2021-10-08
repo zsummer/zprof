@@ -200,7 +200,8 @@ private:
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid)
 #define PROF_BIND_MERGE(id, cid) ProfInst.bind_merge(cid, id)
 #define PROF_BIND_CHILD_AND_MERGE(id, cid) do {PROF_BIND_CHILD(id, cid); PROF_BIND_MERGE(id, cid); }while(0)
-
+#define PROF_FAST_REG_AND_BIND_CHILD(id, cid) do { PROF_FAST_REGIST_NODE(id); PROF_BIND_CHILD(cid, id); } while(0)
+#define PROF_FAST_REG_AND_BIND_MERGE(id, cid) do { PROF_FAST_REGIST_NODE(id); PROF_BIND_MERGE(cid, id); } while(0)
 
 
 
@@ -259,6 +260,8 @@ private:
 #define PROF_BIND_CHILD(id, cid) 
 #define PROF_BIND_MERGE(id, cid) 
 #define PROF_BIND_CHILD_AND_MERGE(id, cid) 
+#define PROF_FAST_REG_AND_BIND_CHILD(id, cid) 
+#define PROF_FAST_REG_AND_BIND_MERGE(id, cid) 
 
 #define PROF_INIT(desc) 
 #define PROF_INIT_JUMP_COUNT()
