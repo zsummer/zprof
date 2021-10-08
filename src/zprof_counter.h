@@ -123,6 +123,7 @@ struct ProfVM
 {
     unsigned long long vm_size;
     unsigned long long rss_size;
+    unsigned long long shr_size;
 };
 
 template<ProfCounterType T>
@@ -434,7 +435,7 @@ ProfVM prof_get_mem_use()
     }
     return { 0ULL, 0ULL };
 #else
-    const char* file = "/proc/self/status";
+    const char* file = "/proc/self/statm";
     FILE* fp = fopen(file, "r");
     if (NULL == fp)
     {
@@ -442,55 +443,22 @@ ProfVM prof_get_mem_use()
     }
 
     char line_buff[256];
-    ProfVM vm = { 0ULL, 0ULL };
+    ProfVM vm = { 0ULL, 0ULL, 0ULL };
     while (fgets(line_buff, sizeof(line_buff), fp) != NULL)
     {
-        if (strstr(line_buff, "VmSize") != NULL)
+        int ret = sscanf(line_buff, "%lld %lld %lld ", &vm.vm_size, &vm.rss_size, &vm.shr_size);
+        if (ret == 3)
         {
-            const char* p = line_buff;
-            while (p < &line_buff[255] && (*p < '0' || *p > '9'))
-            {
-                p++;
-            }
-            if (p == &line_buff[255])
-            {
-                break;
-            }
-
-            int ret = sscanf(p, "%llu", &vm.vm_size);
-            if (ret <= 0)
-            {
-                vm.vm_size = 0;
-                break;
-            }
-        }
-        if (strstr(line_buff, "VmRSS") != NULL)
-        {
-            const char* p = line_buff;
-            while (p < &line_buff[255] && (*p < '0' || *p > '9'))
-            {
-                p++;
-}
-            if (p == &line_buff[255])
-            {
-                break;
-            }
-
-            int ret = sscanf(p, "%llu", &vm.rss_size);
-            if (ret <= 0)
-            {
-                vm.rss_size = 0;
-                break;
-            }
-        }
-        if (vm.rss_size > 0 && vm.vm_size > 0)
-        {
+            vm.vm_size *= 4096;
+            vm.rss_size *= 4096; 
+            vm.shr_size *= 4096;
             break;
         }
+        memset(&vm, 0, sizeof(vm));
+        break;
     }
-
     fclose(fp);
-    return { vm.vm_size * 1024, vm.rss_size * 1024 };
+    return vm;
 #endif
 }
 

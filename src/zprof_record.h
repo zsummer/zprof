@@ -1026,7 +1026,11 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
             buffer.push_human_mem(node.vm.vm_size);
             buffer.push_string(STRLEN("(vm), "));
             buffer.push_human_mem(node.vm.rss_size);
-            buffer.push_string(STRLEN("(rss)"));
+            buffer.push_string(STRLEN("(rss), "));
+            buffer.push_human_mem(node.vm.shr_size);
+            buffer.push_string(STRLEN("(shr), "));
+            buffer.push_human_mem(node.vm.rss_size - node.vm.shr_size);
+            buffer.push_string(STRLEN("(uss)"));
         }
 
         buffer.push_string(STRLEN(" --|"));
@@ -1154,7 +1158,7 @@ int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std:
     buffer.push_string(STRLEN(PROF_LINE_FEED));
     buffer.push_string(STRLEN("| -- index -- | ---    cpu  ------------ | ----------   hits, avg, sum   ---------- | ---- max, min ---- | ------ dv, sm ------ |  --- hsm, lsm --- | " PROF_LINE_FEED));
     buffer.push_string(STRLEN("| -- index -- | ---    mem  ---------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | " PROF_LINE_FEED));
-    buffer.push_string(STRLEN("| -- index -- | ---    vm  ------------ | ----------   vm, rss   ------------------ | " ));
+    buffer.push_string(STRLEN("| -- index -- | ---    vm  ------------ | ----------   vm, rss, shr, uss   ------------------ | " ));
     buffer.closing_string();
     call_log(buffer);
     buffer.reset_offset();
