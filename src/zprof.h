@@ -247,6 +247,8 @@ private:
 
 
 #define PROF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, PROF_LEVEL, desc) ProfAutoSingleRecord<COUNT, PROF_LEVEL, PROF_COUNTER_DEFAULT> rec(desc)
+#define PROF_DEFINE_AUTO_SINGLE_USER(desc, num) do {PROF_DEFINE_REGISTER_DEFAULT(rec, desc); PROF_CALL_USER(rec.node_id(), 1, num);} while(0)
+#define PROF_DEFINE_AUTO_SINGLE_MEM(desc, num) do {PROF_DEFINE_REGISTER_DEFAULT(rec, desc); PROF_CALL_MEM(rec.node_id(), 1, num);} while(0)
 #define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ ProfRegister<> __temp_prof_record_mem__(desc); PROF_CALL_VM(__temp_prof_record_mem__.node_id(), prof_get_mem_use()); }while(0)
 
 
@@ -302,6 +304,8 @@ private:
 
 
 #define PROF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, PROF_LEVEL, desc) 
+#define PROF_DEFINE_AUTO_SINGLE_USER(desc, num) 
+#define PROF_DEFINE_AUTO_SINGLE_MEM(desc, num) 
 #define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) 
 
 #endif
