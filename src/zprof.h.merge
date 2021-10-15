@@ -2452,7 +2452,12 @@ private:
 #define PROF_REGISTER_REFRESH_VM(reg, vm) reg.call_vm(vm)
 
 
+#define PROF_DEFINE_AUTO_MULTI_COUNT_CPU(desc, count, num) do {PROF_DEFINE_REGISTER_DEFAULT(rec, desc); ProfRecordWrap<true, PROF_LEVEL_FAST>((int)(rec.node_id()), (long long)(count), (long long)num);} while(0)
+#define PROF_DEFINE_AUTO_MULTI_COUNT_USER(desc, count, num) do {PROF_DEFINE_REGISTER_DEFAULT(rec, desc); PROF_CALL_USER(rec.node_id(), count, num);} while(0)
+#define PROF_DEFINE_AUTO_MULTI_COUNT_MEM(desc, count, num) do {PROF_DEFINE_REGISTER_DEFAULT(rec, desc); PROF_CALL_MEM(rec.node_id(), count, num);} while(0)
+
 #define PROF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, PROF_LEVEL, desc) ProfAutoSingleRecord<COUNT, PROF_LEVEL, PROF_COUNTER_DEFAULT> rec(desc)
+#define PROF_DEFINE_AUTO_SINGLE_CPU(desc, num) do {PROF_DEFINE_REGISTER_DEFAULT(rec, desc); PROF_CALL_CPU(rec.node_id(), num);} while(0)
 #define PROF_DEFINE_AUTO_SINGLE_USER(desc, num) do {PROF_DEFINE_REGISTER_DEFAULT(rec, desc); PROF_CALL_USER(rec.node_id(), 1, num);} while(0)
 #define PROF_DEFINE_AUTO_SINGLE_MEM(desc, num) do {PROF_DEFINE_REGISTER_DEFAULT(rec, desc); PROF_CALL_MEM(rec.node_id(), 1, num);} while(0)
 #define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ ProfRegister<> __temp_prof_record_mem__(desc); PROF_CALL_VM(__temp_prof_record_mem__.node_id(), prof_get_mem_use()); }while(0)
@@ -2508,8 +2513,11 @@ private:
 #define PROF_REGISTER_REFRESH_MEM(reg, add) 
 #define PROF_REGISTER_REFRESH_VM(reg, add) 
 
-
+#define PROF_DEFINE_AUTO_MULTI_COUNT_CPU(desc, count, num) 
+#define PROF_DEFINE_AUTO_MULTI_COUNT_USER(desc, count, num) 
+#define PROF_DEFINE_AUTO_MULTI_COUNT_MEM(desc, count, num) 
 #define PROF_DEFINE_AUTO_SINGLE_RECORD(rec, COUNT, PROF_LEVEL, desc) 
+#define PROF_DEFINE_AUTO_SINGLE_CPU(desc, num)
 #define PROF_DEFINE_AUTO_SINGLE_USER(desc, num) 
 #define PROF_DEFINE_AUTO_SINGLE_MEM(desc, num) 
 #define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) 
