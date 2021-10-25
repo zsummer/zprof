@@ -71,7 +71,7 @@ public:
     size_t offset() const { return offset_; }
     size_t buff_len() { return buff_len_; }
     size_t buff_len()const { return buff_len_; }
-    void reset_offset() { offset_ = 0; }
+    void reset_offset(size_t offset = 0) { offset_ = offset; }
 private:
     char* buff_;
     size_t offset_;
