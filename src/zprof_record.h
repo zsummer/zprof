@@ -641,6 +641,8 @@ int ProfRecord<INST, RESERVE, DECLARE>::init_prof(const char* desc)
         self_mem_cost.start();
         call_vm(INNER_PROF_SELF_MEM_COST, prof_get_mem_use());
         call_cpu(INNER_PROF_SELF_MEM_COST, self_mem_cost.stop_and_save().cycles());
+        call_mem(INNER_PROF_SELF_MEM_COST, 1, sizeof(*this));
+        call_user(INNER_PROF_SELF_MEM_COST, 1, max_node_count());
     }
 
     if (true)
