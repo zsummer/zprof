@@ -49,6 +49,7 @@ jobs:
           ./instructions_cost_test
           ./tree_and_array_test
           ./using_test
+          ./coverage_test
           ./zprof
           
           
