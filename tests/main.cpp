@@ -59,11 +59,11 @@ int main(int argc, char *argv[])
     PROF_INIT("inner prof");
     //ProfInst.init_prof("inner prof");
     regist_prof();
-    PROF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PROF_LEVEL_NORMAL, "self use mem in main func begin and exit");
-    PROF_REGISTER_REFRESH_VM(delta.reg(), prof_get_mem_use());
+    PROF_DEFINE_AUTO_ANON_RECORD(delta, 1, PROF_LEVEL_NORMAL, "self use mem in main func begin and exit");
+    PROF_ANON_REFRESH_VM(delta.anon(), prof_get_mem_use());
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
 
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PROF_DEFINE_REGISTER_DEFAULT(ot, "user test");
+        PROF_DEFINE_ANON_DEFAULT(ot, "user test");
         PROF_CALL_USER(ot.node_id(), 1, 100);
         PROF_CALL_USER(ot.node_id(), 1, 102);
         PROF_CALL_USER(ot.node_id(), 1, 103);
@@ -155,23 +155,23 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(ot, 1, PROF_LEVEL_NORMAL, "self use mem");
-        PROF_REGISTER_REFRESH_VM(ot.reg(), prof_get_mem_use());
+        PROF_DEFINE_AUTO_ANON_RECORD(ot, 1, PROF_LEVEL_NORMAL, "self use mem");
+        PROF_ANON_REFRESH_VM(ot.anon(), prof_get_mem_use());
     }
 
 
     if (true)
     {
-       PROF_DEFINE_AUTO_SINGLE_RECORD(ot, 1, PROF_LEVEL_NORMAL, "ProfInst use mem");
-       PROF_REGISTER_REC_MEM(ot.reg(), sizeof(ProfInst));
+       PROF_DEFINE_AUTO_ANON_RECORD(ot, 1, PROF_LEVEL_NORMAL, "ProfInst use mem");
+       PROF_ANON_REC_MEM(ot.anon(), sizeof(ProfInst));
     }
 
     
-    PROF_DEFINE_REGISTER_DEFAULT(bat_parent, "bat_parent");
+    PROF_DEFINE_ANON_DEFAULT(bat_parent, "bat_parent");
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_SYS bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_SYS bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_SYS>();
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_CLOCK bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_CLOCK bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_CLOCK>();
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_CONNTER_CHRONO bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_CONNTER_CHRONO bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_CONNTER_CHRONO>();
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_PURE bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_PURE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_PURE>();
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_NOFENCE bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_NOFENCE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>();
@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC(lfence) bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC(lfence) bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_BTB(lfence) bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_BTB(lfence) bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
@@ -234,7 +234,7 @@ int main(int argc, char *argv[])
 
     if (false)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 20, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSCP bat 20");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 20, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSCP bat 20");
         for (size_t i = 0; i < 20; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSCP>();
@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_MFENCE bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_MFENCE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE>();
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_MFENCE_BTB bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_MFENCE_BTB bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE_BTB>();
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_LOCK bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "PROF_COUNTER_RDTSC_LOCK bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_LOCK>();
@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10 * 10000, PROF_LEVEL_NORMAL, "c clock bat 10w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10 * 10000, PROF_LEVEL_NORMAL, "c clock bat 10w");
         for (size_t i = 0; i < 10 * 10000; i++)
         {
             cycles += clock();
@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "c++ system_clock bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "c++ system_clock bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += std::chrono::system_clock().now().time_since_epoch().count();
@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "c++ steady_clock bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "c++ steady_clock bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += std::chrono::steady_clock().now().time_since_epoch().count();
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "c time bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000, PROF_LEVEL_NORMAL, "c time bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             cycles += time(NULL);
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_REGISTER_DEFAULT(bat_end, "bat_end");
+        PROF_DEFINE_ANON_DEFAULT(bat_end, "bat_end");
         for (int i = bat_parent.node_id() + 1; i < bat_end.node_id(); i++)
         {
             PROF_BIND_CHILD(bat_parent.node_id(), i);
@@ -314,112 +314,112 @@ int main(int argc, char *argv[])
         }
     }
 
-    PROF_DEFINE_REGISTER_DEFAULT(dis_parent, "dis_parent");
+    PROF_DEFINE_ANON_DEFAULT(dis_parent, "dis_parent");
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_SYS dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_SYS dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_SYS>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_CLOCK dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_CLOCK dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_CLOCK>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_CONNTER_CHRONO dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_CONNTER_CHRONO dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_CONNTER_CHRONO>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC_PURE dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC_PURE dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_PURE>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC_NOFENCE dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC_NOFENCE dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC(lfence) dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC(lfence) dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC_BTB (lfence) dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC_BTB (lfence) dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
     if (false)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSCP dis 20", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSCP dis 20", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 20; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSCP>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC_MFENCE dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC_MFENCE dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC_MFENCE_BTB dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC_MFENCE_BTB dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE_BTB>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
 
@@ -427,12 +427,12 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC_LOCK dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC_LOCK dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_LOCK>();
-            PROF_REGISTER_RECORD(rec);
+            PROF_ANON_RECORD(rec);
         }
     }
 
@@ -440,34 +440,34 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_REGISTER_DEFAULT(rec, "PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | DEFAULT");
+        PROF_DEFINE_ANON_DEFAULT(rec, "PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | DEFAULT");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
-            PROF_REGISTER_RECORD_WRAP(rec, 1, PROF_LEVEL_FAST);
+            PROF_ANON_RECORD_WRAP(rec, 1, PROF_LEVEL_FAST);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_SYS", PROF_COUNTER_SYS);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_SYS", PROF_COUNTER_SYS);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
-            PROF_REGISTER_RECORD_WRAP(rec, 1, PROF_LEVEL_FAST);
+            PROF_ANON_RECORD_WRAP(rec, 1, PROF_LEVEL_FAST);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_RDTSC_NOFENCE", PROF_COUNTER_RDTSC_NOFENCE); 
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_RDTSC_NOFENCE", PROF_COUNTER_RDTSC_NOFENCE); 
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
-            PROF_REGISTER_RECORD_WRAP(rec, 1, PROF_LEVEL_FAST);
+            PROF_ANON_RECORD_WRAP(rec, 1, PROF_LEVEL_FAST);
         }
     }
 
@@ -476,7 +476,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1000 * 10000 * 10, PROF_LEVEL_NORMAL, "PROF_DEFINE_AUTO_SINGLE_RECORD: PROF_COUNTER_RDTSC(lfence)*10 bat 1000w");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1000 * 10000 * 10, PROF_LEVEL_NORMAL, "PROF_DEFINE_AUTO_ANON_RECORD: PROF_COUNTER_RDTSC(lfence)*10 bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             for (size_t i = 0; i < 10; i++)
@@ -488,20 +488,20 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(rec, "PROF_COUNTER_RDTSC(lfence) * 10 dis 1000w", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(rec, "PROF_COUNTER_RDTSC(lfence) * 10 dis 1000w", PROF_COUNTER_RDTSC_BTB);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            PROF_REGISTER_START(rec);
+            PROF_ANON_START(rec);
             for (size_t i = 0; i < 10; i++)
             {
                 cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
             }
-            PROF_REGISTER_RECORD_WRAP(rec, 1, PROF_LEVEL_FAST);
+            PROF_ANON_RECORD_WRAP(rec, 1, PROF_LEVEL_FAST);
         }
     }
     if (true)
     {
-        PROF_DEFINE_REGISTER_DEFAULT(dis_end, "dis_end");
+        PROF_DEFINE_ANON_DEFAULT(dis_end, "dis_end");
         for (int i = dis_parent.node_id() + 1; i < dis_end.node_id(); i++)
         {
             PROF_BIND_CHILD(dis_parent.node_id(), i);
@@ -512,23 +512,23 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "sleep 300ms: sys ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1, PROF_LEVEL_NORMAL, "sleep 300ms: sys ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "sleep 300ms rdtscp ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1, PROF_LEVEL_NORMAL, "sleep 300ms rdtscp ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "sleep 300ms clock ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1, PROF_LEVEL_NORMAL, "sleep 300ms clock ");
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_CALL_CPU_SAMPLE 1000w ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_CALL_CPU_SAMPLE 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_CPU_SAMPLE(ENUM_PROF_TEST, 1000);
@@ -537,7 +537,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_CALL_CPU_SAMPLE 1000w ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_CALL_CPU_SAMPLE 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_CPU_SAMPLE(ENUM_PROF_TEST, 1000);
@@ -546,7 +546,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_CALL_CPU 1000w ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_CALL_CPU 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_CPU(ENUM_PROF_TEST, 1000);
@@ -555,7 +555,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_FAST 1000w (without count)");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_FAST 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, PROF_LEVEL_FAST);
@@ -563,7 +563,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_FAST 1000w (with count)");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_FAST 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, PROF_LEVEL_FAST);
@@ -572,7 +572,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_NORMAL 1000w (without count)");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_NORMAL 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, PROF_LEVEL_NORMAL);
@@ -581,7 +581,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_NORMAL 1000w (with count)");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_NORMAL 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, PROF_LEVEL_NORMAL);
@@ -590,7 +590,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_FULL 1000w (without count)");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_FULL 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, PROF_LEVEL_FULL);
@@ -599,7 +599,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_FULL 1000w (with count)");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_FAST, "PROF_LEVEL_FULL 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, PROF_LEVEL_FULL);
@@ -608,7 +608,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_NORMAL, "call mem 1000w ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_NORMAL, "call mem 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_MEM(ENUM_PROF_TEST, 1, 1000);
@@ -617,7 +617,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_REGISTER(reg, "call empty rdtsc btb", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(reg, "call empty rdtsc btb", PROF_COUNTER_RDTSC_BTB);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
@@ -627,7 +627,7 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PROF_DEFINE_REGISTER(reg, "call nofence empty", PROF_COUNTER_RDTSC_NOFENCE);
+        PROF_DEFINE_ANON(reg, "call nofence empty", PROF_COUNTER_RDTSC_NOFENCE);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
@@ -640,7 +640,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         cycles = 3.1415926;
-        PROF_DEFINE_REGISTER(reg, "call fdiv", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(reg, "call fdiv", PROF_COUNTER_RDTSC_BTB);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
@@ -653,7 +653,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         cycles = 3.1415926;
-        PROF_DEFINE_REGISTER(reg, "call fdiv no any fence", PROF_COUNTER_RDTSC_NOFENCE);
+        PROF_DEFINE_ANON(reg, "call fdiv no any fence", PROF_COUNTER_RDTSC_NOFENCE);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
@@ -665,7 +665,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         cycles = 3.1415926;
-        PROF_DEFINE_REGISTER(reg, "call fmul by rdtsc btb", PROF_COUNTER_RDTSC_BTB);
+        PROF_DEFINE_ANON(reg, "call fmul by rdtsc btb", PROF_COUNTER_RDTSC_BTB);
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
@@ -678,7 +678,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_NORMAL, "call atom++ 1000w ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_NORMAL, "call atom++ 1000w ");
         std::atomic<long long> latom;
         for (int i = 0; i < 10000000; i++)
         {
@@ -691,7 +691,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 10000000, PROF_LEVEL_NORMAL, "call timer 1000w ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 10000000, PROF_LEVEL_NORMAL, "call timer 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
             PROF_CALL_TIMER(ENUM_PROF_TEST, 1000);
@@ -700,27 +700,27 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_REGISTER_DEFAULT(ot, "call timer sleep_for 10ms ");
+        PROF_DEFINE_ANON_DEFAULT(ot, "call timer sleep_for 10ms ");
         for (int i = 0; i < 100; i++)
         {
-            PROF_REGISTER_START(ot);
+            PROF_ANON_START(ot);
             PROF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        PROF_REGISTER_START(ot);
+        PROF_ANON_START(ot);
         PROF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
     }
 
     if (true)
     {
-        PROF_DEFINE_REGISTER_DEFAULT(ot, "call timer sleep_for 10*1000*1000ns(10ms) ");
+        PROF_DEFINE_ANON_DEFAULT(ot, "call timer sleep_for 10*1000*1000ns(10ms) ");
         for (int i = 0; i < 100; i++)
         {
-            PROF_REGISTER_START(ot);
+            PROF_ANON_START(ot);
             PROF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
             std::this_thread::sleep_for(std::chrono::nanoseconds(10 * 1000 * 1000));
         }
-        PROF_REGISTER_START(ot);
+        PROF_ANON_START(ot);
         PROF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
     }
 
@@ -728,27 +728,27 @@ int main(int argc, char *argv[])
     struct timespec tim, tim2;
     tim.tv_sec = 0;
     tim.tv_nsec = 10 * 1000 * 1000;
-    PROF_DEFINE_REGISTER_DEFAULT(ot, "call timer nanosleep 10*1000*1000ns(10ms) ");
+    PROF_DEFINE_ANON_DEFAULT(ot, "call timer nanosleep 10*1000*1000ns(10ms) ");
     for (int i = 0; i < 100; i++)
     {
-        PROF_REGISTER_START(ot);
+        PROF_ANON_START(ot);
         PROF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
         nanosleep(&tim, &tim2);
     }
-    PROF_REGISTER_START(ot);
+    PROF_ANON_START(ot);
     PROF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
 #endif // WIN32
 
     if (true)
     {
-        PROF_DEFINE_REGISTER_DEFAULT(ot, "call timer sleep_for 100ms ");
+        PROF_DEFINE_ANON_DEFAULT(ot, "call timer sleep_for 100ms ");
         for (int i = 0; i < 20; i++)
         {
-            PROF_REGISTER_START(ot);
+            PROF_ANON_START(ot);
             PROF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        PROF_REGISTER_START(ot);
+        PROF_ANON_START(ot);
         PROF_CALL_TIMER(ot.node_id(), ot.counter().start_val());
     }
 
@@ -756,7 +756,7 @@ int main(int argc, char *argv[])
     entry_mem_test();
     PROF_UPDATE_MERGE();
     PROF_SERIALIZE_FN_LOG();
-    PROF_REGISTER_REFRESH_VM(delta.reg(), prof_get_mem_use());
+    PROF_ANON_REFRESH_VM(delta.anon(), prof_get_mem_use());
 
 
     PROF_RESET_CHILD(ENUM_ENTRY);

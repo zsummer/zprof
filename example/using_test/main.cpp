@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 {
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
     LogDebug() << " main begin test. ";
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         PROF_STOP_AND_SAVE_COUNTER(cost);
         
         //动态创建一行CPU耗时记录, (counter对应使用的计数器版本)    
-        PROF_DEFINE_REGISTER(reg, "new and delete 1k bytes cost", PROF_COUNTER_DEFAULT);
+        PROF_DEFINE_ANON(reg, "new and delete 1k bytes cost", PROF_COUNTER_DEFAULT);
 
         //并记录原始计数结果
         PROF_CALL_CPU(reg.node_id(), cost.cycles());
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     //动态创建一行记录 并统计和记录当前语句段的消耗 效果等同上述拆分步骤(但是会包含整段代码所有用时)      
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(rec, 1, PROF_LEVEL_NORMAL, "new and delete 1k bytes cost");
+        PROF_DEFINE_AUTO_ANON_RECORD(rec, 1, PROF_LEVEL_NORMAL, "new and delete 1k bytes cost");
         delete new char[1024];
     }
 

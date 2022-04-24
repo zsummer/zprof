@@ -37,11 +37,11 @@ int main(int argc, char* argv[])
 {
     PROF_INIT("inner prof");
     regist_prof();
-    PROF_DEFINE_AUTO_SINGLE_RECORD(delta, 1, PROF_LEVEL_NORMAL, "self use mem in main func begin and exit");
-    PROF_REGISTER_REFRESH_VM(delta.reg(), prof_get_mem_use());
+    PROF_DEFINE_AUTO_ANON_RECORD(delta, 1, PROF_LEVEL_NORMAL, "self use mem in main func begin and exit");
+    PROF_ANON_REFRESH_VM(delta.anon(), prof_get_mem_use());
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
 
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "fn write long long");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "fn write long long");
         for (int ss = 0; ss < SUPPERSAMPLING; ss++)
         {
             for (int i = 0; i < DATA_COUNT; i++)
@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "sprintf %d");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "sprintf %d");
         for (int ss = 0; ss < SUPPERSAMPLING; ss++)
         {
             for (int i = 0; i < DATA_COUNT; i++)
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "sscanf %d");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "sscanf %d");
         for (int ss = 0; ss < SUPPERSAMPLING; ss++)
         {
             for (int i = 0; i < DATA_COUNT; i++)
@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "atoi");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "atoi");
         for (int ss = 0; ss < SUPPERSAMPLING; ss++)
         {
             for (int i = 0; i < DATA_COUNT; i++)
@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "fn write double");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "fn write double");
         for (int ss = 0; ss < SUPPERSAMPLING; ss++)
         {
             for (int i = 0; i < DATA_COUNT; i++)
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "fn write float");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "fn write float");
         for (int ss = 0; ss < SUPPERSAMPLING; ss++)
         {
             for (int i = 0; i < DATA_COUNT; i++)
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "sprintf %g");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "sprintf %g");
         for (int ss = 0; ss < SUPPERSAMPLING; ss++)
         {
             for (int i = 0; i < DATA_COUNT; i++)
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "sscanf %f");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "sscanf %f");
         for (int ss = 0; ss < SUPPERSAMPLING; ss++)
         {
             for (int i = 0; i < DATA_COUNT; i++)
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_SINGLE_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "atof ");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, SUPPERSAMPLING * DATA_COUNT, PROF_LEVEL_NORMAL, "atof ");
         for (int ss = 0; ss < SUPPERSAMPLING; ss++)
         {
             for (int i = 0; i < DATA_COUNT; i++)
