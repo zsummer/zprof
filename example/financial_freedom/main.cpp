@@ -37,11 +37,11 @@ typedef float f32;
 int main(int argc, char *argv[])
 {
     PROF_INIT("inner prof");
-    PROF_DEFINE_AUTO_ANON_RECORD(delta, 1, PROF_LEVEL_NORMAL, "self use mem in main func begin and exit");
-    PROF_ANON_REFRESH_VM(delta.anon(), prof_get_mem_use());
+    PROF_DEFINE_AUTO_ANON_RECORD(delta, "self use mem in main func begin and exit");
+    PROF_OUTPUT_SELF_MEM("self use mem in main func begin");
     if (true)
     {
-        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
 

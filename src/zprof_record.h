@@ -106,7 +106,6 @@ enum ProfSerializeFlags : unsigned int
     PROF_SER_INNER = 0x1,
     PROF_SER_RESERVE = 0x2,
     PROF_SER_DELCARE = 0x4,
-    PROF_SER_ANON = 0x8,
 };
 
 
@@ -117,7 +116,7 @@ static inline void ProfDefaultFNLogFunc(const ProfSerializeBuffer& buffer)
 }
 #endif
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
+template<int INST, int RESERVE, int DECLARE>
 class ProfRecord 
 {
 public:
@@ -155,22 +154,14 @@ public:
     static constexpr int node_declare_end_id() { return node_declare_begin_id() + node_declare_count(); }
     inline int node_delcare_reg_end_id() { return declare_reg_end_id_; }
 
-    static constexpr int node_anon_begin_id() { return node_declare_end_id(); }
-    static constexpr int node_anon_count() { return ANON; }
-    static constexpr int node_anon_end_id() { return node_anon_begin_id() + node_anon_count(); }
-    inline int node_anon_real_count() { return used_node_id_ - node_anon_begin_id(); }
-    inline int node_anon_real_end_id() { return used_node_id_; }
-
-
     static constexpr int node_begin_id() { return INNER_PROF_NULL + 1; }
-    static constexpr int node_count() { return node_anon_end_id() - 1; }
-    static constexpr int node_end_id() { return node_anon_end_id(); }
+    static constexpr int node_count() { return node_declare_end_id() - 1; }
+    static constexpr int node_end_id() { return node_begin_id() + node_count(); }
     static constexpr int max_node_count() { return node_count(); }
 
     static constexpr int max_serialize_buff_size() { return 1000; }
     static constexpr int max_compact_string_size() { return 30 * (1+node_end_id()); } //reserve node no name 
-
-    static_assert(node_end_id() == INNER_PROF_MAX + node_reserve_count() + node_declare_count() + node_anon_count(), "");
+    static_assert(node_end_id() == INNER_PROF_MAX + node_reserve_count() + node_declare_count(), "");
 
 public:
     long long init_timestamp_;
@@ -183,7 +174,6 @@ public:
         memset(node_descs_, 0, sizeof(node_descs_));
         merge_to_size_ = 0;
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
-        used_node_id_ = node_anon_begin_id();
         declare_reg_end_id_ = node_declare_begin_id();
 
         log_func_ = NULL;
@@ -280,11 +270,7 @@ public:
         last_timestamp_ = time(NULL);
     }
 
-    void clean_anon_info(bool keep_resident = true)
-    {
-        clean_node_info_range(node_anon_begin_id(), node_anon_end_id(), keep_resident);
-        last_timestamp_ = time(NULL);
-    }
+
 
     inline void reset_childs(int idx, int depth = 0);
 
@@ -475,14 +461,7 @@ public:
     ProfDesc& node_desc(int idx) { return node_descs_[idx]; }
     const char* desc() const { return &compact_string_[desc_]; }
     double circles_per_ns(int t) { return  circles_per_ns_[t == PROF_COUNTER_NULL ? PROF_COUNTER_DEFAULT : t]; }
-    int new_anon_node_id() 
-    { 
-        if (used_node_id_ >= node_anon_end_id())
-        {
-            return 0;
-        }
-        return used_node_id_++;
-    }
+
 public:
     ProfSerializeBuffer& compact_buffer() { return compact_buffer_; }
     char* serialize_buffer() { return serialize_buff_; }
@@ -499,7 +478,6 @@ private:
     int merge_to_size_;
     double circles_per_ns_[PROF_COUNTER_MAX];
     int declare_reg_end_id_;
-    int used_node_id_;
     char serialize_buff_[max_serialize_buff_size()];
     char compact_string_[max_compact_string_size()];
     ProfSerializeBuffer compact_buffer_;
@@ -511,8 +489,8 @@ private:
 
 
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-int ProfRecord<INST, RESERVE, DECLARE,  ANON>::bind_childs(int idx, int cidx)
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::bind_childs(int idx, int cidx)
 {
     if (idx < node_begin_id() || idx >= node_end_id() || cidx < node_begin_id() || cidx >= node_end_id())
     {
@@ -554,8 +532,8 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::bind_childs(int idx, int cidx)
 
 
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-int ProfRecord<INST, RESERVE, DECLARE,  ANON>::bind_merge(int idx, int to)
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int idx, int to)
 {
     if (idx < node_begin_id() || idx >= node_end_id() || to < node_begin_id() || to >= node_end_id())
     {
@@ -596,8 +574,8 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::bind_merge(int idx, int to)
 }
 
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-int ProfRecord<INST, RESERVE, DECLARE,  ANON>::init_prof(const char* desc)
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::init_prof(const char* desc)
 {
     if (desc == NULL || compact_buffer_.is_full())
     {
@@ -725,8 +703,8 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::init_prof(const char* desc)
 }
 
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-int ProfRecord<INST, RESERVE, DECLARE, ANON>::init_jump_count()
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::init_jump_count()
 {
     for (int i = node_declare_begin_id(); i < node_declare_end_id(); )
     {
@@ -745,30 +723,11 @@ int ProfRecord<INST, RESERVE, DECLARE, ANON>::init_jump_count()
         }
         i = next_parrent_id;
     }
-    for (int i = node_anon_begin_id(); i < node_anon_end_id(); )
-    {
-        int next_parrent_id = i + 1;
-        while (next_parrent_id < node_anon_end_id())
-        {
-            if (nodes_[next_parrent_id].parrent == 0)
-            {
-                break;
-            }
-            next_parrent_id++;
-        }
-        for (int j = i; j < next_parrent_id; j++)
-        {
-            nodes_[j].jump_child = next_parrent_id - j - 1;
-        }
-        i = next_parrent_id;
-    }
-
-
     return 0;
 }
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-int ProfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* desc, unsigned int counter_type, bool resident, bool re_reg)
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::regist_node(int idx, const char* desc, unsigned int counter_type, bool resident, bool re_reg)
 {
     if (idx >= node_end_id() )
     {
@@ -803,8 +762,8 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::regist_node(int idx, const char* 
     return 0;
 }
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-int ProfRecord<INST, RESERVE, DECLARE,  ANON>::rename_node(int idx, const char* desc)
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::rename_node(int idx, const char* desc)
 {
     if (idx < node_begin_id() || idx >= node_end_id() )
     {
@@ -836,8 +795,8 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::rename_node(int idx, const char* 
 }
 
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-const char* ProfRecord<INST, RESERVE, DECLARE, ANON>::node_name(int idx)
+template<int INST, int RESERVE, int DECLARE>
+const char* ProfRecord<INST, RESERVE, DECLARE>::node_name(int idx)
 {
     if (idx < node_begin_id() || idx >= node_end_id())
     {
@@ -852,8 +811,8 @@ const char* ProfRecord<INST, RESERVE, DECLARE, ANON>::node_name(int idx)
 };
 
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-void ProfRecord<INST, RESERVE, DECLARE,  ANON>::reset_childs(int idx, int depth)
+template<int INST, int RESERVE, int DECLARE>
+void ProfRecord<INST, RESERVE, DECLARE>::reset_childs(int idx, int depth)
 {
     if (idx < node_begin_id() || idx >= node_end_id())
     {
@@ -880,8 +839,8 @@ void ProfRecord<INST, RESERVE, DECLARE,  ANON>::reset_childs(int idx, int depth)
 
 
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializeBuffer& buffer, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializeBuffer& buffer, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
 {
     if (entry_idx >= node_end_id())
     {
@@ -1163,8 +1122,8 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
 
 
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-ProfSerializeBuffer ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
+template<int INST, int RESERVE, int DECLARE>
+ProfSerializeBuffer ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
 {
     ProfSerializeBuffer buffer(serialize_buff_, sizeof(serialize_buff_));
     int ret = serialize_root(entry_idx, 0, NULL, 0, buffer, call_log);
@@ -1175,8 +1134,8 @@ ProfSerializeBuffer ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(in
 
 
 
-template<int INST, int RESERVE, int DECLARE, int ANON>
-int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::serialize(unsigned int flags, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
 {
     if (!call_log && log_func_)
     {
@@ -1227,20 +1186,6 @@ int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std:
         {
             int ret = serialize_root(i, 0, NULL, 0, buffer, call_log);
             (void)ret;
-        }
-    }
-
-    if (flags & PROF_SER_ANON)
-    {
-        buffer.reset_offset();
-        buffer.push_string(STRLEN(PROF_LINE_FEED));
-        buffer.closing_string();
-        buffer.reset_offset();
-        for (int i = node_anon_begin_id(); i < node_anon_real_end_id(); )
-        {
-            int ret = serialize_root(i, 0, NULL, 0, buffer, call_log);
-            (void)ret;
-            i += nodes_[i].jump_child + 1;
         }
     }
 

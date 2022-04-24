@@ -35,12 +35,10 @@
 #define PROF_DECLARE_COUNT 260
 #endif 
 
-#ifndef PROF_ANON_COUNT
-#define PROF_ANON_COUNT 200
-#endif
 
 
-#define ProfInstType ProfRecord<PROF_DEFAULT_INST_ID, PROF_RESERVE_COUNT, PROF_DECLARE_COUNT, PROF_ANON_COUNT>
+
+#define ProfInstType ProfRecord<PROF_DEFAULT_INST_ID, PROF_RESERVE_COUNT, PROF_DECLARE_COUNT>
 #define ProfInst ProfInstType::instance()
 
 
@@ -117,74 +115,32 @@ private:
 
 
 
-template <ProfCounterType T = PROF_COUNTER_DEFAULT>
-class ProfAnon
-{
-public:
-    ProfAnon(const char* desc)
-    {
-        anon_id_ = ProfInst.new_anon_node_id();
-        ProfInst.regist_node(anon_id_, desc, T, true, false);
-    }
-
-    ~ProfAnon()
-    {
-
-    }
-
-    void start()
-    {
-        counter_.start();
-    }
-
-    void restart()
-    {
-        counter_.start();
-    }
-
-    template <long long COUNT = 1LL, ProfLevel PROF_LEVEL = PROF_LEVEL_NORMAL>
-    void record_current()
-    {
-        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL >(anon_id_, COUNT, counter_.save().cycles());
-    }
-
-    void record_mem(long long mem)
-    {
-        ProfInst.call_mem(anon_id_, 1, mem);
-    }
-    void refresh_mem(long long mem)
-    {
-        ProfInst.refresh_mem(anon_id_, 1, mem);
-    }
-    void call_vm(const ProfVM& vm)
-    {
-        ProfInst.call_vm(anon_id_, vm);
-    }
-    int node_id() { return anon_id_; }
-    ProfCounter<T>& counter() { return counter_; }
-
-private:
-    int anon_id_;
-    ProfCounter<T> counter_;
-};
 
 template <long long COUNT = 1LL, ProfLevel PROF_LEVEL = PROF_LEVEL_NORMAL,
     ProfCounterType C = PROF_COUNTER_DEFAULT>
 class ProfAutoAnonRecord
 {
 public:
-    ProfAutoAnonRecord(const char* desc):anon_(desc)
+    static const size_t DESC_SIZE = 100;
+public:
+    ProfAutoAnonRecord(const char* desc)
     {
-        anon_.start();
+        strncpy(desc_, desc, DESC_SIZE);
+        desc_[DESC_SIZE - 1] = '\0';
+        counter_.start();
     }
     ~ProfAutoAnonRecord()
     {
-        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(anon_.node_id(), COUNT, anon_.counter().save().cycles());
+        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(ProfInstType::INNER_PROF_NULL, COUNT, counter_.save().cycles());
+        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); 
+        ProfInst.serialize_root(ProfInstType::INNER_PROF_NULL, 0, desc_, strlen(desc_), buffer, NULL);
+        ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
     }
 
-    ProfAnon<C>& anon() { return anon_; }
+    ProfCounter<C>& counter() { return counter_; }
 private:
-    ProfAnon<C> anon_;
+    ProfCounter<C> counter_;
+    char desc_[DESC_SIZE];
 };
 
 
@@ -192,7 +148,7 @@ private:
 
 #ifdef OPEN_ZPROF
 
-#define PROF_REGIST_NODE(id, name, c, resident, re_reg)  ProfInst.regist_node(id, name, c, resident, re_reg)
+#define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist_node(id, name, ct, resident, re_reg)
 #define PROF_FAST_REGIST_NODE(id)  ProfInst.regist_node(id, #id, PROF_COUNTER_DEFAULT,  false, false)
 #define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist_node(id, name, PROF_COUNTER_DEFAULT,  false, false)
 #define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist_node(id, #id, PROF_COUNTER_DEFAULT,  true, false)
@@ -214,7 +170,6 @@ private:
 #define PROF_UPDATE_MERGE() ProfInst.update_merge()
 #define PROF_CLEAN_RESERVE() ProfInst.clean_reserve_info()
 #define PROF_CLEAN_DECLARE() ProfInst.clean_declare_info()
-#define PROF_CLEAN_ANON() ProfInst.clean_anon_info()
 
 #define PROF_CALL_CPU_SAMPLE(idx, cost) ProfInst.call_cpu(idx, cost)
 #define PROF_CALL_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL)  \
@@ -229,36 +184,30 @@ private:
 #define PROF_CALL_USER(idx, count, add) ProfInst.call_user(idx, count, add)
 
 
-#define PROF_DEFINE_COUNTER(c)  ProfCounter<> c
+#define PROF_DEFINE_COUNTER(var)  ProfCounter<> var
 #define PROF_DEFINE_COUNTER_INIT(tc, start)  ProfCounter<> tc(start)
-#define PROF_START_COUNTER(c) c.start()
-#define PROF_RESTART_COUNTER(c) c.start()
-#define PROF_STOP_AND_SAVE_COUNTER(c) c.stop_and_save()
-#define PROF_STOP_AND_RECORD(idx, c) PROF_CALL_CPU_WRAP((idx), 1, (c).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
+#define PROF_START_COUNTER(var) var.start()
+#define PROF_RESTART_COUNTER(var) var.start()
+#define PROF_STOP_AND_SAVE_COUNTER(var) var.stop_and_save()
+#define PROF_STOP_AND_REvarORD(idx, var) PROF_CALL_CPU_WRAP((idx), 1, (var).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
 
-#define PROF_DEFINE_AUTO_RECORD(c, idx) ProfAutoRecord<> c(idx)
-
-
-#define PROF_DEFINE_ANON(anon, desc, counter) ProfAnon<counter> anon(desc);  
-#define PROF_DEFINE_ANON_DEFAULT(anon, desc) ProfAnon<> anon(desc);  
-#define PROF_ANON_START(anon) anon.start()
-#define PROF_ANON_RECORD(anon) anon.record_current()
-#define PROF_ANON_RECORD_WRAP(anon, COUNT, PROF_LEVEL) anon.record_current<COUNT, PROF_LEVEL>()
-#define PROF_ANON_REC_MEM(anon, add) anon.record_mem(add)
-#define PROF_ANON_REFRESH_MEM(anon, add) anon.refresh_mem(add)
-#define PROF_ANON_REFRESH_VM(anon, vm) anon.call_vm(vm)
+#define PROF_DEFINE_AUTO_RECORD(var, idx) ProfAutoRecord<> var(idx)
+#define PROF_DEFINE_AUTO_ANON_RECORD(var, desc) ProfAutoAnonRecord<> var(desc)
+#define PROF_DEFINE_AUTO_MULTI_ANON_RECORD(var, count, desc) ProfAutoAnonRecord<count> var(desc)
+#define PROF_DEFINE_AUTO_ADVANCE_ANON_RECORD(var, count, level, ct, desc) ProfAutoAnonRecord<count, level, ct> var(desc)
 
 
-#define PROF_DEFINE_AUTO_MULTI_COUNT_CPU(desc, count, num) do {PROF_DEFINE_ANON_DEFAULT(rec, desc); ProfRecordWrap<true, PROF_LEVEL_FAST>((int)(rec.node_id()), (long long)(count), (long long)num);} while(0)
-#define PROF_DEFINE_AUTO_MULTI_COUNT_USER(desc, count, num) do {PROF_DEFINE_ANON_DEFAULT(rec, desc); PROF_CALL_USER(rec.node_id(), count, num);} while(0)
-#define PROF_DEFINE_AUTO_MULTI_COUNT_MEM(desc, count, num) do {PROF_DEFINE_ANON_DEFAULT(rec, desc); PROF_CALL_MEM(rec.node_id(), count, num);} while(0)
+#define PROF_OUTPUT_DEFAULT_LOG(desc)        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); \
+                                                              ProfInst.serialize_root(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), buffer, NULL);\
+                                                              ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
 
-#define PROF_DEFINE_AUTO_ANON_RECORD(rec, COUNT, PROF_LEVEL, desc) ProfAutoAnonRecord<COUNT, PROF_LEVEL, PROF_COUNTER_DEFAULT> rec(desc)
-#define PROF_DEFINE_AUTO_SINGLE_CPU(desc, num) do {PROF_DEFINE_ANON_DEFAULT(rec, desc); PROF_CALL_CPU(rec.node_id(), num);} while(0)
-#define PROF_DEFINE_AUTO_SINGLE_USER(desc, num) do {PROF_DEFINE_ANON_DEFAULT(rec, desc); PROF_CALL_USER(rec.node_id(), 1, num);} while(0)
-#define PROF_DEFINE_AUTO_SINGLE_MEM(desc, num) do {PROF_DEFINE_ANON_DEFAULT(rec, desc); PROF_CALL_MEM(rec.node_id(), 1, num);} while(0)
-#define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) do{ ProfAnon<> __temp_prof_record_mem__(desc); PROF_CALL_VM(__temp_prof_record_mem__.node_id(), prof_get_mem_use()); }while(0)
-
+#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_DEFAULT_LOG(desc);}while(0)
 
 
 
@@ -292,33 +241,26 @@ private:
 #define PROF_CALL_TIMER(idx, stamp) 
 #define PROF_CALL_USER(idx, count, add)
 
-#define PROF_DEFINE_COUNTER(c)  
+#define PROF_DEFINE_COUNTER(var)  
 #define PROF_DEFINE_COUNTER_INIT(tc, start)  
-#define PROF_START_COUNTER(c) 
-#define PROF_RESTART_COUNTER(c) 
-#define PROF_STOP_AND_SAVE_COUNTER(c) 
-#define PROF_STOP_AND_RECORD(idx, c) 
+#define PROF_START_COUNTER(var) 
+#define PROF_RESTART_COUNTER(var) 
+#define PROF_STOP_AND_SAVE_COUNTER(var) 
+#define PROF_STOP_AND_RECORD(idx, var) 
 
-#define PROF_DEFINE_AUTO_RECORD(c, idx) 
+#define PROF_DEFINE_AUTO_RECORD(var, idx) 
+#define PROF_DEFINE_AUTO_ANON_RECORD(desc, idx) 
+#define PROF_DEFINE_AUTO_ADVANCE_ANON_RECORD(var, count, level, ct, desc) 
 
+#define PROF_OUTPUT_DEFAULT_LOG(desc) 
 
-#define PROF_DEFINE_ANON(anon, desc, counter) 
-#define PROF_DEFINE_ANON_DEFAULT(anon, desc) 
-#define PROF_ANON_START(anon) 
-#define PROF_ANON_RECORD(anon) 
-#define PROF_ANON_RECORD_WRAP(anon, COUNT, PROF_LEVEL) 
-#define PROF_ANON_REC_MEM(anon, add) 
-#define PROF_ANON_REFRESH_MEM(anon, add) 
-#define PROF_ANON_REFRESH_VM(anon, add) 
-
-#define PROF_DEFINE_AUTO_MULTI_COUNT_CPU(desc, count, num) 
-#define PROF_DEFINE_AUTO_MULTI_COUNT_USER(desc, count, num) 
-#define PROF_DEFINE_AUTO_MULTI_COUNT_MEM(desc, count, num) 
-#define PROF_DEFINE_AUTO_ANON_RECORD(rec, COUNT, PROF_LEVEL, desc) 
-#define PROF_DEFINE_AUTO_SINGLE_CPU(desc, num)
-#define PROF_DEFINE_AUTO_SINGLE_USER(desc, num) 
-#define PROF_DEFINE_AUTO_SINGLE_MEM(desc, num) 
-#define PROF_DEFINE_AUTO_RECORD_SELF_MEM(desc) 
+#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  
+#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) 
+#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) 
+#define PROF_OUTPUT_SINGLE_CPU(desc, num)   
+#define PROF_OUTPUT_SINGLE_USER(desc, num)
+#define PROF_OUTPUT_SINGLE_MEM(desc, num) 
+#define PROF_OUTPUT_SELF_MEM(desc) 
 
 #endif
 
@@ -327,18 +269,7 @@ private:
 
 #define PROF_SERIALIZE_FN_LOG()    ProfInst.serialize(0xff, NULL)
 
-#define PROF_OUTPUT_DEFAULT_LOG(desc)        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); \
-                                                              ProfInst.serialize_root(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), buffer, NULL);\
-                                                              ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
 
-
-#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_DEFAULT_LOG(desc);}while(0)
 
 
 

@@ -24,6 +24,7 @@
 #include <array>
 #include <limits.h>
 #include <chrono>
+#include <string.h>
 #ifdef _WIN32
 #ifndef KEEP_INPUT_QUICK_EDIT
 #define KEEP_INPUT_QUICK_EDIT false

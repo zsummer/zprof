@@ -40,12 +40,9 @@ void test_func()
 }
 int main(int argc, char *argv[])
 {
-
-
-
     if (true)
     {
-        PROF_DEFINE_AUTO_ANON_RECORD(guard, 1, PROF_LEVEL_NORMAL, "start fnlog use");
+        PROF_DEFINE_AUTO_ANON_RECORD(guard, "start fnlog use");
         FNLog::FastStartDebugLogger();
     }
     LogDebug() << " main begin test. ";
