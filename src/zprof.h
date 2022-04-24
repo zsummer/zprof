@@ -190,7 +190,6 @@ private:
 
 
 
-
 #ifdef OPEN_ZPROF
 
 #define PROF_REGIST_NODE(id, name, c, resident, re_reg)  ProfInst.regist_node(id, name, c, resident, re_reg)
@@ -325,22 +324,21 @@ private:
 
 
 
-#define PROF_FN_LOG_CALLBACK [](const ProfSerializeBuffer& buffer)  {LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset()); }
 
+#define PROF_SERIALIZE_FN_LOG()    ProfInst.serialize(0xff, NULL)
 
-#define PROF_SERIALIZE_FN_LOG()    ProfInst.serialize(0xff, PROF_FN_LOG_CALLBACK)
-
-#define PROF_OUTPUT_FN_LOG(desc)        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); \
-                                                              ProfInst.serialize_root(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), buffer, PROF_FN_LOG_CALLBACK);\
+#define PROF_OUTPUT_DEFAULT_LOG(desc)        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); \
+                                                              ProfInst.serialize_root(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), buffer, NULL);\
                                                               ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
 
-#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_FN_LOG(desc);}while(0)
+
+#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_DEFAULT_LOG(desc);}while(0)
 
 
 

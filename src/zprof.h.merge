@@ -1063,10 +1063,19 @@ enum ProfSerializeFlags : unsigned int
     PROF_SER_ANON = 0x8,
 };
 
+
+#ifdef _FN_LOG_LOG_H_
+static inline void ProfDefaultFNLogFunc(const ProfSerializeBuffer& buffer)
+{
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset());
+}
+#endif
+
 template<int INST, int RESERVE, int DECLARE, int ANON>
 class ProfRecord 
 {
 public:
+    using DefaultLogFunc = void(*)(const ProfSerializeBuffer& buffer);
     enum InnerType
     {
         INNER_PROF_NULL,
@@ -1130,6 +1139,14 @@ public:
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
         used_node_id_ = node_anon_begin_id();
         declare_reg_end_id_ = node_declare_begin_id();
+
+        log_func_ = NULL;
+
+#ifdef _FN_LOG_LOG_H_
+        log_func_ = &ProfDefaultFNLogFunc;  //set default log;
+#endif
+
+
         serialize_buff_[0] = '\0';
         init_timestamp_ = 0;
         last_timestamp_ = 0;
@@ -1423,6 +1440,11 @@ public:
 public:
     ProfSerializeBuffer& compact_buffer() { return compact_buffer_; }
     char* serialize_buffer() { return serialize_buff_; }
+public:
+    void set_default_log_func(DefaultLogFunc func) { log_func_ = func; }
+    DefaultLogFunc default_log_func() { return log_func_; }
+private:
+    DefaultLogFunc log_func_;
 private:
     ProfNode nodes_[node_end_id()];
     ProfDesc node_descs_[node_end_id()];
@@ -1820,11 +1842,14 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
         return -1;
     }
 
-
     const int min_line_size = 120;
     if (buffer.buff_len() <= min_line_size)
     {
         return -2;
+    }
+    if (call_log == NULL && log_func_ != NULL )
+    {
+        call_log = log_func_;
     }
 
     if (buffer.offset() + min_line_size >= buffer.buff_len())
@@ -2107,6 +2132,11 @@ ProfSerializeBuffer ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(in
 template<int INST, int RESERVE, int DECLARE, int ANON>
 int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
 {
+    if (!call_log && log_func_)
+    {
+        call_log = log_func_;
+    }
+
     if (!call_log)
     {
         return -1;
@@ -2416,7 +2446,6 @@ private:
 
 
 
-
 #ifdef OPEN_ZPROF
 
 #define PROF_REGIST_NODE(id, name, c, resident, re_reg)  ProfInst.regist_node(id, name, c, resident, re_reg)
@@ -2551,22 +2580,21 @@ private:
 
 
 
-#define PROF_FN_LOG_CALLBACK [](const ProfSerializeBuffer& buffer)  {LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset()); }
 
+#define PROF_SERIALIZE_FN_LOG()    ProfInst.serialize(0xff, NULL)
 
-#define PROF_SERIALIZE_FN_LOG()    ProfInst.serialize(0xff, PROF_FN_LOG_CALLBACK)
-
-#define PROF_OUTPUT_FN_LOG(desc)        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); \
-                                                              ProfInst.serialize_root(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), buffer, PROF_FN_LOG_CALLBACK);\
+#define PROF_OUTPUT_DEFAULT_LOG(desc)        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); \
+                                                              ProfInst.serialize_root(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), buffer, NULL);\
                                                               ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
 
-#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_FN_LOG(desc);} while(0)
-#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_FN_LOG(desc);}while(0)
+
+#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_DEFAULT_LOG(desc);}while(0)
 
 
 

@@ -109,10 +109,19 @@ enum ProfSerializeFlags : unsigned int
     PROF_SER_ANON = 0x8,
 };
 
+
+#ifdef _FN_LOG_LOG_H_
+static inline void ProfDefaultFNLogFunc(const ProfSerializeBuffer& buffer)
+{
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset());
+}
+#endif
+
 template<int INST, int RESERVE, int DECLARE, int ANON>
 class ProfRecord 
 {
 public:
+    using DefaultLogFunc = void(*)(const ProfSerializeBuffer& buffer);
     enum InnerType
     {
         INNER_PROF_NULL,
@@ -176,6 +185,14 @@ public:
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
         used_node_id_ = node_anon_begin_id();
         declare_reg_end_id_ = node_declare_begin_id();
+
+        log_func_ = NULL;
+
+#ifdef _FN_LOG_LOG_H_
+        log_func_ = &ProfDefaultFNLogFunc;  //set default log;
+#endif
+
+
         serialize_buff_[0] = '\0';
         init_timestamp_ = 0;
         last_timestamp_ = 0;
@@ -469,6 +486,11 @@ public:
 public:
     ProfSerializeBuffer& compact_buffer() { return compact_buffer_; }
     char* serialize_buffer() { return serialize_buff_; }
+public:
+    void set_default_log_func(DefaultLogFunc func) { log_func_ = func; }
+    DefaultLogFunc default_log_func() { return log_func_; }
+private:
+    DefaultLogFunc log_func_;
 private:
     ProfNode nodes_[node_end_id()];
     ProfDesc node_descs_[node_end_id()];
@@ -866,11 +888,14 @@ int ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(int entry_idx, int
         return -1;
     }
 
-
     const int min_line_size = 120;
     if (buffer.buff_len() <= min_line_size)
     {
         return -2;
+    }
+    if (call_log == NULL && log_func_ != NULL )
+    {
+        call_log = log_func_;
     }
 
     if (buffer.offset() + min_line_size >= buffer.buff_len())
@@ -1153,6 +1178,11 @@ ProfSerializeBuffer ProfRecord<INST, RESERVE, DECLARE,  ANON>::serialize_root(in
 template<int INST, int RESERVE, int DECLARE, int ANON>
 int ProfRecord<INST, RESERVE, DECLARE, ANON>::serialize(unsigned int flags, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
 {
+    if (!call_log && log_func_)
+    {
+        call_log = log_func_;
+    }
+
     if (!call_log)
     {
         return -1;
