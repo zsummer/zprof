@@ -189,7 +189,7 @@ private:
 #define PROF_START_COUNTER(var) var.start()
 #define PROF_RESTART_COUNTER(var) var.start()
 #define PROF_STOP_AND_SAVE_COUNTER(var) var.stop_and_save()
-#define PROF_STOP_AND_REvarORD(idx, var) PROF_CALL_CPU_WRAP((idx), 1, (var).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
+#define PROF_STOP_AND_RECORD(idx, var) PROF_CALL_CPU_WRAP((idx), 1, (var).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
 
 #define PROF_DEFINE_AUTO_RECORD(var, idx) ProfAutoRecord<> var(idx)
 #define PROF_DEFINE_AUTO_ANON_RECORD(var, desc) ProfAutoAnonRecord<> var(desc)
