@@ -132,7 +132,12 @@ ProfSerializeBuffer& ProfSerializeBuffer::push_human_time(long long ns)
         fc = 'u';
         lc = 's';
     }
-    push_number((unsigned long long)(ns/ fr));
+    else
+    {
+        push_string("invalid time");
+        return *this;
+    }
+    push_number((long long)(ns/ fr));
     buff_[offset_++] = '.';
     push_number((unsigned long long)((ns/ mr) % 1000), 3);
     buff_[offset_++] = fc;

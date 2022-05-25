@@ -57,6 +57,14 @@ int main(int argc, char *argv[])
     PROF_CLEAN_DECLARE();
 
 
+
+    for (u32 i = 0; i < 64; i++)
+    {
+        char buf[20];
+        sprintf(buf, "2^%u", i);
+        memset(ProfInst.serialize_buffer(), 0, ProfInstType::max_serialize_buff_size());
+        PROF_OUTPUT_SINGLE_CPU(buf, (u64)pow(2LLU, i));
+    }
     return 0;
 }
 
