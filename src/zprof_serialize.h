@@ -132,9 +132,10 @@ ProfSerializeBuffer& ProfSerializeBuffer::push_human_time(long long ns)
         fc = 'u';
         lc = 's';
     }
-    else
+    else if (ns < 0) //cost may be over  when long long time  elapse . 
     {
-        push_string("invalid time");
+        //ns = 0;
+        push_string("invalid");
         return *this;
     }
     push_number((long long)(ns/ fr));
