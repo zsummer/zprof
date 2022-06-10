@@ -1014,11 +1014,11 @@ struct ProfCPU
     long long c; 
     long long sum;  
     long long dv; 
-    int sm;
-    int h_sm;
-    int l_sm;
-    int max_u;
-    int min_u;
+    long long sm;
+    long long h_sm;
+    long long l_sm;
+    long long max_u;
+    long long min_u;
     long long t_u;
 };
 
@@ -1178,7 +1178,7 @@ public:
     {
         ProfNode& node = nodes_[idx];
         memset(&node.cpu, 0, sizeof(node.cpu));
-        node.cpu.min_u = INT_MAX;
+        node.cpu.min_u = LLONG_MAX;
     }
     PROF_ALWAYS_INLINE void reset_mem(int idx)
     {
@@ -1715,7 +1715,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::regist_node(int idx, const char* desc, u
     node_descs_[idx].counter_type = counter_type;
     node_descs_[idx].resident = resident;
     node.active = true;
-    node.cpu.min_u = INT_MAX;
+    node.cpu.min_u = LLONG_MAX;
 
     if (idx >= node_declare_begin_id() && idx < node_declare_end_id() && idx + 1 > declare_reg_end_id_)
     {
