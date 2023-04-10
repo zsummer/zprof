@@ -82,6 +82,10 @@ private:
 
 ProfSerializeBuffer& ProfSerializeBuffer::push_human_count(long long count)
 {
+    if (buff_len_ <= offset_ + 35)
+    {
+        return *this;
+    }
     if (count > 1000 * 1000)
     {
         push_number((unsigned long long)(count / 1000 / 1000));
@@ -149,6 +153,10 @@ ProfSerializeBuffer& ProfSerializeBuffer::push_human_time(long long ns)
 
 ProfSerializeBuffer& ProfSerializeBuffer::push_human_mem(long long bytes)
 {
+    if (buff_len_ <= offset_ + 35)
+    {
+        return *this;
+    }
     if (bytes > 1024 * 1024 * 1024)
     {
         push_number((unsigned long long)(bytes / 1024 / 1024 / 1024));
