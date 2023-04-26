@@ -1,11 +1,14 @@
-release zprof version date:2023-04-26 11:32:36
+release zprof version date:2023-04-26 11:34:16
 
 git log:
-commit 2a53cd97a92234ee17a9b27ad175b9128f83266d
+commit 63eb224ebee9287db253e1550205fe7c346b2e3f
 Author: zsummer <yawei.zhang@foxmail.com>
-Date:   Mon Apr 10 16:20:33 2023 +0800
+Date:   Wed Apr 26 11:33:07 2023 +0800
 
-    more guard code
+    dist
 
- src/zprof_serialize.h | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ dist/LICENSE   |   34 +
+ dist/README.md |  170 ++++
+ dist/VERSION   |   11 +
+ dist/zprof.h   | 2500 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 2715 insertions(+)
