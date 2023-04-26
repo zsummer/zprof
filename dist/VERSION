@@ -1,0 +1,11 @@
+release zprof version date:2023-04-26 11:32:36
+
+git log:
+commit 2a53cd97a92234ee17a9b27ad175b9128f83266d
+Author: zsummer <yawei.zhang@foxmail.com>
+Date:   Mon Apr 10 16:20:33 2023 +0800
+
+    more guard code
+
+ src/zprof_serialize.h | 8 ++++++++
+ 1 file changed, 8 insertions(+)
