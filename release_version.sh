@@ -15,8 +15,9 @@ echo "#ifdef __GNUG__" >> zprof.h.bak
 echo "#pragma GCC pop_options" >> zprof.h.bak
 echo "#endif" >> zprof.h.bak
 
+cat zprof.h.bak | sed '/#include.*zprof_/d' > ./dist/include/zprof/zprof.h
+rm zprof.h.bak
 
-mv zprof.h.bak  ./dist/include/zprof/zprof.h
 cp README.md ./dist/include/zprof/README.md 
 cp COPYRIGHT ./dist/include/zprof/LICENSE 
 

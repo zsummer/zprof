@@ -987,8 +987,6 @@ inline void ProfSerializeBuffer::closing_string()
 * limitations under the License.
 */
 
-#include "zprof_counter.h"
-#include "zprof_serialize.h"
 #include <algorithm>
 #include <functional>
 #include <atomic>
@@ -2238,7 +2236,6 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize(unsigned int flags, std::funct
 */
 
 
-#include "zprof_record.h"
 
 #ifndef ZPROF_H
 #define ZPROF_H
