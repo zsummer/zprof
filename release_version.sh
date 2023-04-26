@@ -16,12 +16,12 @@ echo "#pragma GCC pop_options" >> zprof.h.bak
 echo "#endif" >> zprof.h.bak
 
 
-mv zprof.h.bak  ./dist/zprof.h
-cp README.md ./dist/README.md 
-cp COPYRIGHT ./dist/LICENSE 
+mv zprof.h.bak  ./dist/include/zprof/zprof.h
+cp README.md ./dist/include/zprof/README.md 
+cp COPYRIGHT ./dist/include/zprof/LICENSE 
 
 version=`date +"release zprof version date:%Y-%m-%d %H:%M:%S"`
-echo $version > ./dist/VERSION 
-echo "" >> ./dist/VERSION 
-echo "git log:" >> ./dist/VERSION 
-git log -1 --stat >> ./dist/VERSION 
+echo $version > ./dist/include/zprof/VERSION 
+echo "" >> ./dist/include/zprof/VERSION 
+echo "git log:" >> ./dist/include/zprof/VERSION 
+git log -1 --stat >> ./dist/include/zprof/VERSION 
