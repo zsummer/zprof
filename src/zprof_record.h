@@ -137,8 +137,10 @@ public:
         INNER_PROF_MERGE_ALL_COST,
         INNER_PROF_SELF_MEM_COST,
         INNER_PROF_AUTO_TEST_COST,
-        INNER_PROF_FULL_AUTO_COST,
-        INNER_PROF_COUNTER_COST,
+        INNER_PROF_RECORD_COST,
+        INNER_PROF_RECORD_COST1,
+        INNER_PROF_RECORD_COST2,
+        INNER_PROF_COUNTER_RECORD_COST,
         INNER_PROF_ORIGIN_INC,
         INNER_PROF_ATOM_RELEAX,
         INNER_PROF_ATOM_COST,
@@ -623,8 +625,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::init_prof(const char* desc)
     regist_node(INNER_PROF_MERGE_ALL_COST, "INNER_PROF_MERGE_ALL_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_SELF_MEM_COST, "INNER_PROF_SELF_MEM_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_AUTO_TEST_COST, "INNER_PROF_AUTO_TEST_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_FULL_AUTO_COST, "INNER_PROF_FULL_AUTO_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_COUNTER_COST, "INNER_PROF_COUNTER_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist_node(INNER_PROF_RECORD_COST, "INNER_PROF_RECORD_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist_node(INNER_PROF_RECORD_COST1, "INNER_PROF_RECORD_COST1", PROF_COUNTER_DEFAULT, true, true);
+    regist_node(INNER_PROF_RECORD_COST2, "INNER_PROF_RECORD_COST2", PROF_COUNTER_DEFAULT, true, true);
+    regist_node(INNER_PROF_COUNTER_RECORD_COST, "INNER_PROF_COUNTER_RECORD_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_ORIGIN_INC, "INNER_PROF_ORIGIN_INC", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_ATOM_RELEAX, "INNER_PROF_ATOM_RELEAX", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_ATOM_COST, "INNER_PROF_ATOM_COST", PROF_COUNTER_DEFAULT, true, true);
@@ -657,13 +661,29 @@ int ProfRecord<INST, RESERVE, DECLARE>::init_prof(const char* desc)
             test_cost.stop_and_save();
             call_cpu(INNER_PROF_AUTO_TEST_COST, test_cost.cycles());
         }
-        call_cpu(INNER_PROF_FULL_AUTO_COST, 1000, cost.stop_and_save().cycles());
+        call_cpu(INNER_PROF_COUNTER_RECORD_COST, 1000, cost.stop_and_save().cycles());
         cost.start();
         for (int i = 0; i < 1000; i++)
         {
             call_cpu_no_sm(INNER_PROF_AUTO_TEST_COST, cost.stop_and_save().cycles());
         }
-        call_cpu(INNER_PROF_COUNTER_COST, 1000, cost.stop_and_save().cycles());
+        call_cpu(INNER_PROF_RECORD_COST, 1000, cost.stop_and_save().cycles());
+
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            call_cpu(INNER_PROF_AUTO_TEST_COST, 1, cost.stop_and_save().cycles());
+        }
+        call_cpu(INNER_PROF_RECORD_COST1, 1000, cost.stop_and_save().cycles());
+
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            call_cpu_full(INNER_PROF_AUTO_TEST_COST, 1, cost.stop_and_save().cycles());
+        }
+        call_cpu(INNER_PROF_RECORD_COST2, 1000, cost.stop_and_save().cycles());
+
+
         std::atomic<long long> atomll_test(0);
         volatile long long origin_feetch_add_test = 0;
         cost.start();
