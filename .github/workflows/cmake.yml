@@ -44,7 +44,6 @@ jobs:
           ./compiler_optimization_test
           ./cpu_cache_matrix_test
           ./cpu_cache_test
-          ./financial_freedom
           ./format_test
           ./instructions_cost_test
           ./tree_and_array_test
