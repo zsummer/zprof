@@ -160,12 +160,11 @@ private:
 #define PROF_REG_AND_BIND_CHILD_AND_MERGE(id, cid) do {PROF_FAST_REGIST_NODE(cid);  PROF_BIND_CHILD_AND_MERGE(id, cid); }while(0)
 
 
-
-
-
-
 #define PROF_INIT(desc) ProfInst.init_prof(desc)
 #define PROF_INIT_JUMP_COUNT() ProfInst.init_jump_count()
+#define PROF_SET_LOG(log_fun) ProfInst.set_default_log_func(log_fun)
+
+
 #define PROF_RESET_CHILD(idx) ProfInst.reset_childs(idx)
 #define PROF_UPDATE_MERGE() ProfInst.update_merge()
 #define PROF_CLEAN_RESERVE() ProfInst.clean_reserve_info()
@@ -225,6 +224,8 @@ private:
 
 #define PROF_INIT(desc) 
 #define PROF_INIT_JUMP_COUNT()
+#define PROF_SET_LOG(log_fun) 
+
 #define PROF_RESET_CHILD(idx) 
 #define PROF_UPDATE_MERGE() 
 #define PROF_RESET_RESERVE()
