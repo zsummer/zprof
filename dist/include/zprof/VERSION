@@ -1,13 +1,15 @@
-release zprof version date:2023-05-05 17:11:12
+release zprof version date:2023-05-05 20:32:57
 
 git log:
-commit 10056791fae9bb5af20b94a920446d1166c63a96
+commit e6f162a9695059b8fb57fd3e46ae1ff1ccabc685
 Author: zsummer <yawei.zhang@foxmail.com>
-Date:   Fri May 5 17:11:00 2023 +0800
+Date:   Fri May 5 20:32:43 2023 +0800
 
-    clean depends
+    clean code
 
- example/using_test/main.cpp |  6 ++++++
- src/zprof.h                 |  9 +++++----
- src/zprof_record.h          | 13 +++++++------
- 3 files changed, 18 insertions(+), 10 deletions(-)
+ example/coverage_test/main.cpp |   2 +-
+ src/zprof.h                    | 152 +++++++++++++++++++++++++++++++++--------
+ src/zprof_record.h             |   9 ++-
+ src/zprof_serialize.h          |   2 +-
+ tests/main.cpp                 |   6 ++
+ 5 files changed, 138 insertions(+), 33 deletions(-)
