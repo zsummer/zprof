@@ -281,9 +281,9 @@ public:
         ProfNode& node = nodes_[idx];
         node.cpu.c += c;
         node.cpu.sum += cost;
-        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.max_u = (int)(node.cpu.max_u < dis ? dis : node.cpu.max_u);
-        node.cpu.min_u = (int)(node.cpu.min_u < dis ? node.cpu.min_u : dis);
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
+        node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
         node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
         node.cpu.t_u += cost;
     }
@@ -292,9 +292,9 @@ public:
         ProfNode& node = nodes_[idx];
         node.cpu.c += 1;
         node.cpu.sum += cost;
-        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.max_u = (int)(node.cpu.max_u < cost ? cost : node.cpu.max_u);
-        node.cpu.min_u = (int)(node.cpu.min_u < cost ? node.cpu.min_u : cost);
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.max_u = (node.cpu.max_u < cost ? cost : node.cpu.max_u);
+        node.cpu.min_u = (node.cpu.min_u < cost ? node.cpu.min_u : cost);
         node.cpu.dv += abs(cost - node.cpu.sm);
         node.cpu.t_u += cost;
     }
@@ -303,7 +303,7 @@ public:
         ProfNode& node = nodes_[idx];
         node.cpu.c += 1;
         node.cpu.sum += cost;
-        node.cpu.sm = (int)cost;
+        node.cpu.sm = cost;
         node.cpu.t_u += cost;
     }
     PROF_ALWAYS_INLINE void call_cpu_no_sm(int idx, long long count, long long cost)
@@ -312,7 +312,7 @@ public:
         ProfNode& node = nodes_[idx];
         node.cpu.c += count;
         node.cpu.sum += cost;
-        node.cpu.sm = (int)dis;
+        node.cpu.sm = dis;
         node.cpu.t_u += cost;
     }
 
@@ -324,13 +324,13 @@ public:
         long long dis = cost;
         long long avg = node.cpu.sum / node.cpu.c;
 
-        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.h_sm = (int)(dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
-        node.cpu.l_sm = (int)(dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.h_sm = (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
+        node.cpu.l_sm = (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
         node.cpu.dv += abs(dis - node.cpu.sm);
         node.cpu.t_u += cost;
-        node.cpu.max_u = (int)(node.cpu.max_u < dis ? dis : node.cpu.max_u);
-        node.cpu.min_u = (int)(node.cpu.min_u < dis ? node.cpu.min_u : dis);
+        node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
+        node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
     }
 
     PROF_ALWAYS_INLINE void call_cpu_full(int idx, long long c, long long cost)
@@ -342,13 +342,13 @@ public:
         long long dis = cost / c;
         long long avg = node.cpu.sum / node.cpu.c;
 
-        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.h_sm = (int) (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
-        node.cpu.l_sm = (int) (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.h_sm =  (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
+        node.cpu.l_sm =  (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
         node.cpu.dv += abs(dis - node.cpu.sm);
         node.cpu.t_u += cost;
-        node.cpu.max_u = (int)(node.cpu.max_u < dis ? dis : node.cpu.max_u);
-        node.cpu.min_u = (int)(node.cpu.min_u < dis ? node.cpu.min_u : dis);
+        node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
+        node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
     }
 
 

@@ -22,13 +22,10 @@
 #include <random>
 #include "zhash_map.h"
 
-#ifdef _FN_LOG_LOG_H_
-static inline void ProfDefaultFNLogFuncTest(const ProfSerializeBuffer& buffer)
+static inline void FNLogFunc(const ProfSerializeBuffer& buffer)
 {
-    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_INFO, 0, 0, FNLog::LOG_PREFIX_DEFAULT).write_buffer(buffer.buff(), (int)buffer.offset());
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset());
 }
-#endif
-
 
 int main(int argc, char *argv[])
 {
@@ -45,7 +42,7 @@ int main(int argc, char *argv[])
 
     PROF_OUTPUT_SELF_MEM("default fn log out  test(debug)");
 
-    ProfInst.set_default_log_func(&ProfDefaultFNLogFuncTest);
+    ProfInst.set_default_log_func(&FNLogFunc);
     PROF_OUTPUT_SELF_MEM("specify fn log out  test(info)");
     ProfInst.set_default_log_func(NULL);
     PROF_OUTPUT_SELF_MEM("specify None log out  test(no log)");
