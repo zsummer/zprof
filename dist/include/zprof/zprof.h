@@ -1106,8 +1106,10 @@ public:
         INNER_PROF_MERGE_ALL_COST,
         INNER_PROF_SELF_MEM_COST,
         INNER_PROF_AUTO_TEST_COST,
-        INNER_PROF_FULL_AUTO_COST,
-        INNER_PROF_COUNTER_COST,
+        INNER_PROF_RECORD_COST,
+        INNER_PROF_RECORD_COST1,
+        INNER_PROF_RECORD_COST2,
+        INNER_PROF_COUNTER_RECORD_COST,
         INNER_PROF_ORIGIN_INC,
         INNER_PROF_ATOM_RELEAX,
         INNER_PROF_ATOM_COST,
@@ -1250,9 +1252,9 @@ public:
         ProfNode& node = nodes_[idx];
         node.cpu.c += c;
         node.cpu.sum += cost;
-        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.max_u = (int)(node.cpu.max_u < dis ? dis : node.cpu.max_u);
-        node.cpu.min_u = (int)(node.cpu.min_u < dis ? node.cpu.min_u : dis);
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
+        node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
         node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
         node.cpu.t_u += cost;
     }
@@ -1261,9 +1263,9 @@ public:
         ProfNode& node = nodes_[idx];
         node.cpu.c += 1;
         node.cpu.sum += cost;
-        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.max_u = (int)(node.cpu.max_u < cost ? cost : node.cpu.max_u);
-        node.cpu.min_u = (int)(node.cpu.min_u < cost ? node.cpu.min_u : cost);
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.max_u = (node.cpu.max_u < cost ? cost : node.cpu.max_u);
+        node.cpu.min_u = (node.cpu.min_u < cost ? node.cpu.min_u : cost);
         node.cpu.dv += abs(cost - node.cpu.sm);
         node.cpu.t_u += cost;
     }
@@ -1272,7 +1274,7 @@ public:
         ProfNode& node = nodes_[idx];
         node.cpu.c += 1;
         node.cpu.sum += cost;
-        node.cpu.sm = (int)cost;
+        node.cpu.sm = cost;
         node.cpu.t_u += cost;
     }
     PROF_ALWAYS_INLINE void call_cpu_no_sm(int idx, long long count, long long cost)
@@ -1281,7 +1283,7 @@ public:
         ProfNode& node = nodes_[idx];
         node.cpu.c += count;
         node.cpu.sum += cost;
-        node.cpu.sm = (int)dis;
+        node.cpu.sm = dis;
         node.cpu.t_u += cost;
     }
 
@@ -1293,13 +1295,13 @@ public:
         long long dis = cost;
         long long avg = node.cpu.sum / node.cpu.c;
 
-        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.h_sm = (int)(dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
-        node.cpu.l_sm = (int)(dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.h_sm = (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
+        node.cpu.l_sm = (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
         node.cpu.dv += abs(dis - node.cpu.sm);
         node.cpu.t_u += cost;
-        node.cpu.max_u = (int)(node.cpu.max_u < dis ? dis : node.cpu.max_u);
-        node.cpu.min_u = (int)(node.cpu.min_u < dis ? node.cpu.min_u : dis);
+        node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
+        node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
     }
 
     PROF_ALWAYS_INLINE void call_cpu_full(int idx, long long c, long long cost)
@@ -1311,13 +1313,13 @@ public:
         long long dis = cost / c;
         long long avg = node.cpu.sum / node.cpu.c;
 
-        node.cpu.sm = (int)SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.h_sm = (int) (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
-        node.cpu.l_sm = (int) (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
+        node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+        node.cpu.h_sm =  (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
+        node.cpu.l_sm =  (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
         node.cpu.dv += abs(dis - node.cpu.sm);
         node.cpu.t_u += cost;
-        node.cpu.max_u = (int)(node.cpu.max_u < dis ? dis : node.cpu.max_u);
-        node.cpu.min_u = (int)(node.cpu.min_u < dis ? node.cpu.min_u : dis);
+        node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
+        node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
     }
 
 
@@ -1592,8 +1594,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::init_prof(const char* desc)
     regist_node(INNER_PROF_MERGE_ALL_COST, "INNER_PROF_MERGE_ALL_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_SELF_MEM_COST, "INNER_PROF_SELF_MEM_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_AUTO_TEST_COST, "INNER_PROF_AUTO_TEST_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_FULL_AUTO_COST, "INNER_PROF_FULL_AUTO_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_COUNTER_COST, "INNER_PROF_COUNTER_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist_node(INNER_PROF_RECORD_COST, "INNER_PROF_RECORD_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist_node(INNER_PROF_RECORD_COST1, "INNER_PROF_RECORD_COST1", PROF_COUNTER_DEFAULT, true, true);
+    regist_node(INNER_PROF_RECORD_COST2, "INNER_PROF_RECORD_COST2", PROF_COUNTER_DEFAULT, true, true);
+    regist_node(INNER_PROF_COUNTER_RECORD_COST, "INNER_PROF_COUNTER_RECORD_COST", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_ORIGIN_INC, "INNER_PROF_ORIGIN_INC", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_ATOM_RELEAX, "INNER_PROF_ATOM_RELEAX", PROF_COUNTER_DEFAULT, true, true);
     regist_node(INNER_PROF_ATOM_COST, "INNER_PROF_ATOM_COST", PROF_COUNTER_DEFAULT, true, true);
@@ -1626,13 +1630,29 @@ int ProfRecord<INST, RESERVE, DECLARE>::init_prof(const char* desc)
             test_cost.stop_and_save();
             call_cpu(INNER_PROF_AUTO_TEST_COST, test_cost.cycles());
         }
-        call_cpu(INNER_PROF_FULL_AUTO_COST, 1000, cost.stop_and_save().cycles());
+        call_cpu(INNER_PROF_COUNTER_RECORD_COST, 1000, cost.stop_and_save().cycles());
         cost.start();
         for (int i = 0; i < 1000; i++)
         {
             call_cpu_no_sm(INNER_PROF_AUTO_TEST_COST, cost.stop_and_save().cycles());
         }
-        call_cpu(INNER_PROF_COUNTER_COST, 1000, cost.stop_and_save().cycles());
+        call_cpu(INNER_PROF_RECORD_COST, 1000, cost.stop_and_save().cycles());
+
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            call_cpu(INNER_PROF_AUTO_TEST_COST, 1, cost.stop_and_save().cycles());
+        }
+        call_cpu(INNER_PROF_RECORD_COST1, 1000, cost.stop_and_save().cycles());
+
+        cost.start();
+        for (int i = 0; i < 1000; i++)
+        {
+            call_cpu_full(INNER_PROF_AUTO_TEST_COST, 1, cost.stop_and_save().cycles());
+        }
+        call_cpu(INNER_PROF_RECORD_COST2, 1000, cost.stop_and_save().cycles());
+
+
         std::atomic<long long> atomll_test(0);
         volatile long long origin_feetch_add_test = 0;
         cost.start();
@@ -2441,6 +2461,7 @@ private:
 
 //--------
 // PROF记录       
+// 通常完整的计时+记录约为10ns~20ns 
 // -------
 
 //记录性能消耗信息 平均耗时约为4ns    
