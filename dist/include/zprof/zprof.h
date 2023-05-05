@@ -1077,13 +1077,18 @@ enum ProfSerializeFlags : unsigned int
     PROF_SER_DELCARE = 0x4,
 };
 
-
+/*
 #ifdef _FN_LOG_LOG_H_
 static inline void ProfDefaultFNLogFunc(const ProfSerializeBuffer& buffer)
 {
     LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset());
 }
 #endif
+*/
+static inline void ProfDefaultLogFunc(const ProfSerializeBuffer& buffer)
+{
+    printf("%s", buffer.buff());
+}
 
 template<int INST, int RESERVE, int DECLARE>
 class ProfRecord 
@@ -1145,11 +1150,7 @@ public:
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
         declare_reg_end_id_ = node_declare_begin_id();
 
-        log_func_ = NULL;
-
-#ifdef _FN_LOG_LOG_H_
-        log_func_ = &ProfDefaultFNLogFunc;  //set default log;
-#endif
+        log_func_ = &ProfDefaultLogFunc;  //set default log;
 
 
         serialize_buff_[0] = '\0';
@@ -2378,12 +2379,11 @@ private:
 #define PROF_REG_AND_BIND_CHILD_AND_MERGE(id, cid) do {PROF_FAST_REGIST_NODE(cid);  PROF_BIND_CHILD_AND_MERGE(id, cid); }while(0)
 
 
-
-
-
-
 #define PROF_INIT(desc) ProfInst.init_prof(desc)
 #define PROF_INIT_JUMP_COUNT() ProfInst.init_jump_count()
+#define PROF_SET_LOG(log_fun) ProfInst.set_default_log_func(log_fun)
+
+
 #define PROF_RESET_CHILD(idx) ProfInst.reset_childs(idx)
 #define PROF_UPDATE_MERGE() ProfInst.update_merge()
 #define PROF_CLEAN_RESERVE() ProfInst.clean_reserve_info()
@@ -2443,6 +2443,8 @@ private:
 
 #define PROF_INIT(desc) 
 #define PROF_INIT_JUMP_COUNT()
+#define PROF_SET_LOG(log_fun) 
+
 #define PROF_RESET_CHILD(idx) 
 #define PROF_UPDATE_MERGE() 
 #define PROF_RESET_RESERVE()
