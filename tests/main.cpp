@@ -53,10 +53,16 @@ public:
 };
 
 
+static inline void FNLogFunc(const ProfSerializeBuffer& buffer)
+{
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset());
+}
 
 int main(int argc, char *argv[])
 {
     PROF_INIT("inner prof");
+    PROF_SET_LOG(FNLogFunc);
+
     //ProfInst.init_prof("inner prof");
     regist_prof();
     PROF_DEFINE_AUTO_ANON_RECORD(delta, "self use mem in main func begin and exit");

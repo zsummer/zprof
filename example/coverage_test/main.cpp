@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     PROF_OUTPUT_SELF_MEM("specify fn log out  test(info)");
     ProfInst.set_default_log_func(NULL);
     PROF_OUTPUT_SELF_MEM("specify None log out  test(no log)");
-    ProfInst.set_default_log_func(&ProfDefaultFNLogFunc);
+    ProfInst.set_default_log_func(&ProfDefaultLogFunc);
     //序列化打印所有记录  
     PROF_SERIALIZE_FN_LOG();
 

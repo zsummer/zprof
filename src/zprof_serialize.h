@@ -327,7 +327,7 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_now_date()
 
 inline void ProfSerializeBuffer::closing_string()
 {
-    size_t closed_id = offset_ >= buff_len_ ? offset_ - 1 : offset_;
+    size_t closed_id = offset_ >= buff_len_ ? buff_len_ - 1 : offset_;
     buff_[closed_id] = '\0';
 }
 

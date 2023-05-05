@@ -932,25 +932,28 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth,
             buffer.push_human_time((long long)(node.cpu.sum * cpu_rate));
         }
 
-        buffer.push_string(STRLEN(" --|*\t\t|-- "));
+        
         if (node.cpu.min_u != LLONG_MAX && node.cpu.max_u > 0)
         {
+            buffer.push_string(STRLEN(" --|*\tmin-max|-- "));
             buffer.push_human_time((long long)(node.cpu.max_u * cpu_rate));
             buffer.push_string(STRLEN(", "));
             buffer.push_human_time((long long)(node.cpu.min_u * cpu_rate));
         }
 
-        buffer.push_string(STRLEN(" --|  |-- "));
+        
         if (node.cpu.dv > 0 || node.cpu.sm > 0)
         {
+            buffer.push_string(STRLEN(" --| \tdv-sm|-- "));
             buffer.push_human_time((long long)(node.cpu.dv * cpu_rate / node.cpu.c));
             buffer.push_string(STRLEN(", "));
             buffer.push_human_time((long long)(node.cpu.sm * cpu_rate));
         }
 
-        buffer.push_string(STRLEN(" --||-- "));
+        
         if (node.cpu.h_sm > 0 || node.cpu.l_sm > 0)
         {
+            buffer.push_string(STRLEN(" --| \th-l|-- "));
             buffer.push_human_time((long long)(node.cpu.h_sm * cpu_rate));
             buffer.push_string(STRLEN(", "));
             buffer.push_human_time((long long)(node.cpu.l_sm * cpu_rate));
