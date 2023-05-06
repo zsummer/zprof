@@ -39,16 +39,18 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         cd ${{github.workspace}}/bin
-          ./branch_prediction_test
-          ./call_cpu_test
-          ./compiler_optimization_test
-          ./cpu_cache_matrix_test
-          ./cpu_cache_test
-          ./format_test
-          ./instructions_cost_test
-          ./tree_and_array_test
-          ./using_test
+          ./fast_direct_using_test
+          ./fast_macro_using_test
+          ./coverage_format_test
+          ./coverage_mini_test
           ./coverage_test
-          ./zprof
+          ./benchmark_branch_prediction_test
+          ./benchmark_call_cpu_test
+          ./benchmark_compiler_optimization_test
+          ./benchmark_cpu_cache_matrix_test
+          ./benchmark_cpu_cache_test
+          ./benchmark_instructions_cost_test
+          ./benchmark_tree_and_array_test
+
           
           
