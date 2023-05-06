@@ -1,0 +1,13 @@
+release fn-log version date:2023-05-05 16:43:45
+
+git log:
+commit 6ca1f8e3957af403fd58438fdd6165d3201c3fca
+Author: zsummer <yawei.zhang@foxmail.com>
+Date:   Fri May 5 13:05:44 2023 +0800
+
+    clean code
+
+ src/include/zlist.h     |  8 ++++----
+ src/include/zlist_ext.h | 10 +++++-----
+ src/include/zvector.h   |  2 +-
+ 3 files changed, 10 insertions(+), 10 deletions(-)

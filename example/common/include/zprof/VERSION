@@ -1,0 +1,16 @@
+release zprof version date:2023-04-26 20:18:40
+
+git log:
+commit b8a8337c2ac7143943f4af19e887122b4fc7e641
+Author: zsummer <yawei.zhang@foxmail.com>
+Date:   Wed Apr 26 11:36:57 2023 +0800
+
+    dist dir
+
+ dist/VERSION                       | 14 --------------
+ dist/{ => include/zprof}/LICENSE   |  0
+ dist/{ => include/zprof}/README.md |  0
+ dist/include/zprof/VERSION         | 15 +++++++++++++++
+ dist/{ => include/zprof}/zprof.h   |  0
+ release_version.sh                 | 14 +++++++-------
+ 6 files changed, 22 insertions(+), 21 deletions(-)

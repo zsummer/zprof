@@ -69,12 +69,10 @@ ENDMACRO(GROUP_SRC_BY_DIR)
 FILE(GLOB_RECURSE ARENA_H ${CMAKE_SOURCE_DIR}/src/*.h )
 FILE(GLOB_RECURSE ARENA_C ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.c)
 
-FILE(GLOB_RECURSE TESTS_H ${CMAKE_SOURCE_DIR}/tests/*.h )
-FILE(GLOB_RECURSE TESTS_C ${CMAKE_SOURCE_DIR}/tests/*.cpp)
 
 
-SET(SOURCES_H ${ARENA_H} ${TESTS_H})
-SET(SOURCES_C ${ARENA_C} ${TESTS_C})
+SET(SOURCES_H ${ARENA_H} )
+SET(SOURCES_C ${ARENA_C})
 
 
 # 自动INCLUDE所有头文件的目录  (可能会影响到include的优先级)
@@ -102,7 +100,7 @@ ENDFOREACH()
 if(WIN32)
     ADD_DEFINITIONS(-DWIN32 -W3)
     SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON) 
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT coverage_test)
 else()
     #ADD_DEFINITIONS(-Wall -O3 )
     ADD_DEFINITIONS(-Wall -O2 )
@@ -129,10 +127,10 @@ SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 MESSAGE(${CMAKE_CXX_COMPILER})
 #自定义部分 
 ADD_DEFINITIONS(-DGLFW_USE_CONFIG_H -D_GLFWWIN32 -DOPEN_ZPROF)
-ADD_EXECUTABLE("${PROJECT_NAME}" ${SOURCES} ${CMAKE_SOURCE_DIR}/tests/main.cpp)
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  set_target_properties(${test_ld_preload} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+#  set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+#  set_target_properties(${test_ld_preload} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 elseif (NOT APPLE)
             SET_TARGET_PROPERTIES(${PROJECT_NAME}
                 PROPERTIES 
@@ -150,14 +148,31 @@ macro(SUB_DIR_LIST result curdir)
     endforeach()
     set(${result} ${dirlist})
 endmacro()
+
+
+
+include_directories(${CMAKE_SOURCE_DIR}/example)
+include_directories(${CMAKE_SOURCE_DIR}/example/common)
+include_directories(${CMAKE_SOURCE_DIR}/example/common/include)
+include_directories(${CMAKE_SOURCE_DIR}/example/common/include/fn-log)
+include_directories(${CMAKE_SOURCE_DIR}/example/common/include/zprof)
+include_directories(${CMAKE_SOURCE_DIR}/example/common/include/zbase)
 SUB_DIR_LIST(SUB_DIRS ${CMAKE_SOURCE_DIR}/example/)
+
 FOREACH(SUB_DIR ${SUB_DIRS}) 
     set(EXAMPLE_SOURCE "")
-    FILE(GLOB_RECURSE EXAMPLE_SOURCE  
+    if (${SUB_DIR} STREQUAL "common") 
+        continue()
+    endif()
+    #FILE(GLOB_RECURSE EXAMPLE_SOURCE
+    FILE(GLOB EXAMPLE_SOURCE
+    ${CMAKE_SOURCE_DIR}/example/*.h 
+    ${CMAKE_SOURCE_DIR}/example/common/*.h 
     ${CMAKE_SOURCE_DIR}/example/${SUB_DIR}/*.h 
     ${CMAKE_SOURCE_DIR}/example/${SUB_DIR}/*.c 
     ${CMAKE_SOURCE_DIR}/example/${SUB_DIR}/*.cc 
     ${CMAKE_SOURCE_DIR}/example/${SUB_DIR}/*.cpp)
+
     Message(${EXAMPLE_SOURCE})
     GROUP_SRC_BY_DIR(EXAMPLE_SOURCE)
     ADD_EXECUTABLE(${SUB_DIR} ${ARENA_C} ${ARENA_H} ${EXAMPLE_SOURCE})
@@ -173,9 +188,8 @@ FOREACH(SUB_DIR ${SUB_DIRS})
         endif()
     endif()
 
-
+    add_dependencies(${SUB_DIR} ${PROJECT_NAME})
 ENDFOREACH()
-
 
 
 
