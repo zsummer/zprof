@@ -455,6 +455,8 @@ public:
     //完整报告  
     int output_report(unsigned int flags);
     int output_one_record(int entry_idx);
+    int output_temp_record(const char* opt_name, size_t opt_name_len);
+    int output_temp_record(const char* opt_name);
 
 
 
@@ -469,7 +471,7 @@ public:
     void set_output(Output func) { output_ = func; }
 private:
     void output_and_clean(ProfSerializer& s) { s.closing_string(); output_(s); s.reset_offset(); }
-    static void default_output(const ProfSerializer& serializer) { printf("%s", serializer.buff()); }
+    static void default_output(const ProfSerializer& serializer) { printf("%s\n", serializer.buff()); }
     Output output_;
 private:
     ProfNode nodes_[node_end_id()];
@@ -1127,7 +1129,23 @@ int ProfRecord<INST, RESERVE, DECLARE>::output_one_record(int entry_idx)
     return ret;
 }
 
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::output_temp_record(const char* opt_name, size_t opt_name_len)
+{
+    ProfStackSerializer serializer;
+    int ret = recursive_serialize(0, 0, opt_name, opt_name_len, serializer);
+    reset_node(0);
+    return ret;
+}
 
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::output_temp_record(const char* opt_name)
+{
+    ProfStackSerializer serializer;
+    int ret = recursive_serialize(0, 0, opt_name, opt_name == NULL? 0 : strlen(opt_name), serializer);
+    reset_node(0);
+    return ret;
+}
 
 template<int INST, int RESERVE, int DECLARE>
 int ProfRecord<INST, RESERVE, DECLARE>::output_report(unsigned int flags)

@@ -55,6 +55,13 @@ public:
 
 static inline void FNLogFunc(const ProfSerializer& serializer)
 {
+    /*
+    if (serializer.offset() > 200)
+    {
+        printf("%s\n", serializer.buff());
+        printf("buff size:%d\n", (int)serializer.offset());
+    }
+    */
     LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(serializer.buff(), (int)serializer.offset());
 }
 
@@ -800,8 +807,7 @@ int main(int argc, char *argv[])
 
     for (size_t i = 0; i < 1000; i++)
     {
-        auto void_call = [](const ProfSerializer& serializer) {};
-        ProfInst.output_report(0xff);
+        //ProfInst.output_report(0xff);
     }
 
     if (true)
@@ -846,7 +852,7 @@ int main(int argc, char *argv[])
     }
     for (size_t i = 0; i < 1000; i++)
     {
-        ProfInst.output_report(0xff);
+        //ProfInst.output_report(0xff);
     }
 
     LogInfo() << "all test finish .salt:" << cycles;

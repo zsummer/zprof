@@ -15,39 +15,79 @@
 * limitations under the License.
 */
 
-#include "fn_log.h"
-#include "zprof.h"
-#include <unordered_map>
-#include <unordered_set>
-#include <random>
- 
-typedef char s8;
-typedef unsigned char u8;
-typedef short int s16;
-typedef unsigned short int u16;
-typedef int s32;
-typedef unsigned int u32;
-typedef long long s64;
-typedef unsigned long long u64;
-typedef unsigned long pointer;
-typedef float f32;
 
+#include "zprof.h"
 
 
 int main(int argc, char *argv[])
 {
-    FNLog::FastStartDebugLogger();
-    LogDebug() << " main begin test. ";
-
-
-    //--------------------   
-
     //初始化   
     ProfInst.init("fast_direct_using");
     
+    //手动使用计时器     
+    if (true)
+    {
+        ProfCounter<> counter;
+        counter.start();
+        for (size_t i = 0; i < 1000; i++)
+        {
+            volatile size_t inc = 0;
+            inc++;
+        }
+        counter.stop_and_save();
+        printf("inc * 1000 used:%lld ns \n", counter.duration_ns());
+        printf("inc avg used:%g ns \n", counter.duration_ns()/1000.0);
+    }
 
 
+    //自动测试并记录到指定条目(使用临时条目0 演示)     
+    if (true)
+    {
+        if (true)
+        {
+            ProfAutoRecord<> record(ProfInstType::INNER_PROF_NULL);
+            for (size_t i = 0; i < 1000; i++)
+            {
+                volatile size_t inc = 0;
+                inc++;
+            }
+        }
+        //立刻输出指定条目 
+        ProfInst.output_one_record(ProfInstType::INNER_PROF_NULL);
+    }
 
+    //自动测试并使用自定义名字实时输出报告 
+    if (true)
+    {
+        if (true)
+        {
+            ProfAutoRecord<> record(ProfInstType::INNER_PROF_NULL);
+            for (size_t i = 0; i < 1000; i++)
+            {
+                volatile size_t inc = 0;
+                inc++;
+            }
+        }
+        //立刻输出 
+        ProfInst.output_temp_record("inc*1000");
+    }
+
+
+    //定义条目   
+    // 建立跳点(可选)   
+    // 
+    // 记录条目数据 
+    //   
+    // 合并条目   
+    // 
+    // 输出报告   
+    // 
+    // 清零数据  
+    // 记录数据  
+    // 合并条目  
+    // 输出报告
+    // 
+    
     return 0;
 }
 

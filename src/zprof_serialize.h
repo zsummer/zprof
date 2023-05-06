@@ -360,6 +360,7 @@ inline ProfSerializer& ProfSerializer::push_indent(int count)
         return *this;
     }
     memcpy(buff_ + offset_, pi, count);
+    offset_ += count;
     return *this;
 }
 
@@ -383,13 +384,15 @@ inline ProfSerializer& ProfSerializer::push_blank(int count)
         return *this;
     }
     memcpy(buff_ + offset_, pi, count);
+    offset_ += count;
     return *this;
 }
 
 class ProfStackSerializer : public ProfSerializer
 {
 public:
-    static const int BUFF_SIZE = 512;
+    static const int BUFF_SIZE = 350;
+    static_assert(BUFF_SIZE > PROF_LINE_MIN_SIZE, "");
     ProfStackSerializer() :ProfSerializer(buff_, BUFF_SIZE)
     {
         buff_[0] = '\0';

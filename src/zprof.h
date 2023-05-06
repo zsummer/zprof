@@ -128,12 +128,10 @@ template <long long COUNT = 1LL, ProfLevel PROF_LEVEL = PROF_LEVEL_NORMAL,
 class ProfAutoAnonRecord
 {
 public:
-    static const size_t DESC_SIZE = 100;
-public:
     ProfAutoAnonRecord(const char* desc)
     {
-        strncpy(desc_, desc, DESC_SIZE);
-        desc_[DESC_SIZE - 1] = '\0';
+        strncpy(desc_, desc, PROF_NAME_MAX_SIZE);
+        desc_[PROF_NAME_MAX_SIZE - 1] = '\0';
         counter_.start();
     }
     ~ProfAutoAnonRecord()
@@ -147,7 +145,7 @@ public:
     ProfCounter<C>& counter() { return counter_; }
 private:
     ProfCounter<C> counter_;
-    char desc_[DESC_SIZE];
+    char desc_[PROF_NAME_MAX_SIZE];
 };
 
 
@@ -290,9 +288,7 @@ private:
 
 //使用特殊条目<0>进行一次性输出  
 //用于立刻输出性能信息而不是走报告输出  
-#define PROF_OUTPUT_DEFAULT_LOG(desc)        ProfStackSerializer serializer; \
-                                                              ProfInst.recursive_serialize(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), serializer);\
-                                                              ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
+#define PROF_OUTPUT_DEFAULT_LOG(desc)        do {ProfInst.output_temp_record(desc, strlen(desc));}while(0)
 
 #define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
 #define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
