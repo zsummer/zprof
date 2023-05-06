@@ -42,9 +42,9 @@ enum MyTestEnum
     CHILD_2,
 };
 
-static inline void FNLogFunc(const ProfSerializeBuffer& buffer)
+static inline void FNLogFunc(const ProfSerializer& serializer)
 {
-    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset());
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(serializer.buff(), (int)serializer.offset());
 }
 
 

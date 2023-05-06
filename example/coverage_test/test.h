@@ -81,17 +81,17 @@ void entry_mem_test();
 inline std::string human_time_format(long long cycles)
 {
     char buff[50];
-    ProfSerializeBuffer buffer(buff, sizeof(buff));
-    buffer.push_human_time(cycles);
-    buffer.closing_string();
+    ProfSerializer serializer(buff, sizeof(buff));
+    serializer.push_human_time(cycles);
+    serializer.closing_string();
     return buff;
 }
 inline std::string human_count_format(long long cycles)
 {
     char buff[50];
-    ProfSerializeBuffer buffer(buff, sizeof(buff));
-    buffer.push_human_count(cycles);
-    buffer.closing_string();
+    ProfSerializer serializer(buff, sizeof(buff));
+    serializer.push_human_count(cycles);
+    serializer.closing_string();
     return buff;
 }
 

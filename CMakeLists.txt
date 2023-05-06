@@ -35,6 +35,10 @@ project(zprof)
 # CMAKE_MODULE_PATH can set it change module dir 
 # PROJECT_NAME cur project name 
 
+
+# 自动INCLUDE所有头文件的目录  (可能会影响到include的优先级)
+# list(FILTER <list> <INCLUDE|EXCLUDE> REGEX <regular_expression>)  
+
 # include 
 # include_directories  
 # link_directories 
@@ -42,6 +46,9 @@ project(zprof)
 
 # 
 # execute_process
+
+
+
 set(CMAKE_VERBOSE_MAKEFILEON ON)
 if( NOT CMAKE_CONFIGURATION_TYPES )
     set( CMAKE_CONFIGURATION_TYPES Debug Release )
@@ -66,21 +73,17 @@ MACRO(GROUP_SRC_BY_DIR FILES)
     ENDFOREACH(PATH_NAME)
 ENDMACRO(GROUP_SRC_BY_DIR)
 
-FILE(GLOB_RECURSE ARENA_H ${CMAKE_SOURCE_DIR}/src/*.h )
-FILE(GLOB_RECURSE ARENA_C ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.c)
+FILE(GLOB_RECURSE SOURCES_H ${CMAKE_SOURCE_DIR}/src/*.h )
+FILE(GLOB_RECURSE SOURCES_C ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.c)
 
 
-
-SET(SOURCES_H ${ARENA_H} )
-SET(SOURCES_C ${ARENA_C})
-
-
-# 自动INCLUDE所有头文件的目录  (可能会影响到include的优先级)
-# list(FILTER <list> <INCLUDE|EXCLUDE> REGEX <regular_expression>)  
 
 
 set(SOURCES ${SOURCES_H} ${SOURCES_C})
 GROUP_SRC_BY_DIR(SOURCES)
+
+ADD_CUSTOM_TARGET(${PROJECT_NAME} SOURCES ${SOURCES})
+
 
 FOREACH (FILE_NAME ${SOURCES})
     MESSAGE(${FILE_NAME})
@@ -106,7 +109,6 @@ else()
     ADD_DEFINITIONS(-Wall -O2 )
 #    ADD_DEFINITIONS(-Wall -g -ggdb -O0 )
     set(CMAKE_CXX_FLAGS -std=c++14)
-#    link_directories(${CMAKE_SOURCE_DIR}/res3.5/libs)
 #    link_libraries(protobuf pthread m c)
      link_libraries(pthread m c)
 endif()
@@ -126,17 +128,9 @@ SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 
 MESSAGE(${CMAKE_CXX_COMPILER})
 #自定义部分 
-ADD_DEFINITIONS(-DGLFW_USE_CONFIG_H -D_GLFWWIN32 -DOPEN_ZPROF)
+ADD_DEFINITIONS(-DOPEN_ZPROF)
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-#  set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-#  set_target_properties(${test_ld_preload} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-elseif (NOT APPLE)
-            SET_TARGET_PROPERTIES(${PROJECT_NAME}
-                PROPERTIES 
-                COMPILE_FLAGS "" 
-                LINK_FLAGS " -lrt" )
-endif()
+
 
 macro(SUB_DIR_LIST result curdir)
     file(GLOB children RELATIVE ${curdir} ${curdir}/*)
@@ -155,7 +149,6 @@ include_directories(${CMAKE_SOURCE_DIR}/example)
 include_directories(${CMAKE_SOURCE_DIR}/example/common)
 include_directories(${CMAKE_SOURCE_DIR}/example/common/include)
 include_directories(${CMAKE_SOURCE_DIR}/example/common/include/fn-log)
-include_directories(${CMAKE_SOURCE_DIR}/example/common/include/zprof)
 include_directories(${CMAKE_SOURCE_DIR}/example/common/include/zbase)
 SUB_DIR_LIST(SUB_DIRS ${CMAKE_SOURCE_DIR}/example/)
 
@@ -175,7 +168,7 @@ FOREACH(SUB_DIR ${SUB_DIRS})
 
     Message(${EXAMPLE_SOURCE})
     GROUP_SRC_BY_DIR(EXAMPLE_SOURCE)
-    ADD_EXECUTABLE(${SUB_DIR} ${ARENA_C} ${ARENA_H} ${EXAMPLE_SOURCE})
+    ADD_EXECUTABLE(${SUB_DIR} ${SOURCES_C} ${SOURCES_H} ${EXAMPLE_SOURCE})
     if (UNIX)
             SET_TARGET_PROPERTIES(${SUB_DIR}
                 PROPERTIES 
@@ -187,7 +180,6 @@ FOREACH(SUB_DIR ${SUB_DIRS})
             set_target_properties(${SUB_DIR} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
         endif()
     endif()
-
     add_dependencies(${SUB_DIR} ${PROJECT_NAME})
 ENDFOREACH()
 

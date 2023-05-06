@@ -22,9 +22,9 @@
 #include <random>
 
 
-static inline void FNLogFunc(const ProfSerializeBuffer& buffer)
+static inline void OutputLog(const ProfSerializer& serializer)
 {
-    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), (int)buffer.offset());
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(serializer.buff(), (int)serializer.offset());
 }
 
 int main(int argc, char *argv[])
@@ -42,10 +42,12 @@ int main(int argc, char *argv[])
 
     PROF_OUTPUT_SELF_MEM("default fn log out  test(debug)");
 
-    ProfInst.set_output(&FNLogFunc);
+    ProfInst.set_output(&OutputLog);
     PROF_OUTPUT_SELF_MEM("specify fn log out  test(info)");
     ProfInst.set_output(NULL);
     PROF_OUTPUT_SELF_MEM("specify None log out  test(no log)");
+    ProfInst.set_output(&OutputLog);
+
     //序列化打印所有记录  
     PROF_OUTPUT_REPORT();
 
@@ -58,7 +60,6 @@ int main(int argc, char *argv[])
     {
         char buf[20];
         sprintf(buf, "2^%u", i);
-        memset(ProfInst.serialize_buffer(), 0, ProfInstType::max_serialize_buff_size());
         PROF_OUTPUT_SINGLE_CPU(buf, (unsigned long long)pow(2LLU, i));
     }
     return 0;

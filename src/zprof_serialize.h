@@ -41,11 +41,16 @@
 #endif // WIN32
 
 
-class ProfSerializeBuffer
+#define PROF_NAME_MAX_SIZE 50  
+#define PROF_DESC_MAX_SIZE 100
+#define PROF_LINE_MIN_SIZE 200
+#define PROF_MAX_DEPTH 5
+
+class ProfSerializer
 {
 public:
-    ProfSerializeBuffer() = delete;
-    explicit ProfSerializeBuffer(char* buff, size_t buff_size)
+    ProfSerializer() = delete;
+    explicit ProfSerializer(char* buff, size_t buff_size)
     {
         buff_ = buff;
         buff_len_ = buff_size;
@@ -53,15 +58,19 @@ public:
     }
 
 
-    inline ProfSerializeBuffer& push_human_count(long long count);
-    inline ProfSerializeBuffer& push_human_time(long long ns);
-    inline ProfSerializeBuffer& push_human_mem(long long bytes);
-    inline ProfSerializeBuffer& push_char(char ch, int repeat = 1);
-    inline ProfSerializeBuffer& push_string(const char* str);
-    inline ProfSerializeBuffer& push_string(const char* str, size_t size);
-    inline ProfSerializeBuffer& push_now_date();
-    inline ProfSerializeBuffer& push_number(unsigned long long number, int wide = 0);
-    inline ProfSerializeBuffer& push_number(long long number, int wide = 0);
+    inline ProfSerializer& push_human_count(long long count);
+    inline ProfSerializer& push_human_time(long long ns);
+    inline ProfSerializer& push_human_mem(long long bytes);
+    inline ProfSerializer& push_char(char ch, int repeat = 1);
+    inline ProfSerializer& push_string(const char* str);
+    inline ProfSerializer& push_string(const char* str, size_t size);
+    inline ProfSerializer& push_now_date();
+    inline ProfSerializer& push_number(unsigned long long number, int wide = 0);
+    inline ProfSerializer& push_number(long long number, int wide = 0);
+
+    inline ProfSerializer& push_indent(int count);
+    inline ProfSerializer& push_blank(int count);
+
 
     inline void closing_string();
     bool is_full() { return offset_ + 1 >= buff_len_; } //saved one char  
@@ -80,7 +89,8 @@ private:
 
 
 
-ProfSerializeBuffer& ProfSerializeBuffer::push_human_count(long long count)
+
+inline ProfSerializer& ProfSerializer::push_human_count(long long count)
 {
     if (buff_len_ <= offset_ + 35)
     {
@@ -105,7 +115,7 @@ ProfSerializeBuffer& ProfSerializeBuffer::push_human_count(long long count)
     return push_number((unsigned long long)(count));
 }
 
-ProfSerializeBuffer& ProfSerializeBuffer::push_human_time(long long ns)
+inline ProfSerializer& ProfSerializer::push_human_time(long long ns)
 {
     if (buff_len_ <= offset_ + 35)
     {
@@ -151,7 +161,7 @@ ProfSerializeBuffer& ProfSerializeBuffer::push_human_time(long long ns)
 }
 
 
-ProfSerializeBuffer& ProfSerializeBuffer::push_human_mem(long long bytes)
+inline ProfSerializer& ProfSerializer::push_human_mem(long long bytes)
 {
     if (buff_len_ <= offset_ + 35)
     {
@@ -189,7 +199,7 @@ ProfSerializeBuffer& ProfSerializeBuffer::push_human_mem(long long bytes)
     return *this;
 }
 
-inline ProfSerializeBuffer& ProfSerializeBuffer::push_char(char ch, int repeat)
+inline ProfSerializer& ProfSerializer::push_char(char ch, int repeat)
 {
     while (repeat > 0 && offset_ < buff_len_)
     {
@@ -199,7 +209,7 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_char(char ch, int repeat)
     return *this;
 }
 
-inline ProfSerializeBuffer& ProfSerializeBuffer::push_number(unsigned long long number, int wide)
+inline ProfSerializer& ProfSerializer::push_number(unsigned long long number, int wide)
 {
     if (buff_len_ <= offset_ + 30)
     {
@@ -246,7 +256,7 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_number(unsigned long long 
     return *this;
 }
 
-inline ProfSerializeBuffer& ProfSerializeBuffer::push_number(long long number, int wide)
+inline ProfSerializer& ProfSerializer::push_number(long long number, int wide)
 {
     if (buff_len_ <= offset_ + 30)
     {
@@ -261,11 +271,11 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_number(long long number, i
     return push_number((unsigned long long)number, wide);
 }
 
-inline ProfSerializeBuffer& ProfSerializeBuffer::push_string(const char* str)
+inline ProfSerializer& ProfSerializer::push_string(const char* str)
 {
     return push_string(str, strlen(str));
 }
-inline ProfSerializeBuffer& ProfSerializeBuffer::push_string(const char* str, size_t size)
+inline ProfSerializer& ProfSerializer::push_string(const char* str, size_t size)
 {
     if (str == NULL)
     {
@@ -276,7 +286,7 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_string(const char* str, si
     offset_ += max_size;
     return *this;
 }
-inline ProfSerializeBuffer& ProfSerializeBuffer::push_now_date()
+inline ProfSerializer& ProfSerializer::push_now_date()
 {
     time_t timestamp = 0;
     unsigned int precise = 0;
@@ -325,10 +335,74 @@ inline ProfSerializeBuffer& ProfSerializeBuffer::push_now_date()
 }
 
 
-inline void ProfSerializeBuffer::closing_string()
+inline void ProfSerializer::closing_string()
 {
     size_t closed_id = offset_ >= buff_len_ ? buff_len_ - 1 : offset_;
     buff_[closed_id] = '\0';
 }
+
+inline ProfSerializer& ProfSerializer::push_indent(int count)
+{
+    static const char* const pi = "                                                            ";
+    constexpr int pi_size = 50;
+    static_assert(pi_size >= PROF_NAME_MAX_SIZE, "");
+    static_assert(pi_size >= PROF_MAX_DEPTH*2, "indent is two blank");
+    if (count > pi_size)
+    {
+        count = pi_size;
+    }
+    if (count <= 0)
+    {
+        return *this;
+    }
+    if (offset_ + count >= buff_len_)
+    {
+        return *this;
+    }
+    memcpy(buff_ + offset_, pi, count);
+    return *this;
+}
+
+
+
+inline ProfSerializer& ProfSerializer::push_blank(int count)
+{
+    static const char* const pi = "------------------------------------------------------------";
+    constexpr int pi_size = 50;
+    static_assert(pi_size >= PROF_NAME_MAX_SIZE, "");
+    if (count > pi_size)
+    {
+        count = pi_size;
+    }
+    if (count <= 0)
+    {
+        return *this;
+    }
+    if (offset_ + count >= buff_len_)
+    {
+        return *this;
+    }
+    memcpy(buff_ + offset_, pi, count);
+    return *this;
+}
+
+class ProfStackSerializer : public ProfSerializer
+{
+public:
+    static const int BUFF_SIZE = 512;
+    ProfStackSerializer() :ProfSerializer(buff_, BUFF_SIZE)
+    {
+        buff_[0] = '\0';
+    }
+    ~ProfStackSerializer()
+    {
+
+    }
+
+private:
+    char buff_[BUFF_SIZE];//1k  
+};
+
+
 
 #endif

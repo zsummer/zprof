@@ -139,8 +139,8 @@ public:
     ~ProfAutoAnonRecord()
     {
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(ProfInstType::INNER_PROF_NULL, COUNT, counter_.save().cycles());
-        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); 
-        ProfInst.recursive_serialize(ProfInstType::INNER_PROF_NULL, 0, desc_, strlen(desc_), buffer);
+        ProfStackSerializer serializer;
+        ProfInst.recursive_serialize(ProfInstType::INNER_PROF_NULL, 0, desc_, strlen(desc_), serializer);
         ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
     }
 
@@ -277,7 +277,7 @@ private:
 
 
 
-//-------以下非线程安全 使用了全局buffer进行序列化 ------   
+//-------以下非线程安全 使用了全局serializer进行序列化 ------   
  
 //-------自动计时器(raii包装, 定义时记录开始时间, 销毁时直接输出性能信息到日志)-----------
 #define PROF_DEFINE_AUTO_ANON_RECORD(var, desc) ProfAutoAnonRecord<> var(desc)
@@ -290,8 +290,8 @@ private:
 
 //使用特殊条目<0>进行一次性输出  
 //用于立刻输出性能信息而不是走报告输出  
-#define PROF_OUTPUT_DEFAULT_LOG(desc)        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); \
-                                                              ProfInst.recursive_serialize(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), buffer);\
+#define PROF_OUTPUT_DEFAULT_LOG(desc)        ProfStackSerializer serializer; \
+                                                              ProfInst.recursive_serialize(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), serializer);\
                                                               ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
 
 #define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
