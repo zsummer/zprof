@@ -71,7 +71,7 @@ inline void regist_prof()
     PROF_BIND_CHILD_AND_MERGE(ENUM_MERGE_PARRENT, ENUM_MERGE_CHILD3);
 
 
-    PROF_INIT_JUMP_COUNT();
+    PROF_BUILD_JUMP_PATH();
 }
 
 

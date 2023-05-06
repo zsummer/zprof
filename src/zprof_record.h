@@ -116,16 +116,12 @@ static inline void ProfDefaultFNLogFunc(const ProfSerializeBuffer& buffer)
 }
 #endif
 */
-static inline void ProfDefaultLogFunc(const ProfSerializeBuffer& buffer)
-{
-    printf("%s", buffer.buff());
-}
 
 template<int INST, int RESERVE, int DECLARE>
 class ProfRecord 
 {
 public:
-    using DefaultLogFunc = void(*)(const ProfSerializeBuffer& buffer);
+    using Output = void(*)(const ProfSerializeBuffer& buffer);
     enum InnerType
     {
         INNER_PROF_NULL,
@@ -183,7 +179,7 @@ public:
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
         declare_reg_end_id_ = node_declare_begin_id();
 
-        log_func_ = &ProfDefaultLogFunc;  //set default log;
+        output_ = &ProfRecord::default_output;  //set default log;
 
 
         serialize_buff_[0] = '\0';
@@ -208,8 +204,8 @@ public:
         static ProfRecord inst;
         return inst;
     }
-    inline int init_prof(const char* desc);
-    inline int init_jump_count();
+    inline int init(const char* desc);
+    inline int build_jump_path();
     inline int regist_node(int idx, const char* desc, unsigned int counter, bool resident, bool re_reg);
     inline int rename_node(int idx, const char* desc);
     inline const char* node_name(int idx);
@@ -455,9 +451,15 @@ public:
         }
         call_cpu(INNER_PROF_MERGE_ALL_COST, cost.stop_and_save().cycles());
     }
-    int serialize_root(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializeBuffer& buffer, std::function<void(const ProfSerializeBuffer& buffer)> call_log = NULL);
-    ProfSerializeBuffer serialize_root(int entry_idx, std::function<void(const ProfSerializeBuffer& buffer)> call_log = NULL);
-    int serialize(unsigned int flags, std::function<void(const ProfSerializeBuffer& buffer)> call_log);
+
+    //递归展开  
+    int recursive_serialize(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializeBuffer& buffer);
+    ProfSerializeBuffer recursive_serialize(int entry_idx);
+
+    //完整报告  
+    int output_report(unsigned int flags);
+
+
 
 
     ProfNode& node(int idx) { return nodes_[idx]; }
@@ -469,10 +471,10 @@ public:
     ProfSerializeBuffer& compact_buffer() { return compact_buffer_; }
     char* serialize_buffer() { return serialize_buff_; }
 public:
-    void set_default_log_func(DefaultLogFunc func) { log_func_ = func; }
-    DefaultLogFunc default_log_func() { return log_func_; }
+    static void default_output(const ProfSerializeBuffer& buffer){printf("%s", buffer.buff());}
+    void set_output(Output func) { output_ = func; }
 private:
-    DefaultLogFunc log_func_;
+    Output output_;
 private:
     ProfNode nodes_[node_end_id()];
     ProfDesc node_descs_[node_end_id()];
@@ -578,7 +580,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int idx, int to)
 
 
 template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::init_prof(const char* desc)
+int ProfRecord<INST, RESERVE, DECLARE>::init(const char* desc)
 {
     if (desc == NULL || compact_buffer_.is_full())
     {
@@ -727,7 +729,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::init_prof(const char* desc)
 
 
 template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::init_jump_count()
+int ProfRecord<INST, RESERVE, DECLARE>::build_jump_path()
 {
     for (int i = node_declare_begin_id(); i < node_declare_end_id(); )
     {
@@ -863,7 +865,7 @@ void ProfRecord<INST, RESERVE, DECLARE>::reset_childs(int idx, int depth)
 
 
 template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializeBuffer& buffer, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
+int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializeBuffer& buffer)
 {
     if (entry_idx >= node_end_id())
     {
@@ -875,22 +877,20 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth,
     {
         return -2;
     }
-    if (call_log == NULL && log_func_ != NULL )
+    if (output_ == nullptr)
     {
-        call_log = log_func_;
+        return -3;
     }
+
 
     if (buffer.offset() + min_line_size >= buffer.buff_len())
     {
         buffer.reset_offset(buffer.buff_len() - min_line_size);
         buffer.push_char(' ', depth * 2);
-        buffer.push_string("serialize buffer too short ..." PROF_LINE_FEED);
+        buffer.push_string("output buffer too short ..." PROF_LINE_FEED);
         buffer.closing_string();
-        if (call_log)
-        {
-            call_log(buffer);
-            buffer.reset_offset();
-        }
+        output_(buffer);
+        buffer.reset_offset();
         return -3;
     }
 
@@ -983,10 +983,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth,
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
         call_cpu_full(INNER_PROF_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
-        if (call_log)
+        if (true)
         {
             cost_single_serialize.start();
-            call_log(buffer);
+            output_(buffer);
             buffer.reset_offset();
             cost_single_serialize.stop_and_save();
             call_cpu_full(INNER_PROF_SINGLE_WRITE_LOG_COST, cost_single_serialize.cycles());
@@ -1027,10 +1027,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth,
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
         call_cpu_full(INNER_PROF_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
-        if (call_log)
+        if (true)
         {
             cost_single_serialize.start();
-            call_log(buffer);
+            output_(buffer);
             buffer.reset_offset();
             cost_single_serialize.stop_and_save();
             call_cpu_full(INNER_PROF_SINGLE_WRITE_LOG_COST, cost_single_serialize.cycles());
@@ -1068,10 +1068,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth,
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
         call_cpu_full(INNER_PROF_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
-        if (call_log)
+        if (true)
         {
             cost_single_serialize.start();
-            call_log(buffer);
+            output_(buffer);
             buffer.reset_offset();
             cost_single_serialize.stop_and_save();
             call_cpu_full(INNER_PROF_SINGLE_WRITE_LOG_COST, cost_single_serialize.cycles());
@@ -1105,10 +1105,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth,
         buffer.closing_string();
         cost_single_serialize.stop_and_save();
         call_cpu_full(INNER_PROF_SINGLE_SERIALIZE_COST, cost_single_serialize.cycles());
-        if (call_log)
+        if (true)
         {
             cost_single_serialize.start();
-            call_log(buffer);
+            output_(buffer);
             buffer.reset_offset();
             cost_single_serialize.stop_and_save();
             call_cpu_full(INNER_PROF_SINGLE_WRITE_LOG_COST, cost_single_serialize.cycles());
@@ -1119,9 +1119,9 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth,
         buffer.push_char(' ', depth * 2);
         buffer.push_string("more node in here ... " PROF_LINE_FEED);
         buffer.closing_string();
-        if (call_log)
+        if (true)
         {
-            call_log(buffer);
+            output_(buffer);
             buffer.reset_offset();
         }
         return -4;
@@ -1132,7 +1132,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth,
         ProfNode& child = nodes_[i];
         if (child.parrent == entry_idx)
         {
-            int ret = serialize_root(i, depth + 1, NULL, 0, buffer, call_log);
+            int ret = recursive_serialize(i, depth + 1, NULL, 0, buffer);
             if (ret < 0)
             {
                 return ret;
@@ -1149,10 +1149,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, int depth,
 
 
 template<int INST, int RESERVE, int DECLARE>
-ProfSerializeBuffer ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry_idx, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
+ProfSerializeBuffer ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx)
 {
     ProfSerializeBuffer buffer(serialize_buff_, sizeof(serialize_buff_));
-    int ret = serialize_root(entry_idx, 0, NULL, 0, buffer, call_log);
+    int ret = recursive_serialize(entry_idx, 0, NULL, 0, buffer);
     (void)ret;
     buffer.closing_string();
     return buffer;
@@ -1161,14 +1161,9 @@ ProfSerializeBuffer ProfRecord<INST, RESERVE, DECLARE>::serialize_root(int entry
 
 
 template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::serialize(unsigned int flags, std::function<void(const ProfSerializeBuffer& buffer)> call_log)
+int ProfRecord<INST, RESERVE, DECLARE>::output_report(unsigned int flags)
 {
-    if (!call_log && log_func_)
-    {
-        call_log = log_func_;
-    }
-
-    if (!call_log)
+    if (output_ == nullptr)
     {
         return -1;
     }
@@ -1179,14 +1174,14 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize(unsigned int flags, std::funct
     buffer.reset_offset();
     buffer.push_string(STRLEN(PROF_LINE_FEED));
     buffer.closing_string();
-    call_log(buffer);
+    output_(buffer);
     buffer.reset_offset();
 
 
     buffer.push_char('=', 30);
     buffer.push_char('\t');
     buffer.push_string(desc());
-    buffer.push_string(STRLEN(" begin serialize: "));
+    buffer.push_string(STRLEN(" begin output: "));
     buffer.push_now_date();
     buffer.push_char('\t');
     buffer.push_char('=', 30);
@@ -1195,22 +1190,22 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize(unsigned int flags, std::funct
     buffer.push_string(STRLEN("| -- index -- | ---    mem  ---------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | " PROF_LINE_FEED));
     buffer.push_string(STRLEN("| -- index -- | ---    vm  ------------ | ----------   vm, rss, shr, uss   ------------------ | " ));
     buffer.closing_string();
-    call_log(buffer);
+    output_(buffer);
     buffer.reset_offset();
     buffer.push_string(STRLEN("| -- index -- | ---    user  ----------- | -----------  hits, avg, sum   ---------- | " PROF_LINE_FEED));
     buffer.closing_string();
-    call_log(buffer);
+    output_(buffer);
 
     if (flags & PROF_SER_INNER)
     {
         buffer.reset_offset();
         buffer.push_string(STRLEN(PROF_LINE_FEED));
         buffer.closing_string();
-        call_log(buffer);
+        output_(buffer);
         buffer.reset_offset();
         for (int i = INNER_PROF_NULL + 1; i < INNER_PROF_MAX; i++)
         {
-            int ret = serialize_root(i, 0, NULL, 0, buffer, call_log);
+            int ret = recursive_serialize(i, 0, NULL, 0, buffer);
             (void)ret;
         }
     }
@@ -1223,7 +1218,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize(unsigned int flags, std::funct
         buffer.reset_offset();
         for (int i = node_reserve_begin_id(); i < node_reserve_end_id(); i++)
         {
-            int ret = serialize_root(i, 0, NULL, 0, buffer, call_log);
+            int ret = recursive_serialize(i, 0, NULL, 0, buffer);
             (void)ret;
         }
     }
@@ -1236,7 +1231,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize(unsigned int flags, std::funct
         buffer.reset_offset();
         for (int i = node_declare_begin_id(); i < node_delcare_reg_end_id(); )
         {
-            int ret = serialize_root(i, 0, NULL, 0, buffer, call_log);
+            int ret = recursive_serialize(i, 0, NULL, 0, buffer);
             (void)ret;
             i += nodes_[i].jump_child + 1;
         }
@@ -1251,19 +1246,19 @@ int ProfRecord<INST, RESERVE, DECLARE>::serialize(unsigned int flags, std::funct
     buffer.push_char('=', 30);
     buffer.push_string(STRLEN(PROF_LINE_FEED));
     buffer.closing_string();
-    call_log(buffer);
+    output_(buffer);
     buffer.reset_offset();
     /*
     buffer.push_char('=', 120);
     buffer.push_string(STRLEN(PROF_LINE_FEED));
     buffer.closing_string();
-    call_log(buffer);
+    output_(buffer);
     buffer.reset_offset();
     */
 
     buffer.push_string(STRLEN(PROF_LINE_FEED));
     buffer.closing_string();
-    call_log(buffer);
+    output_(buffer);
     buffer.reset_offset();
 
     call_cpu(INNER_PROF_SERIALIZE_COST, cost.stop_and_save().cycles());

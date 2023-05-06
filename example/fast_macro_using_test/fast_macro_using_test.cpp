@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
     //初始化   
     PROF_INIT("inner prof");
-    PROF_SET_LOG(&FNLogFunc);
+    PROF_SET_OUTPUT(&FNLogFunc);
 
     //记录当前内存
     PROF_OUTPUT_SELF_MEM("this app used memory");
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     }
 
     //序列化打印所有记录  
-    PROF_SERIALIZE_FN_LOG();
+    PROF_OUTPUT_REPORT();
 
     //定时清空无指定驻留的数据, 开始新一轮测试
     PROF_CLEAN_DECLARE();

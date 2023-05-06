@@ -140,7 +140,7 @@ public:
     {
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(ProfInstType::INNER_PROF_NULL, COUNT, counter_.save().cycles());
         ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); 
-        ProfInst.serialize_root(ProfInstType::INNER_PROF_NULL, 0, desc_, strlen(desc_), buffer, NULL);
+        ProfInst.recursive_serialize(ProfInstType::INNER_PROF_NULL, 0, desc_, strlen(desc_), buffer);
         ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
     }
 
@@ -195,14 +195,14 @@ private:
 // -------
 
 //初始化全局实例并启动该实例  
-#define PROF_INIT(desc) ProfInst.init_prof(desc)   
+#define PROF_INIT(desc) ProfInst.init(desc)   
 
 //[option] 对注册好的条目进行跳点优化; 不执行则不获得优化  
 //放在注册完所有条目后执行, 否则优化只能覆盖执行时已经注册的条目(全量覆写型构建跳点, 无副作用)  
-#define PROF_INIT_JUMP_COUNT() ProfInst.init_jump_count()  
+#define PROF_BUILD_JUMP_PATH() ProfInst.build_jump_path()  
 
 //注册输出 默认使用printf  
-#define PROF_SET_LOG(log_fun) ProfInst.set_default_log_func(log_fun)
+#define PROF_SET_OUTPUT(out_func) ProfInst.set_output(out_func)
 
 //重置(清零)idx条目以及递归重置其所有子条目  
 #define PROF_RESET_CHILD(idx) ProfInst.reset_childs(idx)  
@@ -291,7 +291,7 @@ private:
 //使用特殊条目<0>进行一次性输出  
 //用于立刻输出性能信息而不是走报告输出  
 #define PROF_OUTPUT_DEFAULT_LOG(desc)        ProfSerializeBuffer buffer(ProfInst.serialize_buffer(), ProfInstType::max_serialize_buff_size()); \
-                                                              ProfInst.serialize_root(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), buffer, NULL);\
+                                                              ProfInst.recursive_serialize(ProfInstType::INNER_PROF_NULL, 0, desc, strlen(desc), buffer);\
                                                               ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
 
 #define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
@@ -320,8 +320,8 @@ private:
 #define PROF_REG_AND_BIND_CHILD_AND_MERGE(id, cid) 
 
 #define PROF_INIT(desc) 
-#define PROF_INIT_JUMP_COUNT()
-#define PROF_SET_LOG(log_fun) 
+#define PROF_BUILD_JUMP_PATH()
+#define PROF_SET_OUTPUT(log_fun) 
 
 #define PROF_RESET_CHILD(idx) 
 #define PROF_UPDATE_MERGE() 
@@ -365,7 +365,7 @@ private:
 
 
 
-#define PROF_SERIALIZE_FN_LOG()    ProfInst.serialize(0xff, NULL)
+#define PROF_OUTPUT_REPORT()    ProfInst.output_report(0xff)
 
 
 

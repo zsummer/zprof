@@ -426,41 +426,39 @@ long long prof_get_time_cycle<PROF_CONNTER_CHRONO>()
 
 ProfVM prof_get_mem_use()
 {
+    ProfVM vm = { 0ULL, 0ULL, 0ULL };
 #ifdef WIN32
     HANDLE hproc = GetCurrentProcess();
     PROCESS_MEMORY_COUNTERS pmc;
     if (GetProcessMemoryInfo(hproc, &pmc, sizeof(pmc)))
     {
         CloseHandle(hproc);// ignore  
-        return { (unsigned long long)pmc.WorkingSetSize, (unsigned long long)pmc.WorkingSetSize};
+        vm.vm_size = (unsigned long long)pmc.WorkingSetSize;
+        vm.rss_size = (unsigned long long)pmc.WorkingSetSize;
     }
-    return { 0ULL, 0ULL };
 #else
     const char* file = "/proc/self/statm";
     FILE* fp = fopen(file, "r");
-    if (NULL == fp)
+    if (fp != NULL)
     {
-        return { 0ULL, 0ULL };
-    }
-
-    char line_buff[256];
-    ProfVM vm = { 0ULL, 0ULL, 0ULL };
-    while (fgets(line_buff, sizeof(line_buff), fp) != NULL)
-    {
-        int ret = sscanf(line_buff, "%lld %lld %lld ", &vm.vm_size, &vm.rss_size, &vm.shr_size);
-        if (ret == 3)
+        char line_buff[256];
+        while (fgets(line_buff, sizeof(line_buff), fp) != NULL)
         {
-            vm.vm_size *= 4096;
-            vm.rss_size *= 4096; 
-            vm.shr_size *= 4096;
+            int ret = sscanf(line_buff, "%lld %lld %lld ", &vm.vm_size, &vm.rss_size, &vm.shr_size);
+            if (ret == 3)
+            {
+                vm.vm_size *= 4096;
+                vm.rss_size *= 4096;
+                vm.shr_size *= 4096;
+                break;
+            }
+            memset(&vm, 0, sizeof(vm));
             break;
         }
-        memset(&vm, 0, sizeof(vm));
-        break;
+        fclose(fp);
     }
-    fclose(fp);
-    return vm;
 #endif
+    return vm;
 }
 
 #ifdef WIN32

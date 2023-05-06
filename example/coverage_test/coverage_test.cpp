@@ -61,9 +61,9 @@ static inline void FNLogFunc(const ProfSerializeBuffer& buffer)
 int main(int argc, char *argv[])
 {
     PROF_INIT("inner prof");
-    PROF_SET_LOG(FNLogFunc);
+    PROF_SET_OUTPUT(FNLogFunc);
 
-    //ProfInst.init_prof("inner prof");
+    //ProfInst.init("inner prof");
     regist_prof();
     PROF_DEFINE_AUTO_ANON_RECORD(delta, "self use mem in main func begin and exit");
     PROF_OUTPUT_SELF_MEM("self use mem in main func begin");
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
 
         PROF_UPDATE_MERGE();
-        PROF_SERIALIZE_FN_LOG();
+        PROF_OUTPUT_REPORT();
 
         PROF_CALL_CPU(ENUM_MERGE_CHILD1, 100);
         PROF_CALL_CPU(ENUM_MERGE_CHILD1, 106);
@@ -139,12 +139,12 @@ int main(int argc, char *argv[])
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
 
         PROF_UPDATE_MERGE();
-        PROF_SERIALIZE_FN_LOG();
+        PROF_OUTPUT_REPORT();
 
 
         PROF_CLEAN_DECLARE();
         PROF_UPDATE_MERGE();
-        PROF_SERIALIZE_FN_LOG();
+        PROF_OUTPUT_REPORT();
 
 
     }
@@ -525,7 +525,7 @@ int main(int argc, char *argv[])
         PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC(lfence) * 10 dis 1000w");
     }
 
-    PROF_INIT_JUMP_COUNT();
+    PROF_BUILD_JUMP_PATH();
 
     if (true)
     {
@@ -788,7 +788,7 @@ int main(int argc, char *argv[])
     PROF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
     PROF_UPDATE_MERGE();
-    PROF_SERIALIZE_FN_LOG();
+    PROF_OUTPUT_REPORT();
     PROF_OUTPUT_SELF_MEM("now memory");
 
 
@@ -796,12 +796,12 @@ int main(int argc, char *argv[])
     entry_mem_test();
 
     PROF_UPDATE_MERGE();
-    PROF_SERIALIZE_FN_LOG();
+    PROF_OUTPUT_REPORT();
 
     for (size_t i = 0; i < 1000; i++)
     {
         auto void_call = [](const ProfSerializeBuffer& buffer) {};
-        ProfInst.serialize(0xff, void_call);
+        ProfInst.output_report(0xff);
     }
 
     if (true)
@@ -842,11 +842,11 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < 1; i++)
     {
         PROF_UPDATE_MERGE();
-        PROF_SERIALIZE_FN_LOG();
+        PROF_OUTPUT_REPORT();
     }
     for (size_t i = 0; i < 1000; i++)
     {
-        ProfInst.serialize(0xff, [](const ProfSerializeBuffer& buffer) {});
+        ProfInst.output_report(0xff);
     }
 
     LogInfo() << "all test finish .salt:" << cycles;

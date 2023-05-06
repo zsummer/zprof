@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
 
 
 
-    PROF_SERIALIZE_FN_LOG();
+    PROF_OUTPUT_REPORT();
 
     LogInfo() << "all test finish .salt:" << cycles;
     return 0;
