@@ -106,6 +106,7 @@ enum ProfSerializeFlags : unsigned int
     PROF_SER_INNER = 0x1,
     PROF_SER_RESERVE = 0x2,
     PROF_SER_DELCARE = 0x4,
+    PROF_SER_ALL = 0xffff,
 };
 
 /*
@@ -206,7 +207,7 @@ public:
     inline int rename_node(int idx, const char* desc);
     inline const char* node_name(int idx);
     inline int bind_childs(int idx, int child);
-    inline int bind_merge(int idx, int to);
+    inline int bind_merge(int to, int child);
 
     PROF_ALWAYS_INLINE void reset_cpu(int idx)
     {
@@ -319,7 +320,7 @@ public:
         long long avg = node.cpu.sum / node.cpu.c;
 
         node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-        node.cpu.h_sm = (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
+        node.cpu.h_sm = (dis >= avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
         node.cpu.l_sm = (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
         node.cpu.dv += abs(dis - node.cpu.sm);
         node.cpu.t_u += cost;
@@ -387,7 +388,7 @@ public:
     }
 
 
-    void update_merge()
+    void merge_prof_info()
     {
         ProfCounter<PROF_COUNTER_DEFAULT> cost;
         cost.start();
@@ -453,7 +454,7 @@ public:
     
 
     //完整报告  
-    int output_report(unsigned int flags);
+    int output_report(unsigned int flags = PROF_SER_ALL);
     int output_one_record(int entry_idx);
     int output_temp_record(const char* opt_name, size_t opt_name_len);
     int output_temp_record(const char* opt_name);
@@ -535,14 +536,14 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_childs(int idx, int cidx)
 
 
 template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int idx, int to)
+int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
 {
-    if (idx < node_begin_id() || idx >= node_end_id() || to < node_begin_id() || to >= node_end_id())
+    if (child < node_begin_id() || child >= node_end_id() || to < node_begin_id() || to >= node_end_id())
     {
         return -1;
     }
 
-    if (idx == to)
+    if (child == to)
     {
         return -2;  
     }
@@ -550,7 +551,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int idx, int to)
     {
         return -3;
     }
-    ProfNode& node = nodes_[idx];
+    ProfNode& node = nodes_[child];
     ProfNode& to_node = nodes_[to];
     if (!node.active || !to_node.active)
     {
@@ -564,14 +565,14 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int idx, int to)
             if (merge_to_[i] == to)
             {
                 node.merge_to = to;
-                merge_to_[i] = idx;
+                merge_to_[i] = child;
                 return 0;
             }
         }
     }
 
     node.merge_to = to;
-    merge_to_[merge_to_size_++] = idx;
+    merge_to_[merge_to_size_++] = child;
     return 0;
 }
 
@@ -952,7 +953,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
         
         if (node.cpu.min_u != LLONG_MAX && node.cpu.max_u > 0)
         {
-            serializer.push_string(STRLEN(" --|*\tmin-max|-- "));
+            serializer.push_string(STRLEN(" --|\tmax-min:|-- "));
             serializer.push_human_time((long long)(node.cpu.max_u * cpu_rate));
             serializer.push_string(STRLEN(", "));
             serializer.push_human_time((long long)(node.cpu.min_u * cpu_rate));
@@ -961,7 +962,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
         
         if (node.cpu.dv > 0 || node.cpu.sm > 0)
         {
-            serializer.push_string(STRLEN(" --| \tdv-sm|-- "));
+            serializer.push_string(STRLEN(" --|\tdv-sm:|-- "));
             serializer.push_human_time((long long)(node.cpu.dv * cpu_rate / node.cpu.c));
             serializer.push_string(STRLEN(", "));
             serializer.push_human_time((long long)(node.cpu.sm * cpu_rate));
@@ -970,7 +971,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
         
         if (node.cpu.h_sm > 0 || node.cpu.l_sm > 0)
         {
-            serializer.push_string(STRLEN(" --| \th-l|-- "));
+            serializer.push_string(STRLEN(" --|\th-l:|-- "));
             serializer.push_human_time((long long)(node.cpu.h_sm * cpu_rate));
             serializer.push_string(STRLEN(", "));
             serializer.push_human_time((long long)(node.cpu.l_sm * cpu_rate));
@@ -1134,17 +1135,14 @@ int ProfRecord<INST, RESERVE, DECLARE>::output_temp_record(const char* opt_name,
 {
     ProfStackSerializer serializer;
     int ret = recursive_serialize(0, 0, opt_name, opt_name_len, serializer);
-    reset_node(0);
+    reset_node(0);//reset  
     return ret;
 }
 
 template<int INST, int RESERVE, int DECLARE>
 int ProfRecord<INST, RESERVE, DECLARE>::output_temp_record(const char* opt_name)
 {
-    ProfStackSerializer serializer;
-    int ret = recursive_serialize(0, 0, opt_name, opt_name == NULL? 0 : strlen(opt_name), serializer);
-    reset_node(0);
-    return ret;
+    return output_temp_record(opt_name, strlen(opt_name));
 }
 
 template<int INST, int RESERVE, int DECLARE>

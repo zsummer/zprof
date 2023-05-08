@@ -175,7 +175,7 @@ private:
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid) 
 
 //绑定合并层级(cid->id)关系  合并关系中按照合并方向 合并的目标在前, 要搜集的在后并保持连续 可以获得性能上的跳点优化(也符合线性思维)    
-#define PROF_BIND_MERGE(id, cid) ProfInst.bind_merge(cid, id)   
+#define PROF_BIND_MERGE(id, cid) ProfInst.bind_merge(id, cid)   
 
 //通常合并关系和展示层级关系一致 这里同时绑定两者  
 #define PROF_BIND_CHILD_AND_MERGE(id, cid) do {PROF_BIND_CHILD(id, cid); PROF_BIND_MERGE(id, cid); }while(0)
@@ -207,12 +207,12 @@ private:
 
 //执行性能数据的层级合并 
 //合并层级进行了扁平压缩 
-#define PROF_UPDATE_MERGE() ProfInst.update_merge()  
+#define PROF_MERGE_INFO() ProfInst.merge_prof_info()  
 
 //清零<保留条目>信息(常驻条目除外)  
-#define PROF_CLEAN_RESERVE() ProfInst.clean_reserve_info()  
+#define PROF_CLEAN_RESERVE(...) ProfInst.clean_reserve_info(__VA_ARGS__)  
 //清零<注册条目>信息(常驻条目除外)  
-#define PROF_CLEAN_DECLARE() ProfInst.clean_declare_info()  
+#define PROF_CLEAN_DECLARE(...) ProfInst.clean_declare_info(__VA_ARGS__)  
 
 
 //--------
@@ -288,18 +288,24 @@ private:
 
 //使用特殊条目<0>进行一次性输出  
 //用于立刻输出性能信息而不是走报告输出  
-#define PROF_OUTPUT_DEFAULT_LOG(desc)        do {ProfInst.output_temp_record(desc, strlen(desc));}while(0)
+#define PROF_OUTPUT_TEMP_RECORD(desc)        do {ProfInst.output_temp_record(desc, strlen(desc));}while(0)  
 
-#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_DEFAULT_LOG(desc);} while(0)
+//立刻输出一条信息  
+#define PROF_OUTPUT_RECORD(idx)        do {ProfInst.output_one_record(idx);}while(0)
+
+//输出完整报告 (PROF_SER_ALL)   
+#define PROF_OUTPUT_REPORT(...)    ProfInst.output_report(__VA_ARGS__)
+
+//其他立即输出
+#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 
 //输出当前进程的vm/rss信息 
-#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_DEFAULT_LOG(desc);}while(0)
-
+#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
 
 
 #else
@@ -319,11 +325,12 @@ private:
 #define PROF_BUILD_JUMP_PATH()
 #define PROF_SET_OUTPUT(log_fun) 
 
-#define PROF_RESET_CHILD(idx) 
-#define PROF_UPDATE_MERGE() 
 #define PROF_RESET_RESERVE()
 #define PROF_RESET_DECLARE() 
 #define PROF_RESET_ANON() 
+#define PROF_RESET_CHILD(idx) 
+#define PROF_MERGE_INFO() 
+
 
 #define PROF_CALL_CPU_SAMPLE(idx, cost) 
 #define PROF_CALL_CPU(idx, cost) 
@@ -346,7 +353,7 @@ private:
 #define PROF_DEFINE_AUTO_ANON_RECORD(desc, idx) 
 #define PROF_DEFINE_AUTO_ADVANCE_ANON_RECORD(var, count, level, ct, desc) 
 
-#define PROF_OUTPUT_DEFAULT_LOG(desc) 
+#define PROF_OUTPUT_TEMP_RECORD(desc) 
 
 #define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  
 #define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) 
@@ -356,12 +363,14 @@ private:
 #define PROF_OUTPUT_SINGLE_MEM(desc, num) 
 #define PROF_OUTPUT_SELF_MEM(desc) 
 
+#define PROF_OUTPUT_REPORT()
+
 #endif
 
 
 
 
-#define PROF_OUTPUT_REPORT()    ProfInst.output_report(0xff)
+
 
 
 

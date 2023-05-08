@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 200);
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
 
-        PROF_UPDATE_MERGE();
+        PROF_MERGE_INFO();
         PROF_OUTPUT_REPORT();
 
         PROF_CALL_CPU(ENUM_MERGE_CHILD1, 100);
@@ -145,12 +145,12 @@ int main(int argc, char *argv[])
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 200);
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
 
-        PROF_UPDATE_MERGE();
+        PROF_MERGE_INFO();
         PROF_OUTPUT_REPORT();
 
 
         PROF_CLEAN_DECLARE();
-        PROF_UPDATE_MERGE();
+        PROF_MERGE_INFO();
         PROF_OUTPUT_REPORT();
 
 
@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_SYS>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_SYS dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_SYS dis 1000w");
     }
 
     if (true)
@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_CLOCK>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_CLOCK dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_CLOCK dis 1000w");
     }
 
     if (true)
@@ -353,7 +353,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_CONNTER_CHRONO>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_CONNTER_CHRONO dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_CONNTER_CHRONO dis 1000w");
     }
 
     if (true)
@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_PURE>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC_PURE dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_PURE dis 1000w");
     }
 
     if (true)
@@ -379,7 +379,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC_NOFENCE dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_NOFENCE dis 1000w");
     }
 
     if (true)
@@ -392,7 +392,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC(lfence) dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC(lfence) dis 1000w");
     }
     if (true)
     {
@@ -404,7 +404,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC_BTB (lfence) dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_BTB (lfence) dis 1000w");
     }
     if (false)
     {
@@ -416,7 +416,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSCP>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSCP dis 20");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSCP dis 20");
     }
 
     if (true)
@@ -429,7 +429,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC_MFENCE dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_MFENCE dis 1000w");
     }
 
     if (true)
@@ -442,7 +442,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE_BTB>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC_MFENCE_BTB dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_MFENCE_BTB dis 1000w");
     }
 
 
@@ -457,7 +457,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_LOCK>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC_LOCK dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_LOCK dis 1000w");
     }
 
 
@@ -472,7 +472,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
             PROF_CALL_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | DEFAULT");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | DEFAULT");
     }
 
     if (true)
@@ -485,7 +485,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
             PROF_CALL_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_SYS");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_SYS");
     }
 
     if (true)
@@ -498,7 +498,7 @@ int main(int argc, char *argv[])
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
             PROF_CALL_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_RDTSC_NOFENCE");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_RDTSC_NOFENCE");
     }
 
 
@@ -529,7 +529,7 @@ int main(int argc, char *argv[])
             }
             PROF_CALL_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
         }
-        PROF_OUTPUT_DEFAULT_LOG("PROF_COUNTER_RDTSC(lfence) * 10 dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC(lfence) * 10 dis 1000w");
     }
 
     PROF_BUILD_JUMP_PATH();
@@ -648,7 +648,7 @@ int main(int argc, char *argv[])
             start = prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>() - start);
         }
-        PROF_OUTPUT_DEFAULT_LOG("call empty rdtsc btb");
+        PROF_OUTPUT_TEMP_RECORD("call empty rdtsc btb");
     }
     if (true)
     {
@@ -659,7 +659,7 @@ int main(int argc, char *argv[])
             start = prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>();
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>() - start);
         }
-        PROF_OUTPUT_DEFAULT_LOG("call nofence empty");
+        PROF_OUTPUT_TEMP_RECORD("call nofence empty");
 
     }
 
@@ -675,7 +675,7 @@ int main(int argc, char *argv[])
             cycles = cycles / start + i;
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>() - start);
         }
-        PROF_OUTPUT_DEFAULT_LOG("call fdiv");
+        PROF_OUTPUT_TEMP_RECORD("call fdiv");
     }
 
     if (true)
@@ -689,7 +689,7 @@ int main(int argc, char *argv[])
             cycles = cycles / start + i;
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>() - start);
         }
-        PROF_OUTPUT_DEFAULT_LOG("call fdiv no any fence");
+        PROF_OUTPUT_TEMP_RECORD("call fdiv no any fence");
     }
     if (true)
     {
@@ -702,7 +702,7 @@ int main(int argc, char *argv[])
             cycles = cycles * start;
             PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>() - start);
         }
-        PROF_OUTPUT_DEFAULT_LOG("call fmul by rdtsc btb");
+        PROF_OUTPUT_TEMP_RECORD("call fmul by rdtsc btb");
     }
 
 
@@ -741,7 +741,7 @@ int main(int argc, char *argv[])
         }
         counter.start();
         PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
-        PROF_OUTPUT_DEFAULT_LOG("call timer sleep_for 10ms ");
+        PROF_OUTPUT_TEMP_RECORD("call timer sleep_for 10ms ");
     }
 
     if (true)
@@ -756,7 +756,7 @@ int main(int argc, char *argv[])
         }
         counter.start();
         PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
-        PROF_OUTPUT_DEFAULT_LOG("call timer sleep_for 10*1000*1000ns(10ms) ");
+        PROF_OUTPUT_TEMP_RECORD("call timer sleep_for 10*1000*1000ns(10ms) ");
     }
 
 #ifndef WIN32
@@ -773,7 +773,7 @@ int main(int argc, char *argv[])
     }
     counter.start();
     PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
-    PROF_OUTPUT_DEFAULT_LOG("call timer nanosleep 10*1000*1000ns(10ms)");
+    PROF_OUTPUT_TEMP_RECORD("call timer nanosleep 10*1000*1000ns(10ms)");
 
 #endif // WIN32
 
@@ -789,12 +789,12 @@ int main(int argc, char *argv[])
         }
         counter.start();
         PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
-        PROF_OUTPUT_DEFAULT_LOG("call timer sleep_for 100ms ");
+        PROF_OUTPUT_TEMP_RECORD("call timer sleep_for 100ms ");
     }
 
     PROF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
-    PROF_UPDATE_MERGE();
+    PROF_MERGE_INFO();
     PROF_OUTPUT_REPORT();
     PROF_OUTPUT_SELF_MEM("now memory");
 
@@ -802,7 +802,7 @@ int main(int argc, char *argv[])
     PROF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
 
-    PROF_UPDATE_MERGE();
+    PROF_MERGE_INFO();
     PROF_OUTPUT_REPORT();
 
     for (size_t i = 0; i < 1000; i++)
@@ -847,7 +847,7 @@ int main(int argc, char *argv[])
     }
     for (size_t i = 0; i < 1; i++)
     {
-        PROF_UPDATE_MERGE();
+        PROF_MERGE_INFO();
         PROF_OUTPUT_REPORT();
     }
     for (size_t i = 0; i < 1000; i++)

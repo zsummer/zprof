@@ -244,6 +244,8 @@ public:
     PROF_ALWAYS_INLINE long long duration_ns() { return (long long)(cycles_ * prof_get_time_inverse_frequency<T>()); }
     double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
 
+    void set_start_val(long long val) { start_val_ = val; }
+    void set_cycles_val(long long cycles) { cycles_ = cycles; }
 private:
     long long start_val_;
     long long cycles_;
