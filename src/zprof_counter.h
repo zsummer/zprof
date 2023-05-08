@@ -103,6 +103,8 @@ enum ProfCounterType
     PROF_COUNTER_SYS,
     PROF_COUNTER_CLOCK,
     PROF_CONNTER_CHRONO,
+    PROF_CONNTER_CHRONO_STEADY,
+    PROF_CONNTER_CHRONO_SYS,
 
     PROF_COUNTER_RDTSC_PURE,
     PROF_COUNTER_RDTSC_NOFENCE,
@@ -161,6 +163,11 @@ PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_SYS>();
 
 template<>
 PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO>();
+template<>
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO_STEADY>();
+template<>
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO_SYS>();
+
 
 // all frequency is per ns  
 template<ProfCounterType T>
@@ -199,6 +206,10 @@ PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_SYS>();
 
 template<>
 PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO>();
+template<>
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO_STEADY>();
+template<>
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO_SYS>();
 
 
 template<ProfCounterType T>
@@ -388,9 +399,10 @@ template<>
 long long prof_get_time_cycle<PROF_COUNTER_CLOCK>()
 {
 #if (defined WIN32)
-    long long count = 0;
-    QueryPerformanceCounter((LARGE_INTEGER*)&count);
-    return count;
+    LARGE_INTEGER win_freq;
+    win_freq.QuadPart = 0;
+    QueryPerformanceCounter((LARGE_INTEGER*)&win_freq);
+    return win_freq.QuadPart;
 #else
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
@@ -423,7 +435,17 @@ long long prof_get_time_cycle<PROF_CONNTER_CHRONO>()
     return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 }
 
+template<>
+long long prof_get_time_cycle<PROF_CONNTER_CHRONO_STEADY>()
+{
+    return std::chrono::steady_clock().now().time_since_epoch().count();
+}
 
+template<>
+long long prof_get_time_cycle<PROF_CONNTER_CHRONO_SYS>()
+{
+    return std::chrono::system_clock().now().time_since_epoch().count();
+}
 
 
 ProfVM prof_get_mem_use()
@@ -599,9 +621,10 @@ double prof_get_time_frequency<PROF_COUNTER_CLOCK>()
 {
 #ifdef WIN32
     double frequency_per_ns = 0;
-    long long win_freq = 0;
-    QueryPerformanceCounter((LARGE_INTEGER*)&win_freq);
-    frequency_per_ns = win_freq / 1000.0 / 1000.0 / 1000.0;
+    LARGE_INTEGER win_freq;
+    win_freq.QuadPart = 0;
+    QueryPerformanceFrequency((LARGE_INTEGER*)&win_freq);
+    frequency_per_ns = win_freq.QuadPart / 1000.0 / 1000.0 / 1000.0;
     return frequency_per_ns;
 #else
     return 1.0;
@@ -621,6 +644,19 @@ double prof_get_time_frequency<PROF_CONNTER_CHRONO>()
     return chrono_frequency;
 }
 
+template<>
+double prof_get_time_frequency<PROF_CONNTER_CHRONO_STEADY>()
+{
+    static double chrono_frequency = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
+    return chrono_frequency;
+}
+
+template<>
+double prof_get_time_frequency<PROF_CONNTER_CHRONO_SYS>()
+{
+    static double chrono_frequency = std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
+    return chrono_frequency;
+}
 
 template<ProfCounterType T>
 double prof_get_time_inverse_frequency()

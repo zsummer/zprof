@@ -601,6 +601,8 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* desc)
     circles_per_ns_[PROF_COUNTER_SYS] = prof_get_time_inverse_frequency<PROF_COUNTER_SYS>();
     circles_per_ns_[PROF_COUNTER_CLOCK] = prof_get_time_inverse_frequency<PROF_COUNTER_CLOCK>();
     circles_per_ns_[PROF_CONNTER_CHRONO] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO>();
+    circles_per_ns_[PROF_CONNTER_CHRONO_STEADY] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_STEADY>();
+    circles_per_ns_[PROF_CONNTER_CHRONO_SYS] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_SYS>();
     circles_per_ns_[PROF_COUNTER_RDTSC] = prof_get_time_inverse_frequency<PROF_COUNTER_RDTSC>();
     circles_per_ns_[PROF_COUNTER_RDTSC_BTB] = circles_per_ns_[PROF_COUNTER_RDTSC];
     circles_per_ns_[PROF_COUNTER_RDTSCP] = circles_per_ns_[PROF_COUNTER_RDTSC];
