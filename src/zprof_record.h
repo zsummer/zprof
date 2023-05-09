@@ -82,17 +82,29 @@ struct ProfUser
     long long t_u;
 };
 
-struct ProfNode
+
+
+struct ProfMerge
 {
-    bool active;  
-    int parent;
-    int jump_child;
-    int first_child;
-    int child_count; 
     int merge_to;
     int merge_child_count;
     int merge_current_child_count;
+};
 
+struct ProfShow
+{
+    int parent;
+    int jump_child;
+    int first_child;
+    int child_count;
+};
+
+struct ProfNode
+{
+    bool active;  
+    ProfDesc desc;
+    ProfShow show;
+    ProfMerge merge;
     ProfCPU cpu; 
     ProfMEM mem; 
     ProfTimer timer;
@@ -173,7 +185,6 @@ public:
     ProfRecord() : compact_buffer_(compact_string_, max_compact_string_size())
     {
         memset(nodes_, 0, sizeof(nodes_));
-        memset(node_descs_, 0, sizeof(node_descs_));
         merge_to_size_ = 0;
         memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
         declare_reg_end_id_ = node_declare_begin_id();
@@ -247,7 +258,7 @@ public:
     {
         for (int idx = first_idx; idx < end_idx; idx++)
         {
-            if (!keep_resident || !node_descs_[idx].resident)
+            if (!keep_resident || !nodes_[idx].desc.resident)
             {
                 reset_node(idx);
             }
@@ -388,7 +399,7 @@ public:
     }
 
 
-    void merge()
+    void do_merge()
     {
         ProfCounter<PROF_COUNTER_DEFAULT> cost;
         cost.start();
@@ -401,11 +412,11 @@ public:
             long long append_mem = 0;
             long long append_user = 0;
             int node_id = 0;
-            node = &nodes_[leaf.merge_to];
+            node = &nodes_[leaf.merge.merge_to];
             append_cpu = leaf.cpu.t_u;
             append_mem = leaf.mem.t_u;
             append_user = leaf.user.t_u;
-            node_id = leaf.merge_to;
+            node_id = leaf.merge.merge_to;
             leaf.cpu.t_u = 0;
             leaf.mem.t_u = 0;
             leaf.user.t_u = 0;
@@ -414,10 +425,10 @@ public:
                 node->cpu.t_u += append_cpu;
                 node->mem.t_u += append_mem;
                 node->user.t_u += append_user;
-                node->merge_current_child_count++;
-                if (node->merge_current_child_count >= node->merge_child_count)
+                node->merge.merge_current_child_count++;
+                if (node->merge.merge_current_child_count >= node->merge.merge_child_count)
                 {
-                    node->merge_current_child_count = 0;
+                    node->merge.merge_current_child_count = 0;
                     append_cpu = node->cpu.t_u;
                     append_mem = node->mem.t_u;
                     append_user = node->user.t_u;
@@ -436,12 +447,12 @@ public:
                     node->cpu.t_u = 0;
                     node->mem.t_u = 0;
                     node->user.t_u = 0;
-                    if (node->merge_to == 0)
+                    if (node->merge.merge_to == 0)
                     {
                         break;
                     }
-                    node_id = node->merge_to;
-                    node = &nodes_[node->merge_to];
+                    node_id = node->merge.merge_to;
+                    node = &nodes_[node->merge.merge_to];
                     continue;
                 }
                 break;
@@ -476,14 +487,12 @@ private:
 public:
     ProfSerializer& compact_buffer() { return compact_buffer_; }
     ProfNode& node(int idx) { return nodes_[idx]; }
-    ProfDesc& node_desc(int idx) { return node_descs_[idx]; }
     const char* desc() const { return &compact_string_[desc_]; }
     double circles_per_ns(int t) { return  circles_per_ns_[t == PROF_COUNTER_NULL ? PROF_COUNTER_DEFAULT : t]; }
     std::array<int, node_end_id()>& merge_to() { return merge_to_; }
     int merge_to_size() { return merge_to_size_; }
 private:
     ProfNode nodes_[node_end_id()];
-    ProfDesc node_descs_[node_end_id()];
     int desc_;
     std::array<int, node_end_id()> merge_to_;
     int merge_to_size_;
@@ -519,25 +528,25 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_childs(int idx, int cidx)
     {
         return -3; //regist method has memset all info ; 
     }
-    if (node.first_child == 0)
+    if (node.show.first_child == 0)
     {
-        node.first_child = cidx;
-        node.child_count = 1;
+        node.show.first_child = cidx;
+        node.show.child_count = 1;
     }
     else 
     {
-        if (cidx < node.first_child)
+        if (cidx < node.show.first_child)
         {
-            node.child_count += node.first_child - cidx;
-            node.first_child = cidx;
+            node.show.child_count += node.show.first_child - cidx;
+            node.show.first_child = cidx;
         }
-        else if (cidx >= node.first_child + node.child_count)
+        else if (cidx >= node.show.first_child + node.show.child_count)
         {
-            node.child_count = cidx - node.first_child + 1;
+            node.show.child_count = cidx - node.show.first_child + 1;
         }
     }
     
-    child.parent = idx;
+    child.show.parent = idx;
     return 0;
 }
 
@@ -567,20 +576,20 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
     }
 
     //change merge to;  
-    if (node.merge_to != 0)
+    if (node.merge.merge_to != 0)
     {
         return -4;
     }
 
-    to_node.merge_child_count++;
-    node.merge_to = to;
+    to_node.merge.merge_child_count++;
+    node.merge.merge_to = to;
 
-    if (node.merge_child_count > 0)
+    if (node.merge.merge_child_count > 0)
     {
         return 0;
     }
 
-    if (to_node.merge_to != 0)
+    if (to_node.merge.merge_to != 0)
     {
         for (int i = 0; i < merge_to_size_; i++)
         {
@@ -764,7 +773,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::build_jump_path()
         int next_parent_id = i + 1;
         while (next_parent_id < node_declare_end_id())
         {
-            if (nodes_[next_parent_id].parent == 0)
+            if (nodes_[next_parent_id].show.parent == 0)
             {
                 break;
             }
@@ -772,7 +781,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::build_jump_path()
         }
         for (int j = i; j < next_parent_id; j++)
         {
-            nodes_[j].jump_child = next_parent_id - j - 1;
+            nodes_[j].show.jump_child = next_parent_id - j - 1;
         }
         i = next_parent_id;
     }
@@ -802,8 +811,8 @@ int ProfRecord<INST, RESERVE, DECLARE>::regist_node(int idx, const char* desc, u
 
     memset(&node, 0, sizeof(node));
     rename_node(idx, desc);
-    node_descs_[idx].counter_type = counter_type;
-    node_descs_[idx].resident = resident;
+    nodes_[idx].desc.counter_type = counter_type;
+    nodes_[idx].desc.resident = resident;
     node.active = true;
     node.cpu.min_u = LLONG_MAX;
 
@@ -828,21 +837,21 @@ int ProfRecord<INST, RESERVE, DECLARE>::rename_node(int idx, const char* desc)
     }
     if (strcmp(desc, "reserve") == 0)
     {
-        node_descs_[idx].node_name = reserve_desc_;
-        node_descs_[idx].node_name_len = 7;
+        nodes_[idx].desc.node_name = reserve_desc_;
+        nodes_[idx].desc.node_name_len = 7;
         return 0;
     }
 
 
-    node_descs_[idx].node_name = (int)compact_buffer_.offset();// node name is "" when compact serializer full 
+    nodes_[idx].desc.node_name = (int)compact_buffer_.offset();// node name is "" when compact serializer full 
     compact_buffer_.push_string(desc);
     compact_buffer_.push_char('\0');
     compact_buffer_.closing_string();
-    node_descs_[idx].node_name_len = (int)strlen(&compact_string_[node_descs_[idx].node_name]);
-    if (node_descs_[idx].node_name_len == 0)
+    nodes_[idx].desc.node_name_len = (int)strlen(&compact_string_[nodes_[idx].desc.node_name]);
+    if (nodes_[idx].desc.node_name_len == 0)
     {
-        node_descs_[idx].node_name = no_name_space_;
-        node_descs_[idx].node_name_len = no_name_space_len_;
+        nodes_[idx].desc.node_name = no_name_space_;
+        nodes_[idx].desc.node_name_len = no_name_space_len_;
     }
     return 0;
 }
@@ -855,7 +864,7 @@ const char* ProfRecord<INST, RESERVE, DECLARE>::node_name(int idx)
     {
         return "";
     }
-    ProfDesc& desc = node_descs_[idx];
+    ProfDesc& desc = nodes_[idx].desc;
     if (desc.node_name >= max_compact_string_size())
     {
         return "";
@@ -880,10 +889,10 @@ void ProfRecord<INST, RESERVE, DECLARE>::reset_childs(int idx, int depth)
     {
         return;
     }
-    for (int i = node.first_child; i < node.first_child + node.child_count; i++)
+    for (int i = node.show.first_child; i < node.show.first_child + node.show.child_count; i++)
     {
         ProfNode& child = nodes_[i];
-        if (child.parent == idx)
+        if (child.show.parent == idx)
         {
            reset_childs(i, depth + 1);
         }
@@ -912,7 +921,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
 
     ProfNode& node = nodes_[entry_idx];
 
-    if (depth == 0 && node.parent)
+    if (depth == 0 && node.show.parent)
     {
         return 0;
     }
@@ -920,11 +929,11 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
     {
         return 0;
     }
-    if (node_descs_[entry_idx].node_name + node_descs_[entry_idx].node_name_len >= max_compact_string_size())
+    if (node.desc.node_name + node.desc.node_name_len >= max_compact_string_size())
     {
         return 0;
     }
-    if (node_descs_[entry_idx].counter_type >= PROF_COUNTER_MAX)
+    if (node.desc.counter_type >= PROF_COUNTER_MAX)
     {
         return 0;
     }
@@ -933,9 +942,9 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
     
     ProfCounter<> cost_single_serialize;
 
-    const char* desc_name = &compact_string_[node_descs_[entry_idx].node_name];
-    size_t desc_len = node_descs_[entry_idx].node_name_len;
-    double cpu_rate = circles_per_ns(node_descs_[entry_idx].counter_type);
+    const char* desc_name = &compact_string_[node.desc.node_name];
+    size_t desc_len = node.desc.node_name_len;
+    double cpu_rate = circles_per_ns(node.desc.counter_type);
     if (opt_name != NULL)
     {
         desc_name = opt_name;
@@ -1124,10 +1133,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
         return -4;
     }
 
-    for (int i = node.first_child; i < node.first_child + node.child_count; i++)
+    for (int i = node.show.first_child; i < node.show.first_child + node.show.child_count; i++)
     {
         ProfNode& child = nodes_[i];
-        if (child.parent == entry_idx)
+        if (child.show.parent == entry_idx)
         {
             int ret = recursive_serialize(i, depth + 1, NULL, 0, serializer);
             if (ret < 0)
@@ -1230,7 +1239,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::output_report(unsigned int flags)
         {
             int ret = recursive_serialize(i, 0, NULL, 0, serializer);
             (void)ret;
-            i += nodes_[i].jump_child + 1;
+            i += nodes_[i].show.jump_child + 1;
         }
     }
 

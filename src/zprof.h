@@ -205,7 +205,7 @@ private:
 
 //执行性能数据的层级合并 
 //合并层级进行了扁平压缩 
-#define PROF_MERGE_INFO() ProfInst.merge()  
+#define PROF_MERGE_INFO() ProfInst.do_merge()  
 
 //清零<保留条目>信息(常驻条目除外)  
 #define PROF_CLEAN_RESERVE(...) ProfInst.clean_reserve_info(__VA_ARGS__)  

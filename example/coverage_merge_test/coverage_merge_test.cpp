@@ -72,7 +72,7 @@ int check_merge_to_count(int node_id)
     for (int i = 0; i < ProfInst.merge_to_size(); i++)
     {
         int leaf_id = ProfInst.merge_to()[i];
-        if (ProfInst.node(leaf_id).merge_to == node_id)
+        if (ProfInst.node(leaf_id).merge.merge_to == node_id)
         {
             ret++;
         }
@@ -151,38 +151,38 @@ int main(int argc, char *argv[])
 
     
     ASSERT_TEST(check_merge_to_count(PME_CHILD_01) == 2);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge_child_count == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merge_child_count == 2);
 
     ASSERT_TEST(check_merge_to_count(PME_CHILD_02) == 2);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge_child_count == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge.merge_child_count == 2);
 
     ASSERT_TEST(check_merge_to_count(PME_PARENT_01) == 2);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge_child_count == 3);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge.merge_child_count == 3);
 
     ASSERT_TEST(check_merge_to_count(PME_PARENT_02) == 2);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge_child_count == 3);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.merge_child_count == 3);
 
 
     PROF_MERGE_INFO();
 
 
-    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge_child_count == 2);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge_current_child_count == 0);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merge_child_count == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merge_current_child_count == 0);
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).user.t_u == 0);
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).user.sum == 2);
 
-    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge_child_count == 2);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge_current_child_count == 0, ProfInst.node(PME_CHILD_02).merge_current_child_count);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge.merge_child_count == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge.merge_current_child_count == 0, ProfInst.node(PME_CHILD_02).merge.merge_current_child_count);
     ASSERT_TEST(ProfInst.node(PME_CHILD_02).user.t_u == 0);
     ASSERT_TEST(ProfInst.node(PME_CHILD_02).user.sum == 2);
 
-    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge_child_count == 3);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge_current_child_count == 0, ProfInst.node(PME_PARENT_01).merge_current_child_count);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge.merge_child_count == 3);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge.merge_current_child_count == 0, ProfInst.node(PME_PARENT_01).merge.merge_current_child_count);
     ASSERT_TEST(ProfInst.node(PME_PARENT_01).user.t_u == 0);
     ASSERT_TEST(ProfInst.node(PME_PARENT_01).user.sum == 4);
 
-    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge_child_count == 3);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge_current_child_count == 0);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.merge_child_count == 3);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.merge_current_child_count == 0);
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.t_u == 0);
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.sum == 4);
 
@@ -190,23 +190,23 @@ int main(int argc, char *argv[])
     PROF_MERGE_INFO();
     PROF_OUTPUT_REPORT(PROF_OUTPUT_FLAG_DELCARE);
 
-    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge_child_count == 2);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge_current_child_count == 0);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merge_child_count == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merge_current_child_count == 0);
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).user.t_u == 0);
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).user.sum == 2);
 
-    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge_child_count == 2);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge_current_child_count == 0, ProfInst.node(PME_CHILD_02).merge_current_child_count);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge.merge_child_count == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge.merge_current_child_count == 0, ProfInst.node(PME_CHILD_02).merge.merge_current_child_count);
     ASSERT_TEST(ProfInst.node(PME_CHILD_02).user.t_u == 0);
     ASSERT_TEST(ProfInst.node(PME_CHILD_02).user.sum == 2);
 
-    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge_child_count == 3);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge_current_child_count == 0, ProfInst.node(PME_PARENT_01).merge_current_child_count);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge.merge_child_count == 3);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge.merge_current_child_count == 0, ProfInst.node(PME_PARENT_01).merge.merge_current_child_count);
     ASSERT_TEST(ProfInst.node(PME_PARENT_01).user.t_u == 0);
     ASSERT_TEST(ProfInst.node(PME_PARENT_01).user.sum == 4);
 
-    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge_child_count == 3);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge_current_child_count == 0);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.merge_child_count == 3);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.merge_current_child_count == 0);
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.t_u == 0);
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.sum == 4);
 
