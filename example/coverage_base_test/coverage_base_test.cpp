@@ -88,7 +88,8 @@ int main(int argc, char *argv[])
 
     for (int i = PROF_COUNTER_NULL; i < PROF_COUNTER_MAX; i++)
     {
-        ASSERT_TEST(ProfInst.circles_per_ns(i) > 0.000001, "i=", i); //clock maybe E-05 
+        ASSERT_TEST(ProfInst.counter_particle_for_ns(i) > 0.1, "i=", i); //CPU 10Ghz; 0.1ns  
+        ASSERT_TEST(ProfInst.counter_particle_for_ns(i) < 1000*1000*1000, "i=", i); //the clock particle is second ?  
     }
     
     int compact_len = (int)ProfInst.compact_buffer().offset();
@@ -241,13 +242,13 @@ int main(int argc, char *argv[])
 
             ASSERT_TEST(ProfInst.node(decl_id).cpu.c == sleep_count*2, "i=", i);
 
-            double sum = ProfInst.node(decl_id).cpu.sum * ProfInst.circles_per_ns(i);
-            double dv = ProfInst.node(decl_id).cpu.dv * ProfInst.circles_per_ns(i);
-            double sm = ProfInst.node(decl_id).cpu.sm * ProfInst.circles_per_ns(i);
-            double h_sm = ProfInst.node(decl_id).cpu.h_sm * ProfInst.circles_per_ns(i);
-            double l_sm = ProfInst.node(decl_id).cpu.l_sm * ProfInst.circles_per_ns(i);
-            double max_u = ProfInst.node(decl_id).cpu.max_u * ProfInst.circles_per_ns(i);
-            double min_u = ProfInst.node(decl_id).cpu.min_u * ProfInst.circles_per_ns(i);
+            double sum = ProfInst.node(decl_id).cpu.sum * ProfInst.counter_particle_for_ns(i);
+            double dv = ProfInst.node(decl_id).cpu.dv * ProfInst.counter_particle_for_ns(i);
+            double sm = ProfInst.node(decl_id).cpu.sm * ProfInst.counter_particle_for_ns(i);
+            double h_sm = ProfInst.node(decl_id).cpu.h_sm * ProfInst.counter_particle_for_ns(i);
+            double l_sm = ProfInst.node(decl_id).cpu.l_sm * ProfInst.counter_particle_for_ns(i);
+            double max_u = ProfInst.node(decl_id).cpu.max_u * ProfInst.counter_particle_for_ns(i);
+            double min_u = ProfInst.node(decl_id).cpu.min_u * ProfInst.counter_particle_for_ns(i);
 
             ASSERT_TEST(std::abs(sum/1000.0/1000.0 - sum_ms) < dv_total_ms, "i=", i);
             ASSERT_TEST(dv / 1000.0 / 1000.0 < dv_total_ms + (high_ms - low_ms)*sleep_count, "i=", i);

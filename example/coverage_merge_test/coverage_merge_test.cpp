@@ -69,10 +69,10 @@ static inline void OutputLog(const ProfSerializer& serializer)
 int check_merge_to_count(int node_id)
 {
     int ret = 0;
-    for (int i = 0; i < ProfInst.merge_to_size(); i++)
+    for (int i = 0; i < ProfInst.actived_merge_size(); i++)
     {
-        int leaf_id = ProfInst.merge_to()[i];
-        if (ProfInst.node(leaf_id).merge.merge_to == node_id)
+        int leaf_id = ProfInst.actived_merge_nodes()[i];
+        if (ProfInst.node(leaf_id).merge.actived_merge_nodes == node_id)
         {
             ret++;
         }

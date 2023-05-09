@@ -86,7 +86,7 @@ struct ProfUser
 
 struct ProfMerge
 {
-    int merge_to;
+    int actived_merge_nodes;
     int merge_child_count;
     int merge_current_child_count;
 };
@@ -181,44 +181,24 @@ public:
     long long init_timestamp_;
     long long last_timestamp_;
 public:
-
-    ProfRecord() : compact_buffer_(compact_string_, max_compact_string_size())
-    {
-        memset(nodes_, 0, sizeof(nodes_));
-        merge_to_size_ = 0;
-        memset(circles_per_ns_, 0, sizeof(circles_per_ns_));
-        declare_reg_end_id_ = node_declare_begin_id();
-
-        output_ = &ProfRecord::default_output;  //set default log;
-
-        init_timestamp_ = 0;
-        last_timestamp_ = 0;
-        static_assert(max_compact_string_size() > 150, "");
-        unknown_desc_ = 0;
-        compact_buffer_.push_string("unknown");
-        compact_buffer_.push_char('\0');
-        reserve_desc_ = (int)compact_buffer_.offset();
-        compact_buffer_.push_string("reserve");
-        compact_buffer_.push_char('\0');
-        no_name_space_ = (int)compact_buffer_.offset();
-        compact_buffer_.push_string("the string of store name is too small..");
-        no_name_space_len_ = (int)(compact_buffer_.offset() - no_name_space_);
-        compact_buffer_.push_char('\0');
-        desc_ = 0;
-
-    };
     static inline ProfRecord& instance()
     {
         static ProfRecord inst;
         return inst;
     }
-    inline int init(const char* desc);
-    inline int build_jump_path();
-    inline int regist_node(int idx, const char* desc, unsigned int counter, bool resident, bool re_reg);
-    inline int rename_node(int idx, const char* desc);
-    inline const char* node_name(int idx);
-    inline int bind_childs(int idx, int child);
-    inline int bind_merge(int to, int child);
+
+public:
+    ProfRecord();
+    int init(const char* desc);
+    
+    int regist_node(int idx, const char* desc, unsigned int counter, bool resident, bool re_reg);
+    const char* node_name(int idx);
+
+    int bind_childs(int idx, int child);
+    int build_jump_path();
+
+    int bind_merge(int to, int child);
+    void do_merge();
 
     PROF_ALWAYS_INLINE void reset_cpu(int idx)
     {
@@ -254,6 +234,7 @@ public:
         reset_timer(idx);
         reset_user(idx);
     }
+
     void clean_node_info_range(int first_idx, int end_idx, bool keep_resident = true)
     {
         for (int idx = first_idx; idx < end_idx; idx++)
@@ -399,67 +380,7 @@ public:
     }
 
 
-    void do_merge()
-    {
-        ProfCounter<PROF_COUNTER_DEFAULT> cost;
-        cost.start();
-        for (int i = 0; i < merge_to_size_; i++)
-        {
-            int leaf_id = merge_to_[i];
-            ProfNode& leaf = nodes_[leaf_id];
-            ProfNode* node = NULL;
-            long long append_cpu = 0;
-            long long append_mem = 0;
-            long long append_user = 0;
-            int node_id = 0;
-            node = &nodes_[leaf.merge.merge_to];
-            append_cpu = leaf.cpu.t_u;
-            append_mem = leaf.mem.t_u;
-            append_user = leaf.user.t_u;
-            node_id = leaf.merge.merge_to;
-            leaf.cpu.t_u = 0;
-            leaf.mem.t_u = 0;
-            leaf.user.t_u = 0;
-            do
-            {
-                node->cpu.t_u += append_cpu;
-                node->mem.t_u += append_mem;
-                node->user.t_u += append_user;
-                node->merge.merge_current_child_count++;
-                if (node->merge.merge_current_child_count >= node->merge.merge_child_count)
-                {
-                    node->merge.merge_current_child_count = 0;
-                    append_cpu = node->cpu.t_u;
-                    append_mem = node->mem.t_u;
-                    append_user = node->user.t_u;
-                    if (append_cpu > 0)
-                    {
-                        call_cpu_full(node_id, append_cpu);
-                    }
-                    if (append_mem > 0)
-                    {
-                        call_mem(node_id, 1, append_mem);
-                    }
-                    if (append_user > 0)
-                    {
-                        call_user(node_id, 1, append_user);
-                    }
-                    node->cpu.t_u = 0;
-                    node->mem.t_u = 0;
-                    node->user.t_u = 0;
-                    if (node->merge.merge_to == 0)
-                    {
-                        break;
-                    }
-                    node_id = node->merge.merge_to;
-                    node = &nodes_[node->merge.merge_to];
-                    continue;
-                }
-                break;
-            } while (true);
-        }
-        call_cpu(INNER_PROF_MERGE_COST, cost.stop_and_save().cycles());
-    }
+    
 
     //µÝ¹éÕ¹¿ª  
     int recursive_serialize(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializer& serializer);
@@ -472,10 +393,16 @@ public:
     int output_temp_record(const char* opt_name);
 
 
+public:
+    ProfSerializer& compact_buffer() { return compact_buffer_; }
+    ProfNode& node(int idx) { return nodes_[idx]; }
+    
+    double counter_particle_for_ns(int t) { return  counter_particle_for_ns_[t == PROF_COUNTER_NULL ? PROF_COUNTER_DEFAULT : t]; }
 
 
 
 
+ //output interface
 public:
     void set_output(Output func) { output_ = func; }
 protected:
@@ -484,20 +411,22 @@ protected:
 private:
     Output output_;
 
+//merge data and interface 
 public:
-    ProfSerializer& compact_buffer() { return compact_buffer_; }
-    ProfNode& node(int idx) { return nodes_[idx]; }
-    const char* desc() const { return &compact_string_[desc_]; }
-    double circles_per_ns(int t) { return  circles_per_ns_[t == PROF_COUNTER_NULL ? PROF_COUNTER_DEFAULT : t]; }
-    std::array<int, node_end_id()>& merge_to() { return merge_to_; }
-    int merge_to_size() { return merge_to_size_; }
+    std::array<int, node_end_id()>& actived_merge_nodes() { return actived_merge_node_; }
+    int actived_merge_size() { return actived_merge_size_; }
 private:
-    ProfNode nodes_[node_end_id()];
-    int desc_;
-    std::array<int, node_end_id()> merge_to_;
-    int merge_to_size_;
-    double circles_per_ns_[PROF_COUNTER_MAX];
-    int declare_reg_end_id_;
+    std::array<int, node_end_id()> actived_merge_node_;
+    int actived_merge_size_;
+
+
+//name string  
+protected:
+    int rename_node(int idx, const char* desc);
+    const char* report_title() const { return &compact_string_[report_title_]; }
+
+private:
+    int report_title_;
     char compact_string_[max_compact_string_size()];
     ProfSerializer compact_buffer_;
     int unknown_desc_;
@@ -505,107 +434,39 @@ private:
     int no_name_space_;
     int no_name_space_len_;
 
+private:
+    ProfNode nodes_[node_end_id()];
+    int declare_reg_end_id_;
+    double counter_particle_for_ns_[PROF_COUNTER_MAX];
 };
 
-
-
 template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::bind_childs(int idx, int cidx)
+ProfRecord<INST, RESERVE, DECLARE>::ProfRecord() : compact_buffer_(compact_string_, max_compact_string_size())
 {
-    if (idx < node_begin_id() || idx >= node_end_id() || cidx < node_begin_id() || cidx >= node_end_id())
-    {
-        return -1;
-    }
+    memset(nodes_, 0, sizeof(nodes_));
+    actived_merge_size_ = 0;
+    memset(counter_particle_for_ns_, 0, sizeof(counter_particle_for_ns_));
+    declare_reg_end_id_ = node_declare_begin_id();
 
-    if (idx == cidx)
-    {
-        return -2;  
-    }
+    output_ = &ProfRecord::default_output;  //set default log;
 
-    ProfNode& node = nodes_[idx];
-    ProfNode& child = nodes_[cidx];
-    if (!node.active || !child.active)
-    {
-        return -3; //regist method has memset all info ; 
-    }
-    if (node.show.first_child == 0)
-    {
-        node.show.first_child = cidx;
-        node.show.child_count = 1;
-    }
-    else 
-    {
-        if (cidx < node.show.first_child)
-        {
-            node.show.child_count += node.show.first_child - cidx;
-            node.show.first_child = cidx;
-        }
-        else if (cidx >= node.show.first_child + node.show.child_count)
-        {
-            node.show.child_count = cidx - node.show.first_child + 1;
-        }
-    }
-    
-    child.show.parent = idx;
-    return 0;
-}
+    init_timestamp_ = 0;
+    last_timestamp_ = 0;
+    static_assert(max_compact_string_size() > 150, "");
+    unknown_desc_ = 0;
+    compact_buffer_.push_string("unknown");
+    compact_buffer_.push_char('\0');
+    reserve_desc_ = (int)compact_buffer_.offset();
+    compact_buffer_.push_string("reserve");
+    compact_buffer_.push_char('\0');
+    no_name_space_ = (int)compact_buffer_.offset();
+    compact_buffer_.push_string("the string of store name is too small..");
+    no_name_space_len_ = (int)(compact_buffer_.offset() - no_name_space_);
+    compact_buffer_.push_char('\0');
+    report_title_ = 0;
 
+};
 
-
-template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
-{
-    if (child < node_begin_id() || child >= node_end_id() || to < node_begin_id() || to >= node_end_id())
-    {
-        return -1;
-    }
-
-    if (child == to)
-    {
-        return -2;  
-    }
-    if (merge_to_size_ >= node_end_id())
-    {
-        return -3;
-    }
-    ProfNode& node = nodes_[child];
-    ProfNode& to_node = nodes_[to];
-    if (!node.active || !to_node.active)
-    {
-        return -3; //regist method has memset all info ; 
-    }
-
-    //change merge to;  
-    if (node.merge.merge_to != 0)
-    {
-        return -4;
-    }
-
-    to_node.merge.merge_child_count++;
-    node.merge.merge_to = to;
-
-    if (node.merge.merge_child_count > 0)
-    {
-        return 0;
-    }
-
-    if (to_node.merge.merge_to != 0)
-    {
-        for (int i = 0; i < merge_to_size_; i++)
-        {
-            if (merge_to_[i] == to)
-            {
-                merge_to_[i] = child;
-                return 0;
-            }
-        }
-    }
-    
-
-    
-    merge_to_[merge_to_size_++] = child;
-    return 0;
-}
 
 
 template<int INST, int RESERVE, int DECLARE>
@@ -613,11 +474,11 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* desc)
 {
     if (desc == NULL || compact_buffer_.is_full())
     {
-        desc_ = 0;
+        report_title_ = 0;
     }
     else
     {
-        desc_ = (int)compact_buffer_.offset();
+        report_title_ = (int)compact_buffer_.offset();
         compact_buffer_.push_string("desc");
         compact_buffer_.push_char('\0');
         compact_buffer_.closing_string();
@@ -628,21 +489,21 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* desc)
     last_timestamp_ = time(NULL);
     init_timestamp_ = time(NULL);
 
-    circles_per_ns_[PROF_COUNTER_NULL] = 0;
-    circles_per_ns_[PROF_COUNTER_SYS] = prof_get_time_inverse_frequency<PROF_COUNTER_SYS>();
-    circles_per_ns_[PROF_COUNTER_CLOCK] = prof_get_time_inverse_frequency<PROF_COUNTER_CLOCK>();
-    circles_per_ns_[PROF_CONNTER_CHRONO] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO>();
-    circles_per_ns_[PROF_CONNTER_CHRONO_STEADY] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_STEADY>();
-    circles_per_ns_[PROF_CONNTER_CHRONO_SYS] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_SYS>();
-    circles_per_ns_[PROF_COUNTER_RDTSC] = prof_get_time_inverse_frequency<PROF_COUNTER_RDTSC>();
-    circles_per_ns_[PROF_COUNTER_RDTSC_BTB] = circles_per_ns_[PROF_COUNTER_RDTSC];
-    circles_per_ns_[PROF_COUNTER_RDTSCP] = circles_per_ns_[PROF_COUNTER_RDTSC];
-    circles_per_ns_[PROF_COUNTER_RDTSC_MFENCE] = circles_per_ns_[PROF_COUNTER_RDTSC];
-    circles_per_ns_[PROF_COUNTER_RDTSC_MFENCE_BTB] = circles_per_ns_[PROF_COUNTER_RDTSC];
-    circles_per_ns_[PROF_COUNTER_RDTSC_NOFENCE] = circles_per_ns_[PROF_COUNTER_RDTSC];
-    circles_per_ns_[PROF_COUNTER_RDTSC_PURE] = circles_per_ns_[PROF_COUNTER_RDTSC];
-    circles_per_ns_[PROF_COUNTER_RDTSC_LOCK] = circles_per_ns_[PROF_COUNTER_RDTSC];
-    circles_per_ns_[PROF_COUNTER_NULL] = circles_per_ns_[PROF_COUNTER_DEFAULT];
+    counter_particle_for_ns_[PROF_COUNTER_NULL] = 0;
+    counter_particle_for_ns_[PROF_COUNTER_SYS] = prof_get_time_inverse_frequency<PROF_COUNTER_SYS>();
+    counter_particle_for_ns_[PROF_COUNTER_CLOCK] = prof_get_time_inverse_frequency<PROF_COUNTER_CLOCK>();
+    counter_particle_for_ns_[PROF_CONNTER_CHRONO] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO>();
+    counter_particle_for_ns_[PROF_CONNTER_CHRONO_STEADY] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_STEADY>();
+    counter_particle_for_ns_[PROF_CONNTER_CHRONO_SYS] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_SYS>();
+    counter_particle_for_ns_[PROF_COUNTER_RDTSC] = prof_get_time_inverse_frequency<PROF_COUNTER_RDTSC>();
+    counter_particle_for_ns_[PROF_COUNTER_RDTSC_BTB] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
+    counter_particle_for_ns_[PROF_COUNTER_RDTSCP] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
+    counter_particle_for_ns_[PROF_COUNTER_RDTSC_MFENCE] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
+    counter_particle_for_ns_[PROF_COUNTER_RDTSC_MFENCE_BTB] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
+    counter_particle_for_ns_[PROF_COUNTER_RDTSC_NOFENCE] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
+    counter_particle_for_ns_[PROF_COUNTER_RDTSC_PURE] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
+    counter_particle_for_ns_[PROF_COUNTER_RDTSC_LOCK] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
+    counter_particle_for_ns_[PROF_COUNTER_NULL] = counter_particle_for_ns_[PROF_COUNTER_DEFAULT];
 
     for (int i = node_begin_id(); i < node_reserve_end_id(); i++)
     {
@@ -900,6 +761,170 @@ void ProfRecord<INST, RESERVE, DECLARE>::reset_childs(int idx, int depth)
 }
 
 
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::bind_childs(int idx, int cidx)
+{
+    if (idx < node_begin_id() || idx >= node_end_id() || cidx < node_begin_id() || cidx >= node_end_id())
+    {
+        return -1;
+    }
+
+    if (idx == cidx)
+    {
+        return -2;
+    }
+
+    ProfNode& node = nodes_[idx];
+    ProfNode& child = nodes_[cidx];
+    if (!node.active || !child.active)
+    {
+        return -3; //regist method has memset all info ; 
+    }
+    if (node.show.first_child == 0)
+    {
+        node.show.first_child = cidx;
+        node.show.child_count = 1;
+    }
+    else
+    {
+        if (cidx < node.show.first_child)
+        {
+            node.show.child_count += node.show.first_child - cidx;
+            node.show.first_child = cidx;
+        }
+        else if (cidx >= node.show.first_child + node.show.child_count)
+        {
+            node.show.child_count = cidx - node.show.first_child + 1;
+        }
+    }
+
+    child.show.parent = idx;
+    return 0;
+}
+
+
+
+template<int INST, int RESERVE, int DECLARE>
+int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
+{
+    if (child < node_begin_id() || child >= node_end_id() || to < node_begin_id() || to >= node_end_id())
+    {
+        return -1;
+    }
+
+    if (child == to)
+    {
+        return -2;
+    }
+    if (actived_merge_size_ >= node_end_id())
+    {
+        return -3;
+    }
+    ProfNode& node = nodes_[child];
+    ProfNode& to_node = nodes_[to];
+    if (!node.active || !to_node.active)
+    {
+        return -3; //regist method has memset all info ; 
+    }
+
+    //change merge to;  
+    if (node.merge.actived_merge_nodes != 0)
+    {
+        return -4;
+    }
+
+    to_node.merge.merge_child_count++;
+    node.merge.actived_merge_nodes = to;
+
+    if (node.merge.merge_child_count > 0)
+    {
+        return 0;
+    }
+
+    if (to_node.merge.actived_merge_nodes != 0)
+    {
+        for (int i = 0; i < actived_merge_size_; i++)
+        {
+            if (actived_merge_node_[i] == to)
+            {
+                actived_merge_node_[i] = child;
+                return 0;
+            }
+        }
+    }
+
+
+
+    actived_merge_node_[actived_merge_size_++] = child;
+    return 0;
+}
+
+
+template<int INST, int RESERVE, int DECLARE>
+void ProfRecord<INST, RESERVE, DECLARE>::do_merge()
+{
+    ProfCounter<PROF_COUNTER_DEFAULT> cost;
+    cost.start();
+    for (int i = 0; i < actived_merge_size_; i++)
+    {
+        int leaf_id = actived_merge_node_[i];
+        ProfNode& leaf = nodes_[leaf_id];
+        ProfNode* node = NULL;
+        long long append_cpu = 0;
+        long long append_mem = 0;
+        long long append_user = 0;
+        int node_id = 0;
+        node = &nodes_[leaf.merge.actived_merge_nodes];
+        append_cpu = leaf.cpu.t_u;
+        append_mem = leaf.mem.t_u;
+        append_user = leaf.user.t_u;
+        node_id = leaf.merge.actived_merge_nodes;
+        leaf.cpu.t_u = 0;
+        leaf.mem.t_u = 0;
+        leaf.user.t_u = 0;
+        do
+        {
+            node->cpu.t_u += append_cpu;
+            node->mem.t_u += append_mem;
+            node->user.t_u += append_user;
+            node->merge.merge_current_child_count++;
+            if (node->merge.merge_current_child_count >= node->merge.merge_child_count)
+            {
+                node->merge.merge_current_child_count = 0;
+                append_cpu = node->cpu.t_u;
+                append_mem = node->mem.t_u;
+                append_user = node->user.t_u;
+                if (append_cpu > 0)
+                {
+                    call_cpu_full(node_id, append_cpu);
+                }
+                if (append_mem > 0)
+                {
+                    call_mem(node_id, 1, append_mem);
+                }
+                if (append_user > 0)
+                {
+                    call_user(node_id, 1, append_user);
+                }
+                node->cpu.t_u = 0;
+                node->mem.t_u = 0;
+                node->user.t_u = 0;
+                if (node->merge.actived_merge_nodes == 0)
+                {
+                    break;
+                }
+                node_id = node->merge.actived_merge_nodes;
+                node = &nodes_[node->merge.actived_merge_nodes];
+                continue;
+            }
+            break;
+        } while (true);
+    }
+    call_cpu(INNER_PROF_MERGE_COST, cost.stop_and_save().cycles());
+}
+
+
+
 
 template<int INST, int RESERVE, int DECLARE>
 int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializer& serializer)
@@ -944,7 +969,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
 
     const char* desc_name = &compact_string_[node.desc.node_name];
     size_t desc_len = node.desc.node_name_len;
-    double cpu_rate = circles_per_ns(node.desc.counter_type);
+    double cpu_rate = counter_particle_for_ns(node.desc.counter_type);
     if (opt_name != NULL)
     {
         desc_name = opt_name;
@@ -1195,7 +1220,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::output_report(unsigned int flags)
 
     serializer.push_char('=', 30);
     serializer.push_char('\t');
-    serializer.push_string(desc());
+    serializer.push_string(report_title());
     serializer.push_string(STRLEN(" begin output: "));
     serializer.push_now_date();
     serializer.push_char('\t');
