@@ -191,7 +191,7 @@ private:
 // -------
 
 //初始化全局实例并启动该实例  
-#define PROF_INIT(desc) ProfInst.init(desc)   
+#define PROF_INIT(title) ProfInst.init(title)   
 
 //[option] 对注册好的条目进行跳点优化; 不执行则不获得优化  
 //放在注册完所有条目后执行, 否则优化只能覆盖执行时已经注册的条目(全量覆写型构建跳点, 无副作用)  
@@ -319,7 +319,7 @@ private:
 #define PROF_REG_AND_BIND_MERGE(id, cid) 
 #define PROF_REG_AND_BIND_CHILD_AND_MERGE(id, cid) 
 
-#define PROF_INIT(desc) 
+#define PROF_INIT(title) 
 #define PROF_BUILD_JUMP_PATH()
 #define PROF_SET_OUTPUT(log_fun) 
 

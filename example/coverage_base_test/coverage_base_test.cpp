@@ -101,8 +101,8 @@ int main(int argc, char *argv[])
         ASSERT_TEST(ret == 0);
         ASSERT_TEST(ProfInst.node(decl_id).active);
         ASSERT_TEST(ProfInst.compact_buffer().offset()== (size_t)compact_len);
-        ASSERT_TEST(ProfInst.node(decl_id).desc.counter_type == i);
-        ASSERT_TEST(ProfInst.node(decl_id).desc.resident == true);
+        ASSERT_TEST(ProfInst.node(decl_id).traits.counter_type == i);
+        ASSERT_TEST(ProfInst.node(decl_id).traits.resident == true);
     }
 
     
@@ -117,19 +117,19 @@ int main(int argc, char *argv[])
         ASSERT_TEST(ret == 0);
         ASSERT_TEST(ProfInst.node(decl_id).active);
         ASSERT_TEST(ProfInst.compact_buffer().offset() == (size_t)compact_len + (size_t)buf_len + 1);
-        ASSERT_TEST(ProfInst.node(decl_id).desc.counter_type == i);
-        ASSERT_TEST(ProfInst.node(decl_id).desc.resident == false);
+        ASSERT_TEST(ProfInst.node(decl_id).traits.counter_type == i);
+        ASSERT_TEST(ProfInst.node(decl_id).traits.resident == false);
 
 
-        int node_name_id = ProfInst.node(decl_id).desc.node_name;
+        int name_id = ProfInst.node(decl_id).traits.name;
         
-        ASSERT_TEST(node_name_id >= 0);
-        ASSERT_TEST(node_name_id <= (int)ProfInst.compact_buffer().offset());
+        ASSERT_TEST(name_id >= 0);
+        ASSERT_TEST(name_id <= (int)ProfInst.compact_buffer().offset());
 
-        const char* node_name = &ProfInst.compact_buffer().buff()[node_name_id];
+        const char* name = &ProfInst.compact_buffer().buff()[name_id];
 
-        ASSERT_TEST(strlen(node_name) == (size_t)ProfInst.node(decl_id).desc.node_name_len);
-        ASSERT_TEST(strcmp(node_name, buf) == 0);
+        ASSERT_TEST(strlen(name) == (size_t)ProfInst.node(decl_id).traits.name_len);
+        ASSERT_TEST(strcmp(name, buf) == 0);
     }
 
 
