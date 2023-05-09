@@ -327,7 +327,7 @@ int main(int argc, char* argv[])
 
 
         // 合并条目   
-        PROF_MERGE_INFO();
+        PROF_DO_MERGE();
 
         // 输出报告(只输出<声明条目>)  
         printf("%s", "scene 10 report\n");

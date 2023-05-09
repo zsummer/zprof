@@ -1,11 +1,12 @@
-release zprof version date:2023-05-09 14:58:03
+release zprof version date:2023-05-09 15:11:19
 
 git log:
-commit 11da171c1b429373dec76462a2f1fdd2b1055708
+commit 0b140d763f431dd7171a1fa7e1e8264103d88f99
 Author: zsummer <yawei.zhang@foxmail.com>
-Date:   Tue May 9 14:57:38 2023 +0800
+Date:   Tue May 9 14:58:42 2023 +0800
 
-    clean test warning
+    dist
 
- example/coverage_base_test/coverage_base_test.cpp | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ dist/include/zprof/VERSION |  14 +-
+ dist/include/zprof/zprof.h | 667 ++++++++++++++++++++++++++-------------------
+ 2 files changed, 391 insertions(+), 290 deletions(-)

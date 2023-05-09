@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.merge_child_count == 3);
 
 
-    PROF_MERGE_INFO();
+    PROF_DO_MERGE();
 
 
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merge_child_count == 2);
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.sum == 4);
 
 
-    PROF_MERGE_INFO();
+    PROF_DO_MERGE();
     PROF_OUTPUT_REPORT(PROF_OUTPUT_FLAG_DELCARE);
 
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merge_child_count == 2);

@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 200);
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
 
-        PROF_MERGE_INFO();
+        PROF_DO_MERGE();
         PROF_OUTPUT_REPORT();
 
         PROF_CALL_CPU(ENUM_MERGE_CHILD1, 100);
@@ -145,12 +145,12 @@ int main(int argc, char *argv[])
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 200);
         PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
 
-        PROF_MERGE_INFO();
+        PROF_DO_MERGE();
         PROF_OUTPUT_REPORT();
 
 
         PROF_CLEAN_DECLARE();
-        PROF_MERGE_INFO();
+        PROF_DO_MERGE();
         PROF_OUTPUT_REPORT();
 
 
@@ -794,7 +794,7 @@ int main(int argc, char *argv[])
 
     PROF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
-    PROF_MERGE_INFO();
+    PROF_DO_MERGE();
     PROF_OUTPUT_REPORT();
     PROF_OUTPUT_SELF_MEM("now memory");
 
@@ -802,7 +802,7 @@ int main(int argc, char *argv[])
     PROF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();
 
-    PROF_MERGE_INFO();
+    PROF_DO_MERGE();
     PROF_OUTPUT_REPORT();
 
     for (size_t i = 0; i < 1000; i++)
@@ -847,7 +847,7 @@ int main(int argc, char *argv[])
     }
     for (size_t i = 0; i < 1; i++)
     {
-        PROF_MERGE_INFO();
+        PROF_DO_MERGE();
         PROF_OUTPUT_REPORT();
     }
     for (size_t i = 0; i < 1000; i++)

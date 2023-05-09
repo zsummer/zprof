@@ -2572,7 +2572,7 @@ private:
 
 //执行性能数据的层级合并 
 //合并层级进行了扁平压缩 
-#define PROF_MERGE_INFO() ProfInst.do_merge()  
+#define PROF_DO_MERGE() ProfInst.do_merge()  
 
 //清零<保留条目>信息(常驻条目除外)  
 #define PROF_CLEAN_RESERVE(...) ProfInst.clean_reserve_info(__VA_ARGS__)  
@@ -2694,7 +2694,7 @@ private:
 #define PROF_RESET_DECLARE() 
 #define PROF_RESET_ANON() 
 #define PROF_RESET_CHILD(idx) 
-#define PROF_MERGE_INFO() 
+#define PROF_DO_MERGE() 
 
 
 #define PROF_CALL_CPU_SAMPLE(idx, cost) 
