@@ -66,13 +66,13 @@ static inline void OutputLog(const ProfSerializer& serializer)
     LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(serializer.buff(), (int)serializer.offset());
 }
 
-int check_merge_to_count(int node_id)
+int check_merge_to_count(int id)
 {
     int ret = 0;
-    for (int i = 0; i < ProfInst.actived_merge_size(); i++)
+    for (int i = 0; i < ProfInst.merge_leafs_size(); i++)
     {
-        int leaf_id = ProfInst.actived_merge_nodes()[i];
-        if (ProfInst.node(leaf_id).merge.to == node_id)
+        int leaf_id = ProfInst.merge_leafs()[i];
+        if (ProfInst.node(leaf_id).merge.to == id)
         {
             ret++;
         }
@@ -82,7 +82,7 @@ int check_merge_to_count(int node_id)
 
 enum ProfMergeEnum
 {
-    PME_BEGIN = ProfInstType::node_declare_begin_id() + 10 - ((ProfInstType::node_declare_begin_id() + 10)%10),
+    PME_BEGIN = ProfInstType::declare_begin_id() + 10 - ((ProfInstType::declare_begin_id() + 10)%10),
 
     PME_CHILD_CHILD_01,
     PME_CHILD_CHILD_02,
@@ -137,17 +137,17 @@ int main(int argc, char *argv[])
     PROF_BIND_CHILD_AND_MERGE(PME_PARENT_02, PME_CHILD_16);
 
 
-    PROF_CALL_USER(PME_CHILD_CHILD_01, 1, 1);
-    PROF_CALL_USER(PME_CHILD_CHILD_02, 1, 1);
-    PROF_CALL_USER(PME_CHILD_CHILD_11, 1, 1);
-    PROF_CALL_USER(PME_CHILD_CHILD_12, 1, 1);
+    PROF_RECORD_USER(PME_CHILD_CHILD_01, 1, 1);
+    PROF_RECORD_USER(PME_CHILD_CHILD_02, 1, 1);
+    PROF_RECORD_USER(PME_CHILD_CHILD_11, 1, 1);
+    PROF_RECORD_USER(PME_CHILD_CHILD_12, 1, 1);
 
 
 
-    PROF_CALL_USER(PME_CHILD_05, 1, 1);
-    PROF_CALL_USER(PME_CHILD_06, 1, 1);
-    PROF_CALL_USER(PME_CHILD_15, 1, 1);
-    PROF_CALL_USER(PME_CHILD_16, 1, 1);
+    PROF_RECORD_USER(PME_CHILD_05, 1, 1);
+    PROF_RECORD_USER(PME_CHILD_06, 1, 1);
+    PROF_RECORD_USER(PME_CHILD_15, 1, 1);
+    PROF_RECORD_USER(PME_CHILD_16, 1, 1);
 
     
     ASSERT_TEST(check_merge_to_count(PME_CHILD_01) == 2);

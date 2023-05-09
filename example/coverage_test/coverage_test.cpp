@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
     
     if (false)
     {
-        //const int test_len = (int)(ProfInst.compact_buffer().buff_len() - ProfInst.compact_buffer().offset() - 100);
+        //const int test_len = (int)(ProfInst.compact_writer().buff_len() - ProfInst.compact_writer().offset() - 100);
         const int test_len = 50 * 1000;
         char* buf = new char[test_len];
         for (size_t i = 0; i < test_len; i++)
@@ -96,10 +96,10 @@ int main(int argc, char *argv[])
         }
         buf[test_len -1] = '\0';
         
-        ProfInst.regist_node(ProfInst.node_reserve_begin_id(), buf, PROF_COUNTER_DEFAULT, false, true);
-        PROF_CALL_CPU(ProfInst.node_reserve_begin_id(), 0);
+        ProfInst.regist(ProfInst.reserve_begin_id(), buf, PROF_COUNTER_DEFAULT, false, true);
+        PROF_RECORD_CPU(ProfInst.reserve_begin_id(), 0);
         delete[]buf;
-        //PROF_CALL_CPU()
+        //PROF_RECORD_CPU()
         
     }
 #ifndef WIN32
@@ -122,34 +122,34 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_CALL_CPU(ENUM_MERGE_CHILD1, 100);
-        PROF_CALL_CPU(ENUM_MERGE_CHILD1, 106);
-        PROF_CALL_CPU(ENUM_MERGE_CHILD2, 200);
-        PROF_CALL_CPU(ENUM_MERGE_CHILD2, 300);
+        PROF_RECORD_CPU(ENUM_MERGE_CHILD1, 100);
+        PROF_RECORD_CPU(ENUM_MERGE_CHILD1, 106);
+        PROF_RECORD_CPU(ENUM_MERGE_CHILD2, 200);
+        PROF_RECORD_CPU(ENUM_MERGE_CHILD2, 300);
 
-        PROF_CALL_MEM(ENUM_MERGE_CHILD1, 1, 100);
-        PROF_CALL_MEM(ENUM_MERGE_CHILD1, 1, 106);
-        PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 200);
-        PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
-
-        PROF_DO_MERGE();
-        PROF_OUTPUT_REPORT();
-
-        PROF_CALL_CPU(ENUM_MERGE_CHILD1, 100);
-        PROF_CALL_CPU(ENUM_MERGE_CHILD1, 106);
-        PROF_CALL_CPU(ENUM_MERGE_CHILD2, 200);
-        PROF_CALL_CPU(ENUM_MERGE_CHILD2, 300);
-
-        PROF_CALL_MEM(ENUM_MERGE_CHILD1, 1, 100);
-        PROF_CALL_MEM(ENUM_MERGE_CHILD1, 1, 106);
-        PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 200);
-        PROF_CALL_MEM(ENUM_MERGE_CHILD2, 1, 300);
+        PROF_RECORD_MEM(ENUM_MERGE_CHILD1, 1, 100);
+        PROF_RECORD_MEM(ENUM_MERGE_CHILD1, 1, 106);
+        PROF_RECORD_MEM(ENUM_MERGE_CHILD2, 1, 200);
+        PROF_RECORD_MEM(ENUM_MERGE_CHILD2, 1, 300);
 
         PROF_DO_MERGE();
         PROF_OUTPUT_REPORT();
 
+        PROF_RECORD_CPU(ENUM_MERGE_CHILD1, 100);
+        PROF_RECORD_CPU(ENUM_MERGE_CHILD1, 106);
+        PROF_RECORD_CPU(ENUM_MERGE_CHILD2, 200);
+        PROF_RECORD_CPU(ENUM_MERGE_CHILD2, 300);
 
-        PROF_CLEAN_DECLARE();
+        PROF_RECORD_MEM(ENUM_MERGE_CHILD1, 1, 100);
+        PROF_RECORD_MEM(ENUM_MERGE_CHILD1, 1, 106);
+        PROF_RECORD_MEM(ENUM_MERGE_CHILD2, 1, 200);
+        PROF_RECORD_MEM(ENUM_MERGE_CHILD2, 1, 300);
+
+        PROF_DO_MERGE();
+        PROF_OUTPUT_REPORT();
+
+
+        PROF_RESET_DECLARE();
         PROF_DO_MERGE();
         PROF_OUTPUT_REPORT();
 
@@ -157,9 +157,9 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PROF_CALL_USER(ENUM_ENTRY, 1, 100);
-        PROF_CALL_USER(ENUM_ENTRY, 1, 102);
-        PROF_CALL_USER(ENUM_ENTRY, 1, 103);
+        PROF_RECORD_USER(ENUM_ENTRY, 1, 100);
+        PROF_RECORD_USER(ENUM_ENTRY, 1, 102);
+        PROF_RECORD_USER(ENUM_ENTRY, 1, 103);
     }
 
 
@@ -325,7 +325,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_SYS>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_SYS dis 1000w");
     }
@@ -338,7 +338,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_CLOCK>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_CLOCK dis 1000w");
     }
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_CONNTER_CHRONO>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_CONNTER_CHRONO dis 1000w");
     }
@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_PURE>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_PURE dis 1000w");
     }
@@ -377,7 +377,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_NOFENCE dis 1000w");
     }
@@ -390,7 +390,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC(lfence) dis 1000w");
     }
@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_BTB (lfence) dis 1000w");
     }
@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSCP>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSCP dis 20");
     }
@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_MFENCE dis 1000w");
     }
@@ -440,7 +440,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE_BTB>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_MFENCE_BTB dis 1000w");
     }
@@ -455,7 +455,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC_LOCK>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC_LOCK dis 1000w");
     }
@@ -470,7 +470,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
-            PROF_CALL_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
+            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | DEFAULT");
     }
@@ -483,7 +483,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
-            PROF_CALL_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
+            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_SYS");
     }
@@ -496,7 +496,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
-            PROF_CALL_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
+            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC dis 1000w | PROF_LEVEL_FAST | PROF_COUNTER_RDTSC_NOFENCE");
     }
@@ -527,7 +527,7 @@ int main(int argc, char *argv[])
             {
                 cycles += prof_get_time_cycle<PROF_COUNTER_RDTSC>();
             }
-            PROF_CALL_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
+            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_PROF_NULL, 1, cost.stop_and_save().cycles(), PROF_LEVEL_FAST);
         }
         PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_RDTSC(lfence) * 10 dis 1000w");
     }
@@ -552,28 +552,28 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_CALL_CPU_SAMPLE 1000w ");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_RECORD_CPU_SAMPLE 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_CPU_SAMPLE(ENUM_PROF_TEST, 1000);
+            PROF_RECORD_CPU_SAMPLE(ENUM_PROF_TEST, 1000);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_CALL_CPU_SAMPLE 1000w ");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_RECORD_CPU_SAMPLE 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_CPU_SAMPLE(ENUM_PROF_TEST, 1000);
+            PROF_RECORD_CPU_SAMPLE(ENUM_PROF_TEST, 1000);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_CALL_CPU 1000w ");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_RECORD_CPU 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_CPU(ENUM_PROF_TEST, 1000);
+            PROF_RECORD_CPU(ENUM_PROF_TEST, 1000);
         }
     }
 
@@ -582,7 +582,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_LEVEL_FAST 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, PROF_LEVEL_FAST);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, PROF_LEVEL_FAST);
         }
     }
     if (true)
@@ -590,7 +590,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_LEVEL_FAST 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, PROF_LEVEL_FAST);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, PROF_LEVEL_FAST);
         }
     }
 
@@ -599,7 +599,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_LEVEL_NORMAL 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, PROF_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, PROF_LEVEL_NORMAL);
         }
     }
 
@@ -608,7 +608,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_LEVEL_NORMAL 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, PROF_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, PROF_LEVEL_NORMAL);
         }
     }
 
@@ -617,7 +617,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_LEVEL_FULL 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, PROF_LEVEL_FULL);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, PROF_LEVEL_FULL);
         }
     }
 
@@ -626,7 +626,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "PROF_LEVEL_FULL 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, PROF_LEVEL_FULL);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, PROF_LEVEL_FULL);
         }
     }
 
@@ -635,7 +635,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "call mem 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_MEM(ENUM_PROF_TEST, 1, 1000);
+            PROF_RECORD_MEM(ENUM_PROF_TEST, 1, 1000);
         }
     }
 
@@ -646,7 +646,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 10000000; i++)
         {
             start = prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>() - start);
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call empty rdtsc btb");
     }
@@ -657,7 +657,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 10000000; i++)
         {
             start = prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>();
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>() - start);
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call nofence empty");
 
@@ -673,7 +673,7 @@ int main(int argc, char *argv[])
         {
             start = prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
             cycles = cycles / start + i;
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>() - start);
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call fdiv");
     }
@@ -687,7 +687,7 @@ int main(int argc, char *argv[])
         {
             start = prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>();
             cycles = cycles / start + i;
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>() - start);
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call fdiv no any fence");
     }
@@ -700,7 +700,7 @@ int main(int argc, char *argv[])
         {
             start = prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
             cycles = cycles * start;
-            PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>() - start);
+            PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call fmul by rdtsc btb");
     }
@@ -715,7 +715,7 @@ int main(int argc, char *argv[])
         {
             latom++;
         }
-        PROF_CALL_CPU(0, latom.load());
+        PROF_RECORD_CPU(0, latom.load());
     }
  
 
@@ -725,7 +725,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "call timer 1000w ");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_CALL_TIMER(ENUM_PROF_TEST, 1000);
+            PROF_RECORD_TIMER(ENUM_PROF_TEST, 1000);
         }
     }
 
@@ -736,11 +736,11 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 100; i++)
         {
             counter.start();
-            PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
+            PROF_RECORD_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         counter.start();
-        PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
+        PROF_RECORD_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
         PROF_OUTPUT_TEMP_RECORD("call timer sleep_for 10ms ");
     }
 
@@ -751,11 +751,11 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 100; i++)
         {
             counter.start();
-            PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
+            PROF_RECORD_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
             std::this_thread::sleep_for(std::chrono::nanoseconds(10 * 1000 * 1000));
         }
         counter.start();
-        PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
+        PROF_RECORD_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
         PROF_OUTPUT_TEMP_RECORD("call timer sleep_for 10*1000*1000ns(10ms) ");
     }
 
@@ -768,11 +768,11 @@ int main(int argc, char *argv[])
     for (int i = 0; i < 100; i++)
     {
         counter.start();
-        PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
+        PROF_RECORD_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
         nanosleep(&tim, &tim2);
     }
     counter.start();
-    PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
+    PROF_RECORD_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
     PROF_OUTPUT_TEMP_RECORD("call timer nanosleep 10*1000*1000ns(10ms)");
 
 #endif // WIN32
@@ -784,11 +784,11 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 20; i++)
         {
             counter.start();
-            PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
+            PROF_RECORD_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         counter.start();
-        PROF_CALL_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
+        PROF_RECORD_TIMER(ProfInstType::INNER_PROF_NULL, counter.start_val());
         PROF_OUTPUT_TEMP_RECORD("call timer sleep_for 100ms ");
     }
 

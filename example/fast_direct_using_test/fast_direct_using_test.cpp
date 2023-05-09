@@ -22,7 +22,7 @@
 
 enum ProfEnumType
 {
-    PROF_REG_BEGIN = ProfInstType::node_declare_begin_id() + 10, //reserve 10;  it's used scene 1~7 case  
+    PROF_REG_BEGIN = ProfInstType::declare_begin_id() + 10, //reserve 10;  it's used scene 1~7 case  
     PROF_REG_ALL_MATH,
     PROF_REG_INC,
     PROF_REG_SUB,
@@ -60,11 +60,11 @@ int main(int argc, char *argv[])
 
     //scene 2  
     //手动使用计时器 并记录到<注册条目>中 然后立刻输出该<条目>报告     
-    static const int scene_2_id = ProfInst.node_declare_begin_id();
+    static const int scene_2_id = ProfInst.declare_begin_id();
     if (true)
     {
         //注册ID  
-        ProfInst.regist_node(scene_2_id, "scene 2", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(scene_2_id, "scene 2", PROF_COUNTER_RDTSC, false, false);
 
         //计算耗时 
         ProfCounter<> cost;
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
         cost.stop_and_save();
 
         //记录到条目
-        ProfInst.call_cpu(scene_2_id, 1, cost.cycles());
+        ProfInst.record_cpu(scene_2_id, 1, cost.cycles());
 
         //立刻输出条目 
         ProfInst.output_one_record(scene_2_id);
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         //注册ID 
-        ProfInst.regist_node(scene_3_id, "scene 3", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(scene_3_id, "scene 3", PROF_COUNTER_RDTSC, false, false);
 
         //计算耗时并记录到scene_3_id 
         if (true)
@@ -167,13 +167,13 @@ int main(int argc, char *argv[])
         }
         cost.stop_and_save();
         
-        ProfInst.call_cpu(scene_6_tmp_id, 1, cost.cycles());
+        ProfInst.record_cpu(scene_6_tmp_id, 1, cost.cycles());
         ProfInst.output_temp_record("scene_6_tmp_id: total cost");
 
-        ProfInst.call_cpu(scene_6_tmp_id, 1000, inc_cost.cycles());
+        ProfInst.record_cpu(scene_6_tmp_id, 1000, inc_cost.cycles());
         ProfInst.output_temp_record("scene_6_tmp_id: per inc");
 
-        ProfInst.call_cpu(scene_6_tmp_id, 1000, cost.cycles() - inc_cost.cycles());
+        ProfInst.record_cpu(scene_6_tmp_id, 1000, cost.cycles() - inc_cost.cycles());
         ProfInst.output_temp_record("scene_6_tmp_id: per sub");
     }
 
@@ -188,8 +188,8 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        ProfInst.regist_node(scene_8_resident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, true, false);
-        ProfInst.regist_node(scene_8_unresident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(scene_8_resident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, true, false);
+        ProfInst.regist(scene_8_unresident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, false, false);
 
         ProfCounter<> cost;
         cost.start();
@@ -200,13 +200,13 @@ int main(int argc, char *argv[])
         }
         cost.stop_and_save();
         //写入记录信息  
-        ProfInst.call_cpu(scene_8_resident_id, 1000, cost.cycles());
-        ProfInst.call_cpu(scene_8_unresident_id, 1000, cost.cycles());
+        ProfInst.record_cpu(scene_8_resident_id, 1000, cost.cycles());
+        ProfInst.record_cpu(scene_8_unresident_id, 1000, cost.cycles());
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output report.\n");
         ProfInst.output_report(PROF_OUTPUT_FLAG_DELCARE);
         //清除unresident记录  
-        ProfInst.clean_declare_info(true);
+        ProfInst.reset_declare_node(true);
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output cleaned(unresident)  report.\n");
         ProfInst.output_report(PROF_OUTPUT_FLAG_DELCARE);
@@ -216,22 +216,22 @@ int main(int argc, char *argv[])
 
 
     //scene 10: pre 清除所有声明条目 
-    ProfInst.clean_declare_info(false);
+    ProfInst.reset_declare_node(false);
 
 
     //scene 10: 注册条目(适合嵌入到实际项目中而非demo/benchmark/test) 
     if (true)
     {
         //定义条目   
-        ProfInst.regist_node(PROF_REG_ALL_MATH, "all math", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist_node(PROF_REG_INC, "inc", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist_node(PROF_REG_SUB, "sub", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist_node(PROF_REG_MUL, "mul", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist_node(PROF_REG_DIV, "div", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_ALL_MATH, "all math", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_INC, "inc", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_SUB, "sub", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_MUL, "mul", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_DIV, "div", PROF_COUNTER_RDTSC, false, false);
 
-        ProfInst.regist_node(PROF_REG_VM_USE, "self vm use:", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist_node(PROF_REG_TIMMER, "timer 50ms", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist_node(PROF_REG_SELF_SIZE, "self memory size", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_VM_USE, "self vm use:", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_TIMMER, "timer 50ms", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_SELF_SIZE, "self memory size", PROF_COUNTER_RDTSC, false, false);
 
 
 
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
                 volatile size_t inc = 0;
                 inc++;
             }
-            ProfInst.call_cpu(PROF_REG_INC, 1000, cost.stop_and_save().cycles());
+            ProfInst.record_cpu(PROF_REG_INC, 1000, cost.stop_and_save().cycles());
 
             cost.start();
             for (size_t i = 0; i < 1000; i++)
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
                 volatile size_t sub = 0;
                 sub--;
             }
-            ProfInst.call_cpu(PROF_REG_SUB, 1000, cost.stop_and_save().cycles());
+            ProfInst.record_cpu(PROF_REG_SUB, 1000, cost.stop_and_save().cycles());
 
             cost.start();
             for (size_t i = 0; i < 1000; i++)
@@ -278,7 +278,7 @@ int main(int argc, char *argv[])
                 volatile size_t mul = i;
                 mul*=1000;
             }
-            ProfInst.call_cpu(PROF_REG_MUL, 1000, cost.stop_and_save().cycles());
+            ProfInst.record_cpu(PROF_REG_MUL, 1000, cost.stop_and_save().cycles());
 
             cost.start();
             for (size_t i = 0; i < 1000; i++)
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
                 volatile size_t div = i;
                 div /= 1000;
             }
-            ProfInst.call_cpu(PROF_REG_DIV, 1000, cost.stop_and_save().cycles());
+            ProfInst.record_cpu(PROF_REG_DIV, 1000, cost.stop_and_save().cycles());
         }
 
         //vm统计  
@@ -294,23 +294,23 @@ int main(int argc, char *argv[])
         {
             cost.start();
             //记录当前进程的vm使用情况  
-            ProfInst.call_vm(PROF_REG_VM_USE, prof_get_mem_use());
+            ProfInst.record_vm(PROF_REG_VM_USE, prof_get_mem_use());
 
-            //同时可以记录call_vm这行的消耗到同一条目下的cpu消耗信息中 
-            ProfInst.call_cpu(PROF_REG_VM_USE, cost.stop_and_save().cycles());
+            //同时可以记录record_vm这行的消耗到同一条目下的cpu消耗信息中 
+            ProfInst.record_cpu(PROF_REG_VM_USE, cost.stop_and_save().cycles());
         }
 
         //记录字节数量  
         if (true)
         {
-            ProfInst.call_mem(PROF_REG_SELF_SIZE, 1, sizeof(ProfInstType));
+            ProfInst.record_mem(PROF_REG_SELF_SIZE, 1, sizeof(ProfInstType));
         }
 
         //定时器稳定性
         for (size_t i = 0; i < 5; i++)
         {
             cost.start();
-            ProfInst.call_timer(PROF_REG_TIMMER, cost.start_val());
+            ProfInst.record_timer(PROF_REG_TIMMER, cost.start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
 

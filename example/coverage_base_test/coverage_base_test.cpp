@@ -64,7 +64,7 @@ while(0)
 
 #define START_PROF_COUNTER(T) ProfCounter<T> var_##T;  var_##T.start();
 #define RESTART_PROF_COUNTER(T) var_##T.start();
-#define CALL_PROF_COUNTER(T) ProfInst.call_cpu_full(ProfInst.node_declare_begin_id() + T, var_##T.stop_and_save().cycles());;
+#define RECORD_PROF_COUNTER(T) ProfInst.record_cpu_full(ProfInst.declare_begin_id() + T, var_##T.stop_and_save().cycles());;
 
 
 static inline void OutputLog(const ProfSerializer& serializer)
@@ -88,19 +88,19 @@ int main(int argc, char *argv[])
 
     for (int i = PROF_COUNTER_NULL; i < PROF_COUNTER_MAX; i++)
     {
-        ASSERT_TEST(ProfInst.counter_particle_for_ns(i) > 0.1, "i=", i); //CPU 10Ghz; 0.1ns  
-        ASSERT_TEST(ProfInst.counter_particle_for_ns(i) < 1000*1000*1000, "i=", i); //the clock particle is second ?  
+        ASSERT_TEST(ProfInst.particle_for_ns(i) > 0.1, "i=", i); //CPU 10Ghz; 0.1ns  
+        ASSERT_TEST(ProfInst.particle_for_ns(i) < 1000*1000*1000, "i=", i); //the clock particle is second ?  
     }
     
-    int compact_len = (int)ProfInst.compact_buffer().offset();
+    int compact_len = (int)ProfInst.compact_writer().offset();
     for (int i = PROF_COUNTER_NULL; i < PROF_COUNTER_MAX; i++)
     {
-        int decl_id = ProfInst.node_declare_begin_id() + i;
+        int decl_id = ProfInst.declare_begin_id() + i;
         ASSERT_TEST(!ProfInst.node(decl_id).active);
-        int ret = ProfInst.regist_node(decl_id, "reserve", i, true, false);
+        int ret = ProfInst.regist(decl_id, "reserve", i, true, false);
         ASSERT_TEST(ret == 0);
         ASSERT_TEST(ProfInst.node(decl_id).active);
-        ASSERT_TEST(ProfInst.compact_buffer().offset()== (size_t)compact_len);
+        ASSERT_TEST(ProfInst.compact_writer().offset()== (size_t)compact_len);
         ASSERT_TEST(ProfInst.node(decl_id).traits.counter_type == i);
         ASSERT_TEST(ProfInst.node(decl_id).traits.resident == true);
     }
@@ -108,15 +108,15 @@ int main(int argc, char *argv[])
     
     for (int i = PROF_COUNTER_NULL; i < PROF_COUNTER_MAX; i++)
     {
-        int decl_id = ProfInst.node_declare_begin_id() + i;
+        int decl_id = ProfInst.declare_begin_id() + i;
         char buf[100];
         sprintf(buf, "counter_%d", i);
         int buf_len = (int)strlen(buf);
-        int compact_len = (int)ProfInst.compact_buffer().offset();
-        int ret = ProfInst.regist_node(decl_id, buf, i, false, true);
+        int compact_len = (int)ProfInst.compact_writer().offset();
+        int ret = ProfInst.regist(decl_id, buf, i, false, true);
         ASSERT_TEST(ret == 0);
         ASSERT_TEST(ProfInst.node(decl_id).active);
-        ASSERT_TEST(ProfInst.compact_buffer().offset() == (size_t)compact_len + (size_t)buf_len + 1);
+        ASSERT_TEST(ProfInst.compact_writer().offset() == (size_t)compact_len + (size_t)buf_len + 1);
         ASSERT_TEST(ProfInst.node(decl_id).traits.counter_type == i);
         ASSERT_TEST(ProfInst.node(decl_id).traits.resident == false);
 
@@ -124,9 +124,9 @@ int main(int argc, char *argv[])
         int name_id = ProfInst.node(decl_id).traits.name;
         
         ASSERT_TEST(name_id >= 0);
-        ASSERT_TEST(name_id <= (int)ProfInst.compact_buffer().offset());
+        ASSERT_TEST(name_id <= (int)ProfInst.compact_writer().offset());
 
-        const char* name = &ProfInst.compact_buffer().buff()[name_id];
+        const char* name = &ProfInst.compact_writer().buff()[name_id];
 
         ASSERT_TEST(strlen(name) == (size_t)ProfInst.node(decl_id).traits.name_len);
         ASSERT_TEST(strcmp(name, buf) == 0);
@@ -183,19 +183,19 @@ int main(int argc, char *argv[])
             RESTART_PROF_COUNTER(PROF_COUNTER_RDTSC_LOCK);
 
             std::this_thread::sleep_for(std::chrono::milliseconds(low_ms));
-            CALL_PROF_COUNTER(PROF_COUNTER_SYS);
-            CALL_PROF_COUNTER(PROF_COUNTER_CLOCK);
-            CALL_PROF_COUNTER(PROF_CONNTER_CHRONO);
-            CALL_PROF_COUNTER(PROF_CONNTER_CHRONO_STEADY);
-            CALL_PROF_COUNTER(PROF_CONNTER_CHRONO_SYS);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_PURE);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_NOFENCE);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_BTB);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSCP);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_MFENCE);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_MFENCE_BTB);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_LOCK);
+            RECORD_PROF_COUNTER(PROF_COUNTER_SYS);
+            RECORD_PROF_COUNTER(PROF_COUNTER_CLOCK);
+            RECORD_PROF_COUNTER(PROF_CONNTER_CHRONO);
+            RECORD_PROF_COUNTER(PROF_CONNTER_CHRONO_STEADY);
+            RECORD_PROF_COUNTER(PROF_CONNTER_CHRONO_SYS);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_PURE);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_NOFENCE);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_BTB);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSCP);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_MFENCE);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_MFENCE_BTB);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_LOCK);
         }
 
 
@@ -221,34 +221,34 @@ int main(int argc, char *argv[])
 
             std::this_thread::sleep_for(std::chrono::milliseconds(high_ms));
 
-            CALL_PROF_COUNTER(PROF_COUNTER_SYS);
-            CALL_PROF_COUNTER(PROF_COUNTER_CLOCK);
-            CALL_PROF_COUNTER(PROF_CONNTER_CHRONO);
-            CALL_PROF_COUNTER(PROF_CONNTER_CHRONO_STEADY);
-            CALL_PROF_COUNTER(PROF_CONNTER_CHRONO_SYS);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_PURE);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_NOFENCE);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_BTB);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSCP);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_MFENCE);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_MFENCE_BTB);
-            CALL_PROF_COUNTER(PROF_COUNTER_RDTSC_LOCK);
+            RECORD_PROF_COUNTER(PROF_COUNTER_SYS);
+            RECORD_PROF_COUNTER(PROF_COUNTER_CLOCK);
+            RECORD_PROF_COUNTER(PROF_CONNTER_CHRONO);
+            RECORD_PROF_COUNTER(PROF_CONNTER_CHRONO_STEADY);
+            RECORD_PROF_COUNTER(PROF_CONNTER_CHRONO_SYS);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_PURE);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_NOFENCE);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_BTB);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSCP);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_MFENCE);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_MFENCE_BTB);
+            RECORD_PROF_COUNTER(PROF_COUNTER_RDTSC_LOCK);
         }
 
         for (int i = PROF_COUNTER_NULL+1; i < PROF_COUNTER_MAX; i++)
         {
-            int decl_id = ProfInst.node_declare_begin_id() + i;
+            int decl_id = ProfInst.declare_begin_id() + i;
 
             ASSERT_TEST(ProfInst.node(decl_id).cpu.c == sleep_count*2, "i=", i);
 
-            double sum = ProfInst.node(decl_id).cpu.sum * ProfInst.counter_particle_for_ns(i);
-            double dv = ProfInst.node(decl_id).cpu.dv * ProfInst.counter_particle_for_ns(i);
-            double sm = ProfInst.node(decl_id).cpu.sm * ProfInst.counter_particle_for_ns(i);
-            double h_sm = ProfInst.node(decl_id).cpu.h_sm * ProfInst.counter_particle_for_ns(i);
-            double l_sm = ProfInst.node(decl_id).cpu.l_sm * ProfInst.counter_particle_for_ns(i);
-            double max_u = ProfInst.node(decl_id).cpu.max_u * ProfInst.counter_particle_for_ns(i);
-            double min_u = ProfInst.node(decl_id).cpu.min_u * ProfInst.counter_particle_for_ns(i);
+            double sum = ProfInst.node(decl_id).cpu.sum * ProfInst.particle_for_ns(i);
+            double dv = ProfInst.node(decl_id).cpu.dv * ProfInst.particle_for_ns(i);
+            double sm = ProfInst.node(decl_id).cpu.sm * ProfInst.particle_for_ns(i);
+            double h_sm = ProfInst.node(decl_id).cpu.h_sm * ProfInst.particle_for_ns(i);
+            double l_sm = ProfInst.node(decl_id).cpu.l_sm * ProfInst.particle_for_ns(i);
+            double max_u = ProfInst.node(decl_id).cpu.max_u * ProfInst.particle_for_ns(i);
+            double min_u = ProfInst.node(decl_id).cpu.min_u * ProfInst.particle_for_ns(i);
 
             ASSERT_TEST(std::abs(sum/1000.0/1000.0 - sum_ms) < dv_total_ms, "i=", i);
             ASSERT_TEST(dv / 1000.0 / 1000.0 < dv_total_ms + (high_ms - low_ms)*sleep_count, "i=", i);

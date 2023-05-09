@@ -34,7 +34,7 @@ typedef float f32;
 
 enum MyTestEnum
 {
-    MY_DECLARE_BEGIN = ProfInstType::node_declare_begin_id(),
+    MY_DECLARE_BEGIN = ProfInstType::declare_begin_id(),
     NORMAL_NODE, 
 
     PARRENT_1,

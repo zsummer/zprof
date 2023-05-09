@@ -24,7 +24,7 @@
 
 enum MyEnum
 {
-    ENUM_PROF_TEST = ProfInstType::node_declare_begin_id(),
+    ENUM_PROF_TEST = ProfInstType::declare_begin_id(),
     ENUM_BAT_ALLOC_FREE,
     ENUM_ONE_TICK,
     ENUM_ENTRY,

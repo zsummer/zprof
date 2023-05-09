@@ -55,37 +55,37 @@ inline void ProfRecordWrap(int idx, long long count, long long cost)
 template<>
 inline void ProfRecordWrap<true, PROF_LEVEL_NORMAL>(int idx, long long count, long long cost)
 {
-    ProfInst.call_cpu(idx, count, cost);
+    ProfInst.record_cpu(idx, count, cost);
 }
 
 template<>
 inline void ProfRecordWrap<false, PROF_LEVEL_NORMAL>(int idx, long long count, long long cost)
 {
     (void)count;
-    ProfInst.call_cpu(idx, cost);
+    ProfInst.record_cpu(idx, cost);
 }
 template<>
 inline void ProfRecordWrap<true, PROF_LEVEL_FAST>(int idx, long long count, long long cost)
 {
-    ProfInst.call_cpu_no_sm(idx, count, cost);
+    ProfInst.record_cpu_no_sm(idx, count, cost);
 }
 template<>
 inline void ProfRecordWrap<false, PROF_LEVEL_FAST>(int idx, long long count, long long cost)
 {
     (void)count;
-    ProfInst.call_cpu_no_sm(idx, cost);
+    ProfInst.record_cpu_no_sm(idx, cost);
 }
 
 template<>
 inline void ProfRecordWrap<true, PROF_LEVEL_FULL>(int idx, long long count, long long cost)
 {
-    ProfInst.call_cpu_full(idx, count, cost);
+    ProfInst.record_cpu_full(idx, count, cost);
 }
 template<>
 inline void ProfRecordWrap<false, PROF_LEVEL_FULL>(int idx, long long count, long long cost)
 {
     (void)count;
-    ProfInst.call_cpu_full(idx, cost);
+    ProfInst.record_cpu_full(idx, cost);
 }
 
 template<long long COUNT>
@@ -158,16 +158,16 @@ private:
 // 条目注册和关系绑定   
 // -------
 //注册条目  
-#define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist_node(id, name, ct, resident, re_reg)  
+#define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist(id, name, ct, resident, re_reg)  
 
 //快速注册条目: 提供默认计时方式, 默认该条目不开启常驻模式, 一旦调用clear相关接口该条目记录的信息会被清零.  默认该条目未被注册过 当前为新注册  
-#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist_node(id, name, PROF_COUNTER_DEFAULT,  false, false)
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, PROF_COUNTER_DEFAULT,  false, false)
 
 //快速注册条目: 同上, 名字也默认提供 即ID自身    
 #define PROF_FAST_REGIST_NODE(id)  PROF_FAST_REGIST_NODE_ALIAS(id, #id)
 
 //快速注册条目: 同上 但是为常驻条目 
-#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist_node(id, #id, PROF_COUNTER_DEFAULT,  true, false)  
+#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, PROF_COUNTER_DEFAULT,  true, false)  
 
 //绑定展示层级(父子)关系  
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid) 
@@ -208,9 +208,9 @@ private:
 #define PROF_DO_MERGE() ProfInst.do_merge()  
 
 //清零<保留条目>信息(常驻条目除外)  
-#define PROF_CLEAN_RESERVE(...) ProfInst.clean_reserve_info(__VA_ARGS__)  
+#define PROF_RESET_RESERVE(...) ProfInst.reset_reserve_node(__VA_ARGS__)  
 //清零<注册条目>信息(常驻条目除外)  
-#define PROF_CLEAN_DECLARE(...) ProfInst.clean_declare_info(__VA_ARGS__)  
+#define PROF_RESET_DECLARE(...) ProfInst.reset_declare_node(__VA_ARGS__)  
 
 
 //--------
@@ -219,32 +219,32 @@ private:
 // -------
 
 //记录性能消耗信息 平均耗时约为4ns    
-#define PROF_CALL_CPU_SAMPLE(idx, cost) ProfInst.call_cpu(idx, cost)   
+#define PROF_RECORD_CPU_SAMPLE(idx, cost) ProfInst.record_cpu(idx, cost)   
 
 //记录性能消耗信息(携带总耗时和执行次数) 平均耗时约为6ns      
 //COUNT为常数 cost为总耗时, 根据记录等级选择性存储 平滑数据, 抖动偏差 等     ProfLevel:PROF_LEVEL_NORMAL  
-#define PROF_CALL_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL)  \
+#define PROF_RECORD_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL)  \
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>((int)(idx), (long long)(COUNT), (long long)cost)  
 //记录性能消耗信息: 同上, 但count非常数  
-#define PROF_CALL_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)  \
+#define PROF_RECORD_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)  \
         ProfRecordWrap<true, PROF_LEVEL>((int)(idx), (long long)(count), (long long)cost)
 
-//同PROF_CALL_CPU_SAMPLE  
-#define PROF_CALL_CPU(idx, cost) PROF_CALL_CPU_WRAP((idx), 1, (cost), PROF_LEVEL_NORMAL)
+//同PROF_RECORD_CPU_SAMPLE  
+#define PROF_RECORD_CPU(idx, cost) PROF_RECORD_CPU_WRAP((idx), 1, (cost), PROF_LEVEL_NORMAL)
 
 //记录内存字节数    
 //输出日志时 进行可读性处理 带k,m,g等单位  
-#define PROF_CALL_MEM(idx, count, mem) ProfInst.call_mem(idx, count, mem)  
+#define PROF_RECORD_MEM(idx, count, mem) ProfInst.record_mem(idx, count, mem)  
 
 //记录系统内存信息 包含vm, rss等  
-#define PROF_CALL_VM(idx, vm) ProfInst.call_vm(idx, vm)
-#define PROF_REFRESH_MEM(idx, count, mem) ProfInst.refresh_mem(idx, count, mem)
+#define PROF_RECORD_VM(idx, vm) ProfInst.record_vm(idx, vm)
+#define PROF_OVERWRITE_MEM(idx, count, mem) ProfInst.overwrite_mem(idx, count, mem)
 
 //记录定时器 比较特殊.  根据调用的前后间隔进行累加  
-#define PROF_CALL_TIMER(idx, stamp) ProfInst.call_timer(idx, stamp)  
+#define PROF_RECORD_TIMER(idx, stamp) ProfInst.record_timer(idx, stamp)  
 
 //记录用户自定义信息 没有额外处理   
-#define PROF_CALL_USER(idx, count, add) ProfInst.call_user(idx, count, add)
+#define PROF_RECORD_USER(idx, count, add) ProfInst.record_user(idx, count, add)
 
 
 //-------手动计时器-----------
@@ -264,7 +264,7 @@ private:
 #define PROF_STOP_AND_SAVE_COUNTER(var) var.stop_and_save()  
 
 //设置当前时间为定时器结束时间 并写入idx对应的条目中  
-#define PROF_STOP_AND_RECORD(idx, var) PROF_CALL_CPU_WRAP((idx), 1, (var).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
+#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
 
 
 
@@ -296,14 +296,14 @@ private:
 
 //其他立即输出
 #define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_RECORD_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_RECORD_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_RECORD_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_RECORD_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 
 //输出当前进程的vm/rss信息 
-#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
+#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
 
 
 #else
@@ -330,15 +330,15 @@ private:
 #define PROF_DO_MERGE() 
 
 
-#define PROF_CALL_CPU_SAMPLE(idx, cost) 
-#define PROF_CALL_CPU(idx, cost) 
-#define PROF_CALL_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL) 
-#define PROF_CALL_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)
-#define PROF_CALL_MEM(idx, count, mem) 
-#define PROF_CALL_VM(idx, vm) 
-#define PROF_REFRESH_MEM(idx, count, mem) 
-#define PROF_CALL_TIMER(idx, stamp) 
-#define PROF_CALL_USER(idx, count, add)
+#define PROF_RECORD_CPU_SAMPLE(idx, cost) 
+#define PROF_RECORD_CPU(idx, cost) 
+#define PROF_RECORD_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL) 
+#define PROF_RECORD_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)
+#define PROF_RECORD_MEM(idx, count, mem) 
+#define PROF_RECORD_VM(idx, vm) 
+#define PROF_OVERWRITE_MEM(idx, count, mem) 
+#define PROF_RECORD_TIMER(idx, stamp) 
+#define PROF_RECORD_USER(idx, count, add)
 
 #define PROF_DEFINE_COUNTER(var)  
 #define PROF_DEFINE_COUNTER_INIT(tc, start)  

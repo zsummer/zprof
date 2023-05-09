@@ -22,7 +22,7 @@
 
 enum ProfEnumType
 {
-    PROF_REG_BEGIN = ProfInstType::node_declare_begin_id() + 10, //reserve 10;  it's used scene 1~8 case  
+    PROF_REG_BEGIN = ProfInstType::declare_begin_id() + 10, //reserve 10;  it's used scene 1~8 case  
     PROF_REG_ALL_MATH,
     PROF_REG_INC,
     PROF_REG_SUB,
@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 
     //scene 2  
     //手动使用计时器 并记录到<注册条目>中 然后立刻输出该<条目>报告     
-    static const int scene_2_id = ProfInst.node_declare_begin_id();
+    static const int scene_2_id = ProfInst.declare_begin_id();
     if (true)
     {
         //注册ID  
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
         PROF_STOP_AND_SAVE_COUNTER(cost);
 
         //记录到条目
-        PROF_CALL_CPU(scene_2_id, cost.cycles());
+        PROF_RECORD_CPU(scene_2_id, cost.cycles());
 
         //立刻输出条目 
         PROF_OUTPUT_RECORD(scene_2_id);
@@ -166,11 +166,11 @@ int main(int argc, char* argv[])
         }
         PROF_STOP_AND_SAVE_COUNTER(cost);
 
-        PROF_CALL_CPU(scene_6_tmp_id, cost.cycles());
+        PROF_RECORD_CPU(scene_6_tmp_id, cost.cycles());
         PROF_OUTPUT_TEMP_RECORD("scene_6_tmp_id: total cost");
 
         //带count写入 
-        PROF_CALL_CPU_WRAP(scene_6_tmp_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(scene_6_tmp_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
         PROF_OUTPUT_TEMP_RECORD("scene_6_tmp_id: per inc");
 
         //同上 更方便  
@@ -204,15 +204,15 @@ int main(int argc, char* argv[])
         PROF_STOP_AND_SAVE_COUNTER(cost);
 
         //写入记录信息  
-        PROF_CALL_CPU_WRAP(scene_8_resident_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
-        PROF_CALL_CPU_WRAP(scene_8_unresident_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(scene_8_resident_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(scene_8_unresident_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
 
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output report.\n");  
         PROF_OUTPUT_REPORT(PROF_OUTPUT_FLAG_DELCARE);
 
         //清除unresident记录  
-        PROF_CLEAN_DECLARE();
+        PROF_RESET_DECLARE();
 
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output cleaned(unresident)  report.\n");
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
 
 
     //scene 10: pre 清除所有声明条目 
-    PROF_CLEAN_DECLARE(false);
+    PROF_RESET_DECLARE(false);
 
     //scene 10: 注册条目(适合嵌入到实际项目中而非demo/benchmark/test) 
     if (true)
@@ -270,7 +270,7 @@ int main(int argc, char* argv[])
                 volatile size_t inc = 0;
                 inc++;
             }
-            PROF_CALL_CPU_WRAP(PROF_REG_INC, 1000, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_INC, 1000, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
                 volatile size_t sub = 0;
                 sub--;
             }
-            PROF_CALL_CPU_WRAP(PROF_REG_SUB, 1000, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_SUB, 1000, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -286,7 +286,7 @@ int main(int argc, char* argv[])
                 volatile size_t mul = i;
                 mul *= 1000;
             }
-            PROF_CALL_CPU_WRAP(PROF_REG_MUL, 1000, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_MUL, 1000, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
                 volatile size_t div = i;
                 div /= 1000;
             }
-            PROF_CALL_CPU_WRAP(PROF_REG_DIV, 1000, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_DIV, 1000, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
         }
 
         //vm统计  
@@ -302,23 +302,23 @@ int main(int argc, char* argv[])
         {
             PROF_RESTART_COUNTER(cost);
             //记录当前进程的vm使用情况  
-            PROF_CALL_VM(PROF_REG_VM_USE, prof_get_mem_use());
+            PROF_RECORD_VM(PROF_REG_VM_USE, prof_get_mem_use());
 
-            //同时可以记录call_vm这行的消耗到同一条目下的cpu消耗信息中 
-            PROF_CALL_CPU_WRAP(PROF_REG_VM_USE, 1, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
+            //同时可以记录record_vm这行的消耗到同一条目下的cpu消耗信息中 
+            PROF_RECORD_CPU_WRAP(PROF_REG_VM_USE, 1, cost.stop_and_save().cycles(), PROF_LEVEL_NORMAL);
         }
 
         //记录字节数量  
         if (true)
         {
-            PROF_CALL_MEM(PROF_REG_SELF_SIZE, 1, sizeof(ProfInstType));
+            PROF_RECORD_MEM(PROF_REG_SELF_SIZE, 1, sizeof(ProfInstType));
         }
 
         //定时器稳定性
         for (size_t i = 0; i < 5; i++)
         {
             PROF_START_COUNTER(cost);
-            PROF_CALL_TIMER(PROF_REG_TIMMER, cost.start_val());
+            PROF_RECORD_TIMER(PROF_REG_TIMMER, cost.start_val());
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
 

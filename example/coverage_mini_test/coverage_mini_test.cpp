@@ -52,22 +52,22 @@ int main(int argc, char *argv[])
     PROF_OUTPUT_REPORT();
 
     //定时清空无指定驻留的数据, 开始新一轮测试
-    PROF_CLEAN_DECLARE();
+    PROF_RESET_DECLARE();
 
 
-    static int RENAME_ID = ProfInstType::node_declare_begin_id() + 10;
+    static int RENAME_ID = ProfInstType::declare_begin_id() + 10;
     PROF_FAST_REGIST_NODE(RENAME_ID);
-    for (int i = 0; i < ProfInst.max_compact_string_size(); i++)
+    for (int i = 0; i < ProfInst.compact_data_size(); i++)
     {
-        int ret = ProfInst.rename_node(RENAME_ID, "RENAME_ID");
+        int ret = ProfInst.rename(RENAME_ID, "RENAME_ID");
         if (ret != 0)
         {
             LogInfo() << "rename full. rename count:" << i;
-            PROF_CALL_VM(RENAME_ID, prof_get_mem_use());
+            PROF_RECORD_VM(RENAME_ID, prof_get_mem_use());
             PROF_OUTPUT_RECORD(RENAME_ID);
         }
     }
-    PROF_CALL_VM(RENAME_ID, prof_get_mem_use());
+    PROF_RECORD_VM(RENAME_ID, prof_get_mem_use());
     PROF_OUTPUT_RECORD(RENAME_ID);
 
     for (unsigned int i = 0; i < 64; i++)

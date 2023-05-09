@@ -133,139 +133,6 @@ struct ProfVM
     unsigned long long shr_size;
 };
 
-template<ProfCounterType T>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC>();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_PURE>();
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_LOCK>();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE>();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE_BTB>();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSCP>();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_CLOCK>();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_SYS>();
-
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO>();
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO_STEADY>();
-template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO_SYS>();
-
-
-// all frequency is per ns  
-template<ProfCounterType T>
-PROF_ALWAYS_INLINE double prof_get_time_frequency();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC>();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_BTB>();
-
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_NOFENCE>();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_PURE>();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_LOCK>();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_MFENCE>();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_MFENCE_BTB>();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSCP>();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_CLOCK>();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_SYS>();
-
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO>();
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO_STEADY>();
-template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO_SYS>();
-
-
-template<ProfCounterType T>
-PROF_ALWAYS_INLINE double prof_get_time_inverse_frequency();
-
-
-PROF_ALWAYS_INLINE ProfVM prof_get_mem_use();
-
-
-
-template<ProfCounterType T = PROF_COUNTER_DEFAULT>
-class ProfCounter
-{
-public:
-    ProfCounter()
-    {
-        start_val_ = 0;
-        cycles_ = 0;
-    }
-    ProfCounter(long long val)
-    {
-        start_val_ = val;
-        cycles_ = 0;
-    }
-    void start()
-    {
-        start_val_ = prof_get_time_cycle<T>();
-        cycles_ = 0;
-    }
-
-    ProfCounter& save()
-    {
-        cycles_ = prof_get_time_cycle<T>() - start_val_;
-        return *this;
-    }
-
-    ProfCounter& stop_and_save() { return save(); }
-
-    long long stop_val() { return start_val_ + cycles_; }
-    long long start_val() { return start_val_; }
-
-    long long cycles() { return cycles_; }
-    PROF_ALWAYS_INLINE long long duration_ns() { return (long long)(cycles_ * prof_get_time_inverse_frequency<T>()); }
-    double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
-
-    void set_start_val(long long val) { start_val_ = val; }
-    void set_cycles_val(long long cycles) { cycles_ = cycles; }
-private:
-    long long start_val_;
-    long long cycles_;
-};
-
 
 
 
@@ -275,13 +142,13 @@ private:
 
 
 template<ProfCounterType T>
-long long prof_get_time_cycle()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle()
 {
     return 0;
 }
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_RDTSC>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC>()
 {
 #ifdef WIN32
     _mm_lfence();
@@ -295,7 +162,7 @@ long long prof_get_time_cycle<PROF_COUNTER_RDTSC>()
 }
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>()
 {
 #ifdef WIN32
     long long ret;
@@ -313,7 +180,7 @@ long long prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>()
 
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>()
 {
 #ifdef WIN32
     return (long long)__rdtsc();
@@ -326,7 +193,7 @@ long long prof_get_time_cycle<PROF_COUNTER_RDTSC_NOFENCE>()
 }
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_RDTSC_PURE>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_PURE>()
 {
 #ifdef WIN32
     return (long long)__rdtsc();
@@ -339,7 +206,7 @@ long long prof_get_time_cycle<PROF_COUNTER_RDTSC_PURE>()
 }
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_RDTSC_LOCK>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_LOCK>()
 {
 #ifdef WIN32
     _mm_mfence();
@@ -354,7 +221,7 @@ long long prof_get_time_cycle<PROF_COUNTER_RDTSC_LOCK>()
 
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE>()
 {
 #ifdef WIN32
     long long ret = 0;
@@ -371,7 +238,7 @@ long long prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE>()
 }
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE_BTB>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE_BTB>()
 {
 #ifdef WIN32
     _mm_mfence();
@@ -385,7 +252,7 @@ long long prof_get_time_cycle<PROF_COUNTER_RDTSC_MFENCE_BTB>()
 }
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_RDTSCP>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_RDTSCP>()
 {
 #ifdef WIN32
     unsigned int ui;
@@ -400,7 +267,7 @@ long long prof_get_time_cycle<PROF_COUNTER_RDTSCP>()
 
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_CLOCK>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_CLOCK>()
 {
 #if (defined WIN32)
     LARGE_INTEGER win_freq;
@@ -415,7 +282,7 @@ long long prof_get_time_cycle<PROF_COUNTER_CLOCK>()
 }
 
 template<>
-long long prof_get_time_cycle<PROF_COUNTER_SYS>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_SYS>()
 {
 #if (defined WIN32)
     FILETIME ft;
@@ -434,25 +301,25 @@ long long prof_get_time_cycle<PROF_COUNTER_SYS>()
 }
 
 template<>
-long long prof_get_time_cycle<PROF_CONNTER_CHRONO>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO>()
 {
     return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 }
 
 template<>
-long long prof_get_time_cycle<PROF_CONNTER_CHRONO_STEADY>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO_STEADY>()
 {
     return std::chrono::steady_clock().now().time_since_epoch().count();
 }
 
 template<>
-long long prof_get_time_cycle<PROF_CONNTER_CHRONO_SYS>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO_SYS>()
 {
     return std::chrono::system_clock().now().time_since_epoch().count();
 }
 
 
-ProfVM prof_get_mem_use()
+inline ProfVM prof_get_mem_use()
 {
     ProfVM vm = { 0ULL, 0ULL, 0ULL };
 #ifdef WIN32
@@ -500,7 +367,7 @@ struct PROF_PROCESSOR_POWER_INFORMATION
     ULONG  CurrentIdleState;
 };
 #endif
-PROF_ALWAYS_INLINE double prof_get_cpu_mhz()
+inline double prof_get_cpu_mhz()
 {
     double mhz = 1;
 #ifdef __APPLE__
@@ -567,61 +434,61 @@ PROF_ALWAYS_INLINE double prof_get_cpu_mhz()
 
 
 template<ProfCounterType T>
-double prof_get_time_frequency()
+PROF_ALWAYS_INLINE double prof_get_time_frequency()
 {
     return 1.0;
 }
 
 template<>
-double prof_get_time_frequency<PROF_COUNTER_RDTSC>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC>()
 {
     static double frequency_per_ns = prof_get_cpu_mhz() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
     return frequency_per_ns;
 }
 template<>
-double prof_get_time_frequency<PROF_COUNTER_RDTSC_BTB>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_BTB>()
 {
     return prof_get_time_frequency<PROF_COUNTER_RDTSC>();
 }
 
 template<>
-double prof_get_time_frequency<PROF_COUNTER_RDTSC_NOFENCE>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_NOFENCE>()
 {
     return prof_get_time_frequency<PROF_COUNTER_RDTSC>();
 }
 
 template<>
-double prof_get_time_frequency<PROF_COUNTER_RDTSC_PURE>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_PURE>()
 {
     return prof_get_time_frequency<PROF_COUNTER_RDTSC>();
 }
 
 template<>
-double prof_get_time_frequency<PROF_COUNTER_RDTSC_LOCK>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_LOCK>()
 {
     return prof_get_time_frequency<PROF_COUNTER_RDTSC>();
 }
 
 template<>
-double prof_get_time_frequency<PROF_COUNTER_RDTSC_MFENCE>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_MFENCE>()
 {
     return prof_get_time_frequency<PROF_COUNTER_RDTSC>();
 }
 
 template<>
-double prof_get_time_frequency<PROF_COUNTER_RDTSC_MFENCE_BTB>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSC_MFENCE_BTB>()
 {
     return prof_get_time_frequency<PROF_COUNTER_RDTSC>();
 }
 
 template<>
-double prof_get_time_frequency<PROF_COUNTER_RDTSCP>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_RDTSCP>()
 {
     return prof_get_time_frequency<PROF_COUNTER_RDTSC>();
 }
 
 template<>
-double prof_get_time_frequency<PROF_COUNTER_CLOCK>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_CLOCK>()
 {
 #ifdef WIN32
     double frequency_per_ns = 0;
@@ -636,38 +503,103 @@ double prof_get_time_frequency<PROF_COUNTER_CLOCK>()
 }
 
 template<>
-double prof_get_time_frequency<PROF_COUNTER_SYS>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_SYS>()
 {
     return 1.0;
 }
 
 template<>
-double prof_get_time_frequency<PROF_CONNTER_CHRONO>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO>()
 {
     static double chrono_frequency = std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
     return chrono_frequency;
 }
 
 template<>
-double prof_get_time_frequency<PROF_CONNTER_CHRONO_STEADY>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO_STEADY>()
 {
     static double chrono_frequency = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
     return chrono_frequency;
 }
 
 template<>
-double prof_get_time_frequency<PROF_CONNTER_CHRONO_SYS>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO_SYS>()
 {
     static double chrono_frequency = std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
     return chrono_frequency;
 }
 
 template<ProfCounterType T>
-double prof_get_time_inverse_frequency()
+PROF_ALWAYS_INLINE double prof_get_time_inverse_frequency()
 {
     static double inverse_frequency_per_ns = 1.0 / (prof_get_time_frequency<T>() <= 0.0 ? 1.0 : prof_get_time_frequency<T>());
     return inverse_frequency_per_ns;
 }
+
+
+
+
+
+
+
+
+
+
+
+template<ProfCounterType T = PROF_COUNTER_DEFAULT>
+class ProfCounter
+{
+public:
+    ProfCounter()
+    {
+        start_val_ = 0;
+        cycles_ = 0;
+    }
+    ProfCounter(long long val)
+    {
+        start_val_ = val;
+        cycles_ = 0;
+    }
+    void start()
+    {
+        start_val_ = prof_get_time_cycle<T>();
+        cycles_ = 0;
+    }
+
+    ProfCounter& save()
+    {
+        cycles_ = prof_get_time_cycle<T>() - start_val_;
+        return *this;
+    }
+
+    ProfCounter& stop_and_save() { return save(); }
+
+    long long stop_val() { return start_val_ + cycles_; }
+    long long start_val() { return start_val_; }
+
+    long long cycles() { return cycles_; }
+    PROF_ALWAYS_INLINE long long duration_ns() { return (long long)(cycles_ * prof_get_time_inverse_frequency<T>()); }
+    double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
+
+    void set_start_val(long long val) { start_val_ = val; }
+    void set_cycles_val(long long cycles) { cycles_ = cycles; }
+private:
+    long long start_val_;
+    long long cycles_;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #endif
@@ -1242,22 +1174,22 @@ public:
 
 
 
-    static constexpr int node_reserve_begin_id() { return INNER_PROF_MAX; }
-    static constexpr int node_reserve_count() { return RESERVE; }
-    static constexpr int node_reserve_end_id() { return node_reserve_begin_id() + node_reserve_count(); }
+    static constexpr int reserve_begin_id() { return INNER_PROF_MAX; }
+    static constexpr int reserve_count() { return RESERVE; }
+    static constexpr int reserve_end_id() { return reserve_begin_id() + reserve_count(); }
 
-    static constexpr int node_declare_begin_id() { return node_reserve_end_id(); }
-    static constexpr int node_declare_count() { return DECLARE; }
-    static constexpr int node_declare_end_id() { return node_declare_begin_id() + node_declare_count(); }
-    inline int node_delcare_reg_end_id() { return declare_reg_end_id_; }
+    static constexpr int declare_begin_id() { return reserve_end_id(); }
+    static constexpr int declare_count() { return DECLARE; }
+    static constexpr int declare_end_id() { return declare_begin_id() + declare_count(); }
+    inline int declare_window() { return declare_window_; }
 
-    static constexpr int node_begin_id() { return INNER_PROF_NULL + 1; }
-    static constexpr int node_count() { return node_declare_end_id() - 1; }
-    static constexpr int node_end_id() { return node_begin_id() + node_count(); }
-    static constexpr int max_node_count() { return node_count(); }
+    static constexpr int begin_id() { return INNER_PROF_NULL + 1; }
+    static constexpr int count() { return declare_end_id() - 1; }
+    static constexpr int end_id() { return begin_id() + count(); }
+    static constexpr int max_count() { return count(); }
 
-    static constexpr int max_compact_string_size() { return 30 * (1+node_end_id()); } //reserve node no name 
-    static_assert(node_end_id() == INNER_PROF_MAX + node_reserve_count() + node_declare_count(), "");
+    static constexpr int compact_data_size() { return 30 * (1+end_id()); } //reserve node no name 
+    static_assert(end_id() == INNER_PROF_MAX + reserve_count() + declare_count(), "");
 
 public:
     long long init_timestamp_;
@@ -1272,9 +1204,12 @@ public:
 public:
     ProfRecord();
     int init(const char* title);
-    
-    int regist_node(int idx, const char* name, unsigned int counter, bool resident, bool re_reg);
-    const char* record_name(int idx);
+    int regist(int idx, const char* name, unsigned int counter, bool resident, bool re_reg);
+    const char* title() const { return &compact_data_[title_]; }
+
+    const char* name(int idx);
+    int rename(int idx, const char* name);
+
 
     int bind_childs(int idx, int child);
     int build_jump_path();
@@ -1317,7 +1252,7 @@ public:
         reset_user(idx);
     }
 
-    void clean_node_info_range(int first_idx, int end_idx, bool keep_resident = true)
+    void reset_range_node(int first_idx, int end_idx, bool keep_resident = true)
     {
         for (int idx = first_idx; idx < end_idx; idx++)
         {
@@ -1328,15 +1263,15 @@ public:
         }
     }
 
-    void clean_reserve_info(bool keep_resident = true)
+    void reset_reserve_node(bool keep_resident = true)
     {
-        clean_node_info_range(node_reserve_begin_id(), node_reserve_end_id(), keep_resident);
+        reset_range_node(reserve_begin_id(), reserve_end_id(), keep_resident);
         last_timestamp_ = time(NULL);
     }
 
-    void clean_declare_info(bool keep_resident = true)
+    void reset_declare_node(bool keep_resident = true)
     {
-        clean_node_info_range(node_declare_begin_id(), node_declare_end_id(), keep_resident);
+        reset_range_node(declare_begin_id(), declare_end_id(), keep_resident);
         last_timestamp_ = time(NULL);
     }
 
@@ -1344,7 +1279,7 @@ public:
 
     inline void reset_childs(int idx, int depth = 0);
 
-    PROF_ALWAYS_INLINE void call_cpu(int idx, long long c, long long cost)
+    PROF_ALWAYS_INLINE void record_cpu(int idx, long long c, long long cost)
     {
         long long dis = cost / c;
         ProfNode& node = nodes_[idx];
@@ -1356,7 +1291,7 @@ public:
         node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
         node.cpu.t_u += cost;
     }
-    PROF_ALWAYS_INLINE void call_cpu(int idx, long long cost)
+    PROF_ALWAYS_INLINE void record_cpu(int idx, long long cost)
     {
         ProfNode& node = nodes_[idx];
         node.cpu.c += 1;
@@ -1367,7 +1302,7 @@ public:
         node.cpu.dv += abs(cost - node.cpu.sm);
         node.cpu.t_u += cost;
     }
-    PROF_ALWAYS_INLINE void call_cpu_no_sm(int idx, long long cost)
+    PROF_ALWAYS_INLINE void record_cpu_no_sm(int idx, long long cost)
     {
         ProfNode& node = nodes_[idx];
         node.cpu.c += 1;
@@ -1375,7 +1310,7 @@ public:
         node.cpu.sm = cost;
         node.cpu.t_u += cost;
     }
-    PROF_ALWAYS_INLINE void call_cpu_no_sm(int idx, long long count, long long cost)
+    PROF_ALWAYS_INLINE void record_cpu_no_sm(int idx, long long count, long long cost)
     {
         long long dis = cost / count;
         ProfNode& node = nodes_[idx];
@@ -1385,7 +1320,7 @@ public:
         node.cpu.t_u += cost;
     }
 
-    PROF_ALWAYS_INLINE void call_cpu_full(int idx, long long cost)
+    PROF_ALWAYS_INLINE void record_cpu_full(int idx, long long cost)
     {
         ProfNode& node = nodes_[idx];
         node.cpu.c += 1;
@@ -1402,7 +1337,7 @@ public:
         node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
     }
 
-    PROF_ALWAYS_INLINE void call_cpu_full(int idx, long long c, long long cost)
+    PROF_ALWAYS_INLINE void record_cpu_full(int idx, long long c, long long cost)
     {
         
         ProfNode& node = nodes_[idx];
@@ -1421,7 +1356,7 @@ public:
     }
 
 
-    PROF_ALWAYS_INLINE void call_timer(int idx, long long stamp)
+    PROF_ALWAYS_INLINE void record_timer(int idx, long long stamp)
     {
         ProfNode& node = nodes_[idx];
         if (node.timer.last == 0)
@@ -1429,22 +1364,22 @@ public:
             node.timer.last = stamp;
             return;
         }
-        call_cpu_full(idx, 1, stamp - node.timer.last);
+        record_cpu_full(idx, 1, stamp - node.timer.last);
         node.timer.last = stamp;
     }
 
-    PROF_ALWAYS_INLINE void call_mem(int idx, long long c, long long add)
+    PROF_ALWAYS_INLINE void record_mem(int idx, long long c, long long add)
     {
         ProfNode& node = nodes_[idx];
         node.mem.c += c;
         node.mem.sum += add;
         node.mem.t_u += add;
     }
-    PROF_ALWAYS_INLINE void call_vm(int idx, const ProfVM& vm)
+    PROF_ALWAYS_INLINE void record_vm(int idx, const ProfVM& vm)
     {
         nodes_[idx].vm = vm;
     }
-    PROF_ALWAYS_INLINE void call_user(int idx, long long c, long long add)
+    PROF_ALWAYS_INLINE void record_user(int idx, long long c, long long add)
     {
         ProfNode& node = nodes_[idx];
         node.user.c += c;
@@ -1452,20 +1387,17 @@ public:
         node.user.t_u += add;
     }
 
-    PROF_ALWAYS_INLINE void refresh_mem(int idx, long long c, long long add)
+    PROF_ALWAYS_INLINE void overwrite_mem(int idx, long long c, long long add)
     {
-        ProfNode& node = nodes_[idx];
-        node.mem.c = c;
-        node.mem.delta = add - node.mem.sum;
-        node.mem.sum = add;
-        node.mem.t_u = add;
+        reset_mem(idx);
+        record_mem(idx, c, add);
     }
 
 
     
 
     //递归展开  
-    int recursive_serialize(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializer& serializer);
+    int recursive_output(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializer& serializer);
     
 
     //完整报告  
@@ -1476,10 +1408,10 @@ public:
 
 
 public:
-    ProfSerializer& compact_buffer() { return compact_buffer_; }
+    ProfSerializer& compact_writer() { return compact_writer_; }
     ProfNode& node(int idx) { return nodes_[idx]; }
     
-    double counter_particle_for_ns(int t) { return  counter_particle_for_ns_[t == PROF_COUNTER_NULL ? PROF_COUNTER_DEFAULT : t]; }
+    double particle_for_ns(int t) { return  particle_for_ns_[t == PROF_COUNTER_NULL ? PROF_COUNTER_DEFAULT : t]; }
 
 
 
@@ -1495,57 +1427,53 @@ private:
 
 //merge data and interface 
 public:
-    std::array<int, node_end_id()>& actived_merge_nodes() { return actived_merge_node_; }
-    int actived_merge_size() { return actived_merge_size_; }
+    std::array<int, end_id()>& merge_leafs() { return merge_leafs_; }
+    int merge_leafs_size() { return merge_leafs_size_; }
 private:
-    std::array<int, node_end_id()> actived_merge_node_;
-    int actived_merge_size_;
+    std::array<int, end_id()> merge_leafs_;
+    int merge_leafs_size_;
 
 
-//name string  
-public:
-    int rename_node(int idx, const char* name);
-    const char* report_title() const { return &compact_string_[report_title_]; }
 
 private:
-    int report_title_;
-    char compact_string_[max_compact_string_size()];
-    ProfSerializer compact_buffer_;
+    int title_;
+    char compact_data_[compact_data_size()];
+    ProfSerializer compact_writer_;
     int unknown_desc_;
     int reserve_desc_;
     int no_name_space_;
     int no_name_space_len_;
 
 private:
-    ProfNode nodes_[node_end_id()];
-    int declare_reg_end_id_;
-    double counter_particle_for_ns_[PROF_COUNTER_MAX];
+    ProfNode nodes_[end_id()];
+    int declare_window_;
+    double particle_for_ns_[PROF_COUNTER_MAX];
 };
 
 template<int INST, int RESERVE, int DECLARE>
-ProfRecord<INST, RESERVE, DECLARE>::ProfRecord() : compact_buffer_(compact_string_, max_compact_string_size())
+ProfRecord<INST, RESERVE, DECLARE>::ProfRecord() : compact_writer_(compact_data_, compact_data_size())
 {
     memset(nodes_, 0, sizeof(nodes_));
-    actived_merge_size_ = 0;
-    memset(counter_particle_for_ns_, 0, sizeof(counter_particle_for_ns_));
-    declare_reg_end_id_ = node_declare_begin_id();
+    merge_leafs_size_ = 0;
+    memset(particle_for_ns_, 0, sizeof(particle_for_ns_));
+    declare_window_ = declare_begin_id();
 
     output_ = &ProfRecord::default_output;  //set default log;
 
     init_timestamp_ = 0;
     last_timestamp_ = 0;
-    static_assert(max_compact_string_size() > 150, "");
+    static_assert(compact_data_size() > 150, "");
     unknown_desc_ = 0;
-    compact_buffer_.push_string("unknown");
-    compact_buffer_.push_char('\0');
-    reserve_desc_ = (int)compact_buffer_.offset();
-    compact_buffer_.push_string("reserve");
-    compact_buffer_.push_char('\0');
-    no_name_space_ = (int)compact_buffer_.offset();
-    compact_buffer_.push_string("null(name empty or over buffers)");
-    no_name_space_len_ = (int)(compact_buffer_.offset() - no_name_space_);
-    compact_buffer_.push_char('\0');
-    report_title_ = 0;
+    compact_writer_.push_string("unknown");
+    compact_writer_.push_char('\0');
+    reserve_desc_ = (int)compact_writer_.offset();
+    compact_writer_.push_string("reserve");
+    compact_writer_.push_char('\0');
+    no_name_space_ = (int)compact_writer_.offset();
+    compact_writer_.push_string("null(name empty or over buffers)");
+    no_name_space_len_ = (int)(compact_writer_.offset() - no_name_space_);
+    compact_writer_.push_char('\0');
+    title_ = 0;
 
 };
 
@@ -1554,16 +1482,16 @@ ProfRecord<INST, RESERVE, DECLARE>::ProfRecord() : compact_buffer_(compact_strin
 template<int INST, int RESERVE, int DECLARE>
 int ProfRecord<INST, RESERVE, DECLARE>::init(const char* title)
 {
-    if (title == NULL || compact_buffer_.is_full())
+    if (title == NULL || compact_writer_.is_full())
     {
-        report_title_ = 0;
+        title_ = 0;
     }
     else
     {
-        report_title_ = (int)compact_buffer_.offset();
-        compact_buffer_.push_string("title");
-        compact_buffer_.push_char('\0');
-        compact_buffer_.closing_string();
+        title_ = (int)compact_writer_.offset();
+        compact_writer_.push_string("title");
+        compact_writer_.push_char('\0');
+        compact_writer_.closing_string();
     }
     ProfCounter<> counter;
     counter.start();
@@ -1571,47 +1499,47 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* title)
     last_timestamp_ = time(NULL);
     init_timestamp_ = time(NULL);
 
-    counter_particle_for_ns_[PROF_COUNTER_NULL] = 0;
-    counter_particle_for_ns_[PROF_COUNTER_SYS] = prof_get_time_inverse_frequency<PROF_COUNTER_SYS>();
-    counter_particle_for_ns_[PROF_COUNTER_CLOCK] = prof_get_time_inverse_frequency<PROF_COUNTER_CLOCK>();
-    counter_particle_for_ns_[PROF_CONNTER_CHRONO] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO>();
-    counter_particle_for_ns_[PROF_CONNTER_CHRONO_STEADY] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_STEADY>();
-    counter_particle_for_ns_[PROF_CONNTER_CHRONO_SYS] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_SYS>();
-    counter_particle_for_ns_[PROF_COUNTER_RDTSC] = prof_get_time_inverse_frequency<PROF_COUNTER_RDTSC>();
-    counter_particle_for_ns_[PROF_COUNTER_RDTSC_BTB] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
-    counter_particle_for_ns_[PROF_COUNTER_RDTSCP] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
-    counter_particle_for_ns_[PROF_COUNTER_RDTSC_MFENCE] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
-    counter_particle_for_ns_[PROF_COUNTER_RDTSC_MFENCE_BTB] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
-    counter_particle_for_ns_[PROF_COUNTER_RDTSC_NOFENCE] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
-    counter_particle_for_ns_[PROF_COUNTER_RDTSC_PURE] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
-    counter_particle_for_ns_[PROF_COUNTER_RDTSC_LOCK] = counter_particle_for_ns_[PROF_COUNTER_RDTSC];
-    counter_particle_for_ns_[PROF_COUNTER_NULL] = counter_particle_for_ns_[PROF_COUNTER_DEFAULT];
+    particle_for_ns_[PROF_COUNTER_NULL] = 0;
+    particle_for_ns_[PROF_COUNTER_SYS] = prof_get_time_inverse_frequency<PROF_COUNTER_SYS>();
+    particle_for_ns_[PROF_COUNTER_CLOCK] = prof_get_time_inverse_frequency<PROF_COUNTER_CLOCK>();
+    particle_for_ns_[PROF_CONNTER_CHRONO] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO>();
+    particle_for_ns_[PROF_CONNTER_CHRONO_STEADY] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_STEADY>();
+    particle_for_ns_[PROF_CONNTER_CHRONO_SYS] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_SYS>();
+    particle_for_ns_[PROF_COUNTER_RDTSC] = prof_get_time_inverse_frequency<PROF_COUNTER_RDTSC>();
+    particle_for_ns_[PROF_COUNTER_RDTSC_BTB] = particle_for_ns_[PROF_COUNTER_RDTSC];
+    particle_for_ns_[PROF_COUNTER_RDTSCP] = particle_for_ns_[PROF_COUNTER_RDTSC];
+    particle_for_ns_[PROF_COUNTER_RDTSC_MFENCE] = particle_for_ns_[PROF_COUNTER_RDTSC];
+    particle_for_ns_[PROF_COUNTER_RDTSC_MFENCE_BTB] = particle_for_ns_[PROF_COUNTER_RDTSC];
+    particle_for_ns_[PROF_COUNTER_RDTSC_NOFENCE] = particle_for_ns_[PROF_COUNTER_RDTSC];
+    particle_for_ns_[PROF_COUNTER_RDTSC_PURE] = particle_for_ns_[PROF_COUNTER_RDTSC];
+    particle_for_ns_[PROF_COUNTER_RDTSC_LOCK] = particle_for_ns_[PROF_COUNTER_RDTSC];
+    particle_for_ns_[PROF_COUNTER_NULL] = particle_for_ns_[PROF_COUNTER_DEFAULT];
 
-    for (int i = node_begin_id(); i < node_reserve_end_id(); i++)
+    for (int i = begin_id(); i < reserve_end_id(); i++)
     {
-        regist_node(i, "reserve", PROF_COUNTER_DEFAULT, false, false);
+        regist(i, "reserve", PROF_COUNTER_DEFAULT, false, false);
     }
 
-    regist_node(INNER_PROF_NULL, "INNER_PROF_NULL", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_INIT_COST, "INIT_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_MERGE_COST, "MERGE_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_NULL, "INNER_PROF_NULL", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_INIT_COST, "INIT_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_MERGE_COST, "MERGE_COST", PROF_COUNTER_DEFAULT, true, true);
 
-    regist_node(INNER_PROF_REPORT_COST, "REPORT_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_SERIALIZE_COST, "SERIALIZE_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_OUTPUT_COST, "OUTPUT_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_REPORT_COST, "REPORT_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_SERIALIZE_COST, "SERIALIZE_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_OUTPUT_COST, "OUTPUT_COST", PROF_COUNTER_DEFAULT, true, true);
     
-    regist_node(INNER_PROF_MEM_INFO_COST, "MEM_INFO_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_MEM_INFO_COST, "MEM_INFO_COST", PROF_COUNTER_DEFAULT, true, true);
 
-    regist_node(INNER_PROF_COUNTER_COST, "COUNTER_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_RECORD_COST, "RECORD_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_RECORD_SM_COST, "RECORD_SM_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_RECORD_FULL_COST, "RECORD_FULL_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_COUNTER_RECORD_COST, "COUNTER_RECORD_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_COUNTER_COST, "COUNTER_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_RECORD_COST, "RECORD_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_RECORD_SM_COST, "RECORD_SM_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_RECORD_FULL_COST, "RECORD_FULL_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_COUNTER_RECORD_COST, "COUNTER_RECORD_COST", PROF_COUNTER_DEFAULT, true, true);
 
-    regist_node(INNER_PROF_ORIGIN_INC, "ORIGIN_INC", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_ATOM_RELEAX, "ATOM_RELEAX", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_ATOM_COST, "ATOM_COST", PROF_COUNTER_DEFAULT, true, true);
-    regist_node(INNER_PROF_ATOM_SEQ_COST, "ATOM_SEQ_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_ORIGIN_INC, "ORIGIN_INC", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_ATOM_RELEAX, "ATOM_RELEAX", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_ATOM_COST, "ATOM_COST", PROF_COUNTER_DEFAULT, true, true);
+    regist(INNER_PROF_ATOM_SEQ_COST, "ATOM_SEQ_COST", PROF_COUNTER_DEFAULT, true, true);
 
 
 
@@ -1620,10 +1548,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* title)
     {
         ProfCounter<> self_mem_cost;
         self_mem_cost.start();
-        call_vm(INNER_PROF_MEM_INFO_COST, prof_get_mem_use());
-        call_cpu(INNER_PROF_MEM_INFO_COST, self_mem_cost.stop_and_save().cycles());
-        call_mem(INNER_PROF_MEM_INFO_COST, 1, sizeof(*this));
-        call_user(INNER_PROF_MEM_INFO_COST, 1, max_node_count());
+        record_vm(INNER_PROF_MEM_INFO_COST, prof_get_mem_use());
+        record_cpu(INNER_PROF_MEM_INFO_COST, self_mem_cost.stop_and_save().cycles());
+        record_mem(INNER_PROF_MEM_INFO_COST, 1, sizeof(*this));
+        record_user(INNER_PROF_MEM_INFO_COST, 1, max_count());
     }
 
     if (true)
@@ -1635,37 +1563,37 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* title)
             ProfCounter<> test_cost;
             test_cost.start();
             test_cost.stop_and_save();
-            call_cpu(INNER_PROF_NULL, test_cost.cycles());
+            record_cpu(INNER_PROF_NULL, test_cost.cycles());
         }
-        call_cpu(INNER_PROF_COUNTER_RECORD_COST, 1000, cost.stop_and_save().cycles());
+        record_cpu(INNER_PROF_COUNTER_RECORD_COST, 1000, cost.stop_and_save().cycles());
 
         cost.start();
         for (int i = 0; i < 1000; i++)
         {
             cost.save();
         }
-        call_cpu(INNER_PROF_COUNTER_COST, 1000, cost.stop_and_save().cycles());
+        record_cpu(INNER_PROF_COUNTER_COST, 1000, cost.stop_and_save().cycles());
 
         cost.start();
         for (int i = 0; i < 1000; i++)
         {
-            call_cpu_no_sm(INNER_PROF_NULL, cost.stop_and_save().cycles());
+            record_cpu_no_sm(INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        call_cpu(INNER_PROF_RECORD_COST, 1000, cost.stop_and_save().cycles());
+        record_cpu(INNER_PROF_RECORD_COST, 1000, cost.stop_and_save().cycles());
 
         cost.start();
         for (int i = 0; i < 1000; i++)
         {
-            call_cpu(INNER_PROF_NULL, 1, cost.stop_and_save().cycles());
+            record_cpu(INNER_PROF_NULL, 1, cost.stop_and_save().cycles());
         }
-        call_cpu(INNER_PROF_RECORD_SM_COST, 1000, cost.stop_and_save().cycles());
+        record_cpu(INNER_PROF_RECORD_SM_COST, 1000, cost.stop_and_save().cycles());
 
         cost.start();
         for (int i = 0; i < 1000; i++)
         {
-            call_cpu_full(INNER_PROF_NULL, 1, cost.stop_and_save().cycles());
+            record_cpu_full(INNER_PROF_NULL, 1, cost.stop_and_save().cycles());
         }
-        call_cpu(INNER_PROF_RECORD_FULL_COST, 1000, cost.stop_and_save().cycles());
+        record_cpu(INNER_PROF_RECORD_FULL_COST, 1000, cost.stop_and_save().cycles());
 
 
         std::atomic<long long> atomll_test(0);
@@ -1675,21 +1603,21 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* title)
         {
             origin_feetch_add_test++;
         }
-        call_cpu(INNER_PROF_ORIGIN_INC, 1000, cost.stop_and_save().cycles());
+        record_cpu(INNER_PROF_ORIGIN_INC, 1000, cost.stop_and_save().cycles());
 
         cost.start();
         for (int i = 0; i < 1000; i++)
         {
             atomll_test.fetch_add(1, std::memory_order_relaxed);
         }
-        call_cpu(INNER_PROF_ATOM_RELEAX, 1000, cost.stop_and_save().cycles());
+        record_cpu(INNER_PROF_ATOM_RELEAX, 1000, cost.stop_and_save().cycles());
 
         cost.start();
         for (int i = 0; i < 1000; i++)
         {
             atomll_test++;
         }
-        call_cpu(INNER_PROF_ATOM_COST, 1000, cost.stop_and_save().cycles());
+        record_cpu(INNER_PROF_ATOM_COST, 1000, cost.stop_and_save().cycles());
 
         
         cost.start();
@@ -1697,12 +1625,12 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* title)
         {
             atomll_test.fetch_add(1, std::memory_order_seq_cst);
         }
-        call_cpu(INNER_PROF_ATOM_SEQ_COST, 1000, cost.stop_and_save().cycles());
+        record_cpu(INNER_PROF_ATOM_SEQ_COST, 1000, cost.stop_and_save().cycles());
 
         reset_node(INNER_PROF_NULL);
     }
 
-    call_cpu(INNER_PROF_INIT_COST, counter.stop_and_save().cycles());
+    record_cpu(INNER_PROF_INIT_COST, counter.stop_and_save().cycles());
 
     return 0;
 }
@@ -1711,10 +1639,10 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* title)
 template<int INST, int RESERVE, int DECLARE>
 int ProfRecord<INST, RESERVE, DECLARE>::build_jump_path()
 {
-    for (int i = node_declare_begin_id(); i < node_declare_end_id(); )
+    for (int i = declare_begin_id(); i < declare_end_id(); )
     {
         int next_upper_id = i + 1;
-        while (next_upper_id < node_declare_end_id())
+        while (next_upper_id < declare_end_id())
         {
             if (nodes_[next_upper_id].show.upper == 0)
             {
@@ -1732,9 +1660,9 @@ int ProfRecord<INST, RESERVE, DECLARE>::build_jump_path()
 }
 
 template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::regist_node(int idx, const char* name, unsigned int counter_type, bool resident, bool re_reg)
+int ProfRecord<INST, RESERVE, DECLARE>::regist(int idx, const char* name, unsigned int counter_type, bool resident, bool re_reg)
 {
-    if (idx >= node_end_id() )
+    if (idx >= end_id() )
     {
         return -1;
     }
@@ -1753,24 +1681,24 @@ int ProfRecord<INST, RESERVE, DECLARE>::regist_node(int idx, const char* name, u
     }
 
     memset(&node, 0, sizeof(node));
-    rename_node(idx, name);
+    rename(idx, name);
     nodes_[idx].traits.counter_type = counter_type;
     nodes_[idx].traits.resident = resident;
     node.active = true;
     node.cpu.min_u = LLONG_MAX;
 
-    if (idx >= node_declare_begin_id() && idx < node_declare_end_id() && idx + 1 > declare_reg_end_id_)
+    if (idx >= declare_begin_id() && idx < declare_end_id() && idx + 1 > declare_window_)
     {
-        declare_reg_end_id_ = idx + 1;
+        declare_window_ = idx + 1;
     }
 
     return 0;
 }
 
 template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::rename_node(int idx, const char* name)
+int ProfRecord<INST, RESERVE, DECLARE>::rename(int idx, const char* name)
 {
-    if (idx < node_begin_id() || idx >= node_end_id() )
+    if (idx < begin_id() || idx >= end_id() )
     {
         return -1;
     }
@@ -1786,11 +1714,11 @@ int ProfRecord<INST, RESERVE, DECLARE>::rename_node(int idx, const char* name)
     }
 
 
-    nodes_[idx].traits.name = (int)compact_buffer_.offset();// node name is "" when compact serializer full 
-    compact_buffer_.push_string(name);
-    compact_buffer_.push_char('\0');
-    compact_buffer_.closing_string();
-    nodes_[idx].traits.name_len = (int)strlen(&compact_string_[nodes_[idx].traits.name]);
+    nodes_[idx].traits.name = (int)compact_writer_.offset();// node name is "" when compact serializer full 
+    compact_writer_.push_string(name);
+    compact_writer_.push_char('\0');
+    compact_writer_.closing_string();
+    nodes_[idx].traits.name_len = (int)strlen(&compact_data_[nodes_[idx].traits.name]);
     if (nodes_[idx].traits.name_len == 0)
     {
         nodes_[idx].traits.name = no_name_space_;
@@ -1801,25 +1729,25 @@ int ProfRecord<INST, RESERVE, DECLARE>::rename_node(int idx, const char* name)
 
 
 template<int INST, int RESERVE, int DECLARE>
-const char* ProfRecord<INST, RESERVE, DECLARE>::record_name(int idx)
+const char* ProfRecord<INST, RESERVE, DECLARE>::name(int idx)
 {
-    if (idx < node_begin_id() || idx >= node_end_id())
+    if (idx < begin_id() || idx >= end_id())
     {
         return "";
     }
     ProfTraits& traits = nodes_[idx].traits;
-    if (traits.name >= max_compact_string_size())
+    if (traits.name >= compact_data_size())
     {
         return "";
     }
-    return &compact_string_[traits.name];
+    return &compact_data_[traits.name];
 };
 
 
 template<int INST, int RESERVE, int DECLARE>
 void ProfRecord<INST, RESERVE, DECLARE>::reset_childs(int idx, int depth)
 {
-    if (idx < node_begin_id() || idx >= node_end_id())
+    if (idx < begin_id() || idx >= end_id())
     {
         return ;
     }
@@ -1846,7 +1774,7 @@ void ProfRecord<INST, RESERVE, DECLARE>::reset_childs(int idx, int depth)
 template<int INST, int RESERVE, int DECLARE>
 int ProfRecord<INST, RESERVE, DECLARE>::bind_childs(int idx, int cidx)
 {
-    if (idx < node_begin_id() || idx >= node_end_id() || cidx < node_begin_id() || cidx >= node_end_id())
+    if (idx < begin_id() || idx >= end_id() || cidx < begin_id() || cidx >= end_id())
     {
         return -1;
     }
@@ -1889,7 +1817,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_childs(int idx, int cidx)
 template<int INST, int RESERVE, int DECLARE>
 int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
 {
-    if (child < node_begin_id() || child >= node_end_id() || to < node_begin_id() || to >= node_end_id())
+    if (child < begin_id() || child >= end_id() || to < begin_id() || to >= end_id())
     {
         return -1;
     }
@@ -1898,7 +1826,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
     {
         return -2;
     }
-    if (actived_merge_size_ >= node_end_id())
+    if (merge_leafs_size_ >= end_id())
     {
         return -3;
     }
@@ -1925,11 +1853,11 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
 
     if (to_node.merge.to != 0)
     {
-        for (int i = 0; i < actived_merge_size_; i++)
+        for (int i = 0; i < merge_leafs_size_; i++)
         {
-            if (actived_merge_node_[i] == to)
+            if (merge_leafs_[i] == to)
             {
-                actived_merge_node_[i] = child;
+                merge_leafs_[i] = child;
                 return 0;
             }
         }
@@ -1937,7 +1865,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
 
 
 
-    actived_merge_node_[actived_merge_size_++] = child;
+    merge_leafs_[merge_leafs_size_++] = child;
     return 0;
 }
 
@@ -1947,20 +1875,20 @@ void ProfRecord<INST, RESERVE, DECLARE>::do_merge()
 {
     ProfCounter<PROF_COUNTER_DEFAULT> cost;
     cost.start();
-    for (int i = 0; i < actived_merge_size_; i++)
+    for (int i = 0; i < merge_leafs_size_; i++)
     {
-        int leaf_id = actived_merge_node_[i];
+        int leaf_id = merge_leafs_[i];
         ProfNode& leaf = nodes_[leaf_id];
         ProfNode* node = NULL;
         long long append_cpu = 0;
         long long append_mem = 0;
         long long append_user = 0;
-        int node_id = 0;
+        int id = 0;
         node = &nodes_[leaf.merge.to];
         append_cpu = leaf.cpu.t_u;
         append_mem = leaf.mem.t_u;
         append_user = leaf.user.t_u;
-        node_id = leaf.merge.to;
+        id = leaf.merge.to;
         leaf.cpu.t_u = 0;
         leaf.mem.t_u = 0;
         leaf.user.t_u = 0;
@@ -1978,15 +1906,15 @@ void ProfRecord<INST, RESERVE, DECLARE>::do_merge()
                 append_user = node->user.t_u;
                 if (append_cpu > 0)
                 {
-                    call_cpu_full(node_id, append_cpu);
+                    record_cpu_full(id, append_cpu);
                 }
                 if (append_mem > 0)
                 {
-                    call_mem(node_id, 1, append_mem);
+                    record_mem(id, 1, append_mem);
                 }
                 if (append_user > 0)
                 {
-                    call_user(node_id, 1, append_user);
+                    record_user(id, 1, append_user);
                 }
                 node->cpu.t_u = 0;
                 node->mem.t_u = 0;
@@ -1995,23 +1923,23 @@ void ProfRecord<INST, RESERVE, DECLARE>::do_merge()
                 {
                     break;
                 }
-                node_id = node->merge.to;
+                id = node->merge.to;
                 node = &nodes_[node->merge.to];
                 continue;
             }
             break;
         } while (true);
     }
-    call_cpu(INNER_PROF_MERGE_COST, cost.stop_and_save().cycles());
+    record_cpu(INNER_PROF_MERGE_COST, cost.stop_and_save().cycles());
 }
 
 
 
 
 template<int INST, int RESERVE, int DECLARE>
-int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializer& serializer)
+int ProfRecord<INST, RESERVE, DECLARE>::recursive_output(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializer& serializer)
 {
-    if (entry_idx >= node_end_id())
+    if (entry_idx >= end_id())
     {
         return -1;
     }
@@ -2036,7 +1964,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
     {
         return 0;
     }
-    if (node.traits.name + node.traits.name_len >= max_compact_string_size())
+    if (node.traits.name + node.traits.name_len >= compact_data_size())
     {
         return 0;
     }
@@ -2049,9 +1977,9 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
     
     ProfCounter<> cost_single_serialize;
 
-    const char* name = &compact_string_[node.traits.name];
+    const char* name = &compact_data_[node.traits.name];
     size_t name_len = node.traits.name_len;
-    double cpu_rate = counter_particle_for_ns(node.traits.counter_type);
+    double cpu_rate = particle_for_ns(node.traits.counter_type);
     if (opt_name != NULL)
     {
         name = opt_name;
@@ -2118,12 +2046,12 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
         }
         serializer.push_string(STRLEN(" --|"));
         cost_single_serialize.stop_and_save();
-        call_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.cycles());
+        record_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.cycles());
 
         cost_single_serialize.start();
         output_and_clean(serializer);
         cost_single_serialize.stop_and_save();
-        call_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.cycles());
+        record_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.cycles());
 
     }
 
@@ -2157,13 +2085,13 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
         }
         serializer.push_string(STRLEN(" --|"));
         cost_single_serialize.stop_and_save();
-        call_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.cycles());
+        record_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.cycles());
 
 
         cost_single_serialize.start();
         output_and_clean(serializer);
         cost_single_serialize.stop_and_save();
-        call_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.cycles());
+        record_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.cycles());
     }
 
     if (node.vm.rss_size + node.vm.vm_size > 0)
@@ -2193,12 +2121,12 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
 
         serializer.push_string(STRLEN(" --|"));
         cost_single_serialize.stop_and_save();
-        call_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.cycles());
+        record_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.cycles());
 
         cost_single_serialize.start();
         output_and_clean(serializer);
         cost_single_serialize.stop_and_save();
-        call_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.cycles());
+        record_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.cycles());
     }
 
     if (node.user.c > 0)
@@ -2225,12 +2153,12 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
 
         serializer.push_string(STRLEN(" --|"));
         cost_single_serialize.stop_and_save();
-        call_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.cycles());
+        record_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.cycles());
 
         cost_single_serialize.start();
         output_and_clean(serializer);
         cost_single_serialize.stop_and_save();
-        call_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.cycles());
+        record_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.cycles());
     }
 
     if (depth > PROF_MAX_DEPTH)
@@ -2245,7 +2173,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::recursive_serialize(int entry_idx, int d
         ProfNode& child = nodes_[i];
         if (child.show.upper == entry_idx)
         {
-            int ret = recursive_serialize(i, depth + 1, NULL, 0, serializer);
+            int ret = recursive_output(i, depth + 1, NULL, 0, serializer);
             if (ret < 0)
             {
                 return ret;
@@ -2265,7 +2193,7 @@ template<int INST, int RESERVE, int DECLARE>
 int ProfRecord<INST, RESERVE, DECLARE>::output_one_record(int entry_idx)
 {
     ProfStackSerializer serializer;
-    int ret = recursive_serialize(entry_idx, 0, NULL, 0, serializer);
+    int ret = recursive_output(entry_idx, 0, NULL, 0, serializer);
     (void)ret;
     return ret;
 }
@@ -2274,7 +2202,7 @@ template<int INST, int RESERVE, int DECLARE>
 int ProfRecord<INST, RESERVE, DECLARE>::output_temp_record(const char* opt_name, size_t opt_name_len)
 {
     ProfStackSerializer serializer;
-    int ret = recursive_serialize(0, 0, opt_name, opt_name_len, serializer);
+    int ret = recursive_output(0, 0, opt_name, opt_name_len, serializer);
     reset_node(0);//reset  
     return ret;
 }
@@ -2302,7 +2230,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::output_report(unsigned int flags)
 
     serializer.push_char('=', 30);
     serializer.push_char('\t');
-    serializer.push_string(report_title());
+    serializer.push_string(title());
     serializer.push_string(STRLEN(" begin output: "));
     serializer.push_now_date();
     serializer.push_char('\t');
@@ -2324,7 +2252,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::output_report(unsigned int flags)
         serializer.push_string(STRLEN(PROF_LINE_FEED));
         for (int i = INNER_PROF_NULL + 1; i < INNER_PROF_MAX; i++)
         {
-            int ret = recursive_serialize(i, 0, NULL, 0, serializer);
+            int ret = recursive_output(i, 0, NULL, 0, serializer);
             (void)ret;
         }
     }
@@ -2332,9 +2260,9 @@ int ProfRecord<INST, RESERVE, DECLARE>::output_report(unsigned int flags)
     if (flags & PROF_OUTPUT_FLAG_RESERVE)
     {
         serializer.push_string(STRLEN(PROF_LINE_FEED));
-        for (int i = node_reserve_begin_id(); i < node_reserve_end_id(); i++)
+        for (int i = reserve_begin_id(); i < reserve_end_id(); i++)
         {
-            int ret = recursive_serialize(i, 0, NULL, 0, serializer);
+            int ret = recursive_output(i, 0, NULL, 0, serializer);
             (void)ret;
         }
     }
@@ -2342,9 +2270,9 @@ int ProfRecord<INST, RESERVE, DECLARE>::output_report(unsigned int flags)
     if (flags & PROF_OUTPUT_FLAG_DELCARE)
     {
         serializer.push_string(STRLEN(PROF_LINE_FEED));
-        for (int i = node_declare_begin_id(); i < node_delcare_reg_end_id(); )
+        for (int i = declare_begin_id(); i < declare_window(); )
         {
-            int ret = recursive_serialize(i, 0, NULL, 0, serializer);
+            int ret = recursive_output(i, 0, NULL, 0, serializer);
             (void)ret;
             i += nodes_[i].show.jumps + 1;
         }
@@ -2360,7 +2288,7 @@ int ProfRecord<INST, RESERVE, DECLARE>::output_report(unsigned int flags)
     output_and_clean(serializer);
     output_and_clean(serializer);
 
-    call_cpu(INNER_PROF_REPORT_COST, cost.stop_and_save().cycles());
+    record_cpu(INNER_PROF_REPORT_COST, cost.stop_and_save().cycles());
     return 0;
 }
 
@@ -2422,37 +2350,37 @@ inline void ProfRecordWrap(int idx, long long count, long long cost)
 template<>
 inline void ProfRecordWrap<true, PROF_LEVEL_NORMAL>(int idx, long long count, long long cost)
 {
-    ProfInst.call_cpu(idx, count, cost);
+    ProfInst.record_cpu(idx, count, cost);
 }
 
 template<>
 inline void ProfRecordWrap<false, PROF_LEVEL_NORMAL>(int idx, long long count, long long cost)
 {
     (void)count;
-    ProfInst.call_cpu(idx, cost);
+    ProfInst.record_cpu(idx, cost);
 }
 template<>
 inline void ProfRecordWrap<true, PROF_LEVEL_FAST>(int idx, long long count, long long cost)
 {
-    ProfInst.call_cpu_no_sm(idx, count, cost);
+    ProfInst.record_cpu_no_sm(idx, count, cost);
 }
 template<>
 inline void ProfRecordWrap<false, PROF_LEVEL_FAST>(int idx, long long count, long long cost)
 {
     (void)count;
-    ProfInst.call_cpu_no_sm(idx, cost);
+    ProfInst.record_cpu_no_sm(idx, cost);
 }
 
 template<>
 inline void ProfRecordWrap<true, PROF_LEVEL_FULL>(int idx, long long count, long long cost)
 {
-    ProfInst.call_cpu_full(idx, count, cost);
+    ProfInst.record_cpu_full(idx, count, cost);
 }
 template<>
 inline void ProfRecordWrap<false, PROF_LEVEL_FULL>(int idx, long long count, long long cost)
 {
     (void)count;
-    ProfInst.call_cpu_full(idx, cost);
+    ProfInst.record_cpu_full(idx, cost);
 }
 
 template<long long COUNT>
@@ -2525,16 +2453,16 @@ private:
 // 条目注册和关系绑定   
 // -------
 //注册条目  
-#define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist_node(id, name, ct, resident, re_reg)  
+#define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist(id, name, ct, resident, re_reg)  
 
 //快速注册条目: 提供默认计时方式, 默认该条目不开启常驻模式, 一旦调用clear相关接口该条目记录的信息会被清零.  默认该条目未被注册过 当前为新注册  
-#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist_node(id, name, PROF_COUNTER_DEFAULT,  false, false)
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, PROF_COUNTER_DEFAULT,  false, false)
 
 //快速注册条目: 同上, 名字也默认提供 即ID自身    
 #define PROF_FAST_REGIST_NODE(id)  PROF_FAST_REGIST_NODE_ALIAS(id, #id)
 
 //快速注册条目: 同上 但是为常驻条目 
-#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist_node(id, #id, PROF_COUNTER_DEFAULT,  true, false)  
+#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, PROF_COUNTER_DEFAULT,  true, false)  
 
 //绑定展示层级(父子)关系  
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid) 
@@ -2575,9 +2503,9 @@ private:
 #define PROF_DO_MERGE() ProfInst.do_merge()  
 
 //清零<保留条目>信息(常驻条目除外)  
-#define PROF_CLEAN_RESERVE(...) ProfInst.clean_reserve_info(__VA_ARGS__)  
+#define PROF_RESET_RESERVE(...) ProfInst.reset_reserve_node(__VA_ARGS__)  
 //清零<注册条目>信息(常驻条目除外)  
-#define PROF_CLEAN_DECLARE(...) ProfInst.clean_declare_info(__VA_ARGS__)  
+#define PROF_RESET_DECLARE(...) ProfInst.reset_declare_node(__VA_ARGS__)  
 
 
 //--------
@@ -2586,32 +2514,32 @@ private:
 // -------
 
 //记录性能消耗信息 平均耗时约为4ns    
-#define PROF_CALL_CPU_SAMPLE(idx, cost) ProfInst.call_cpu(idx, cost)   
+#define PROF_RECORD_CPU_SAMPLE(idx, cost) ProfInst.record_cpu(idx, cost)   
 
 //记录性能消耗信息(携带总耗时和执行次数) 平均耗时约为6ns      
 //COUNT为常数 cost为总耗时, 根据记录等级选择性存储 平滑数据, 抖动偏差 等     ProfLevel:PROF_LEVEL_NORMAL  
-#define PROF_CALL_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL)  \
+#define PROF_RECORD_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL)  \
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>((int)(idx), (long long)(COUNT), (long long)cost)  
 //记录性能消耗信息: 同上, 但count非常数  
-#define PROF_CALL_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)  \
+#define PROF_RECORD_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)  \
         ProfRecordWrap<true, PROF_LEVEL>((int)(idx), (long long)(count), (long long)cost)
 
-//同PROF_CALL_CPU_SAMPLE  
-#define PROF_CALL_CPU(idx, cost) PROF_CALL_CPU_WRAP((idx), 1, (cost), PROF_LEVEL_NORMAL)
+//同PROF_RECORD_CPU_SAMPLE  
+#define PROF_RECORD_CPU(idx, cost) PROF_RECORD_CPU_WRAP((idx), 1, (cost), PROF_LEVEL_NORMAL)
 
 //记录内存字节数    
 //输出日志时 进行可读性处理 带k,m,g等单位  
-#define PROF_CALL_MEM(idx, count, mem) ProfInst.call_mem(idx, count, mem)  
+#define PROF_RECORD_MEM(idx, count, mem) ProfInst.record_mem(idx, count, mem)  
 
 //记录系统内存信息 包含vm, rss等  
-#define PROF_CALL_VM(idx, vm) ProfInst.call_vm(idx, vm)
-#define PROF_REFRESH_MEM(idx, count, mem) ProfInst.refresh_mem(idx, count, mem)
+#define PROF_RECORD_VM(idx, vm) ProfInst.record_vm(idx, vm)
+#define PROF_OVERWRITE_MEM(idx, count, mem) ProfInst.overwrite_mem(idx, count, mem)
 
 //记录定时器 比较特殊.  根据调用的前后间隔进行累加  
-#define PROF_CALL_TIMER(idx, stamp) ProfInst.call_timer(idx, stamp)  
+#define PROF_RECORD_TIMER(idx, stamp) ProfInst.record_timer(idx, stamp)  
 
 //记录用户自定义信息 没有额外处理   
-#define PROF_CALL_USER(idx, count, add) ProfInst.call_user(idx, count, add)
+#define PROF_RECORD_USER(idx, count, add) ProfInst.record_user(idx, count, add)
 
 
 //-------手动计时器-----------
@@ -2631,7 +2559,7 @@ private:
 #define PROF_STOP_AND_SAVE_COUNTER(var) var.stop_and_save()  
 
 //设置当前时间为定时器结束时间 并写入idx对应的条目中  
-#define PROF_STOP_AND_RECORD(idx, var) PROF_CALL_CPU_WRAP((idx), 1, (var).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
+#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
 
 
 
@@ -2663,14 +2591,14 @@ private:
 
 //其他立即输出
 #define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_CALL_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_CALL_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_CALL_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_RECORD_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_RECORD_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_RECORD_USER(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_RECORD_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 
 //输出当前进程的vm/rss信息 
-#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_CALL_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
+#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
 
 
 #else
@@ -2697,15 +2625,15 @@ private:
 #define PROF_DO_MERGE() 
 
 
-#define PROF_CALL_CPU_SAMPLE(idx, cost) 
-#define PROF_CALL_CPU(idx, cost) 
-#define PROF_CALL_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL) 
-#define PROF_CALL_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)
-#define PROF_CALL_MEM(idx, count, mem) 
-#define PROF_CALL_VM(idx, vm) 
-#define PROF_REFRESH_MEM(idx, count, mem) 
-#define PROF_CALL_TIMER(idx, stamp) 
-#define PROF_CALL_USER(idx, count, add)
+#define PROF_RECORD_CPU_SAMPLE(idx, cost) 
+#define PROF_RECORD_CPU(idx, cost) 
+#define PROF_RECORD_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL) 
+#define PROF_RECORD_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)
+#define PROF_RECORD_MEM(idx, count, mem) 
+#define PROF_RECORD_VM(idx, vm) 
+#define PROF_OVERWRITE_MEM(idx, count, mem) 
+#define PROF_RECORD_TIMER(idx, stamp) 
+#define PROF_RECORD_USER(idx, count, add)
 
 #define PROF_DEFINE_COUNTER(var)  
 #define PROF_DEFINE_COUNTER_INIT(tc, start)  

@@ -34,7 +34,7 @@ typedef float f32;
 
 enum MyTestEnum
 {
-    MY_DECLARE_BEGIN = ProfInstType::node_declare_begin_id(),
+    MY_DECLARE_BEGIN = ProfInstType::declare_begin_id(),
     NORMAL_NODE, 
 
     PARRENT_1,
@@ -56,13 +56,13 @@ int main(int argc, char *argv[])
     //≥ı ºªØ   
     PROF_INIT("inner prof");
     volatile long long cost = 123;
-    ProfInst.call_cpu_no_sm(1, 0x11223344);
-    ProfInst.call_cpu_no_sm(1, cost);
+    ProfInst.record_cpu_no_sm(1, 0x11223344);
+    ProfInst.record_cpu_no_sm(1, cost);
 
-    ProfInst.call_cpu(1, 0x11223333);
-    ProfInst.call_cpu(1, cost);
-    ProfInst.call_cpu_full(1, 0x11223322);
-    ProfInst.call_cpu_full(1, cost);
+    ProfInst.record_cpu(1, 0x11223333);
+    ProfInst.record_cpu(1, cost);
+    ProfInst.record_cpu_full(1, 0x11223322);
+    ProfInst.record_cpu_full(1, cost);
     (void)cost;
 
     return 0;
