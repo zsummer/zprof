@@ -1,11 +1,11 @@
-release zprof version date:2023-05-06 21:03:01
+release zprof version date:2023-05-09 14:58:03
 
 git log:
-commit aeb5ee24d60b9fc7dff4139b7ca31467bc22b21b
-Author: 夏天 <yawei.zhang@foxmail.com>
-Date:   Sat May 6 20:58:59 2023 +0800
+commit 11da171c1b429373dec76462a2f1fdd2b1055708
+Author: zsummer <yawei.zhang@foxmail.com>
+Date:   Tue May 9 14:57:38 2023 +0800
 
-    Update cmake.yml
+    clean test warning
 
- .github/workflows/cmake.yml | 22 ++++++++++++----------
- 1 file changed, 12 insertions(+), 10 deletions(-)
+ example/coverage_base_test/coverage_base_test.cpp | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
