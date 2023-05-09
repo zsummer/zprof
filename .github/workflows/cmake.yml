@@ -40,7 +40,7 @@ jobs:
       run: |
         cd ${{github.workspace}}/bin
           ./benchmark_branch_prediction_test
-          ./benchmark_call_cpu_test
+          ./benchmark_record_cpu_test
           ./benchmark_compiler_optimization_test
           ./benchmark_cpu_cache_matrix_test
           ./benchmark_cpu_cache_test
