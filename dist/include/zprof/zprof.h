@@ -1168,7 +1168,7 @@ struct ProfUser
 
 struct ProfMerge
 {
-    int actived_merge_nodes;
+    int merge_to;
     int merge_child_count;
     int merge_current_child_count;
 };
@@ -1503,7 +1503,7 @@ private:
 
 
 //name string  
-protected:
+public:
     int rename_node(int idx, const char* desc);
     const char* report_title() const { return &compact_string_[report_title_]; }
 
@@ -1910,20 +1910,20 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
     }
 
     //change merge to;  
-    if (node.merge.actived_merge_nodes != 0)
+    if (node.merge.merge_to != 0)
     {
         return -4;
     }
 
     to_node.merge.merge_child_count++;
-    node.merge.actived_merge_nodes = to;
+    node.merge.merge_to = to;
 
     if (node.merge.merge_child_count > 0)
     {
         return 0;
     }
 
-    if (to_node.merge.actived_merge_nodes != 0)
+    if (to_node.merge.merge_to != 0)
     {
         for (int i = 0; i < actived_merge_size_; i++)
         {
@@ -1956,11 +1956,11 @@ void ProfRecord<INST, RESERVE, DECLARE>::do_merge()
         long long append_mem = 0;
         long long append_user = 0;
         int node_id = 0;
-        node = &nodes_[leaf.merge.actived_merge_nodes];
+        node = &nodes_[leaf.merge.merge_to];
         append_cpu = leaf.cpu.t_u;
         append_mem = leaf.mem.t_u;
         append_user = leaf.user.t_u;
-        node_id = leaf.merge.actived_merge_nodes;
+        node_id = leaf.merge.merge_to;
         leaf.cpu.t_u = 0;
         leaf.mem.t_u = 0;
         leaf.user.t_u = 0;
@@ -1991,12 +1991,12 @@ void ProfRecord<INST, RESERVE, DECLARE>::do_merge()
                 node->cpu.t_u = 0;
                 node->mem.t_u = 0;
                 node->user.t_u = 0;
-                if (node->merge.actived_merge_nodes == 0)
+                if (node->merge.merge_to == 0)
                 {
                     break;
                 }
-                node_id = node->merge.actived_merge_nodes;
-                node = &nodes_[node->merge.actived_merge_nodes];
+                node_id = node->merge.merge_to;
+                node = &nodes_[node->merge.merge_to];
                 continue;
             }
             break;

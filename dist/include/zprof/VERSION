@@ -1,12 +1,16 @@
-release zprof version date:2023-05-09 15:11:19
+release zprof version date:2023-05-09 16:32:14
 
 git log:
-commit 0b140d763f431dd7171a1fa7e1e8264103d88f99
+commit 1e40aef55f0c733741b79218b37df8493000e7e3
 Author: zsummer <yawei.zhang@foxmail.com>
-Date:   Tue May 9 14:58:42 2023 +0800
+Date:   Tue May 9 15:11:39 2023 +0800
 
-    dist
+    rename
 
- dist/include/zprof/VERSION |  14 +-
- dist/include/zprof/zprof.h | 667 ++++++++++++++++++++++++++-------------------
- 2 files changed, 391 insertions(+), 290 deletions(-)
+ dist/include/zprof/VERSION                              | 13 +++++++------
+ dist/include/zprof/zprof.h                              |  4 ++--
+ example/coverage_merge_test/coverage_merge_test.cpp     |  4 ++--
+ example/coverage_test/coverage_test.cpp                 | 12 ++++++------
+ example/fast_macro_using_test/fast_macro_using_test.cpp |  2 +-
+ src/zprof.h                                             |  4 ++--
+ 6 files changed, 20 insertions(+), 19 deletions(-)

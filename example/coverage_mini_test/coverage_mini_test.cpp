@@ -55,6 +55,20 @@ int main(int argc, char *argv[])
     PROF_CLEAN_DECLARE();
 
 
+    static int RENAME_ID = ProfInstType::node_declare_begin_id() + 10;
+    PROF_FAST_REGIST_NODE(RENAME_ID);
+    for (int i = 0; i < ProfInst.max_compact_string_size(); i++)
+    {
+        int ret = ProfInst.rename_node(RENAME_ID, "RENAME_ID");
+        if (ret != 0)
+        {
+            LogInfo() << "rename full. rename count:" << i;
+            PROF_CALL_VM(RENAME_ID, prof_get_mem_use());
+            PROF_OUTPUT_RECORD(RENAME_ID);
+        }
+    }
+    PROF_CALL_VM(RENAME_ID, prof_get_mem_use());
+    PROF_OUTPUT_RECORD(RENAME_ID);
 
     for (unsigned int i = 0; i < 64; i++)
     {
