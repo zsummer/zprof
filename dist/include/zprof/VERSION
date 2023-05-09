@@ -1,16 +1,15 @@
-release zprof version date:2023-05-09 16:32:14
+release zprof version date:2023-05-09 16:51:37
 
 git log:
-commit 1e40aef55f0c733741b79218b37df8493000e7e3
+commit a4fab7799be53a69e10fbbe16eec107bb7251963
 Author: zsummer <yawei.zhang@foxmail.com>
-Date:   Tue May 9 15:11:39 2023 +0800
+Date:   Tue May 9 16:32:29 2023 +0800
 
-    rename
+    rename typo
 
- dist/include/zprof/VERSION                              | 13 +++++++------
- dist/include/zprof/zprof.h                              |  4 ++--
- example/coverage_merge_test/coverage_merge_test.cpp     |  4 ++--
- example/coverage_test/coverage_test.cpp                 | 12 ++++++------
- example/fast_macro_using_test/fast_macro_using_test.cpp |  2 +-
- src/zprof.h                                             |  4 ++--
- 6 files changed, 20 insertions(+), 19 deletions(-)
+ dist/include/zprof/VERSION                          | 18 +++++++++++-------
+ dist/include/zprof/zprof.h                          | 20 ++++++++++----------
+ example/coverage_merge_test/coverage_merge_test.cpp |  2 +-
+ example/coverage_mini_test/coverage_mini_test.cpp   | 14 ++++++++++++++
+ src/zprof_record.h                                  | 20 ++++++++++----------
+ 5 files changed, 46 insertions(+), 28 deletions(-)

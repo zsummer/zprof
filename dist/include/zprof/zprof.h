@@ -1168,9 +1168,9 @@ struct ProfUser
 
 struct ProfMerge
 {
-    int merge_to;
-    int merge_child_count;
-    int merge_current_child_count;
+    int to;
+    int childs;
+    int merged;
 };
 
 struct ProfShow
@@ -1910,20 +1910,20 @@ int ProfRecord<INST, RESERVE, DECLARE>::bind_merge(int to, int child)
     }
 
     //change merge to;  
-    if (node.merge.merge_to != 0)
+    if (node.merge.to != 0)
     {
         return -4;
     }
 
-    to_node.merge.merge_child_count++;
-    node.merge.merge_to = to;
+    to_node.merge.childs++;
+    node.merge.to = to;
 
-    if (node.merge.merge_child_count > 0)
+    if (node.merge.childs > 0)
     {
         return 0;
     }
 
-    if (to_node.merge.merge_to != 0)
+    if (to_node.merge.to != 0)
     {
         for (int i = 0; i < actived_merge_size_; i++)
         {
@@ -1956,11 +1956,11 @@ void ProfRecord<INST, RESERVE, DECLARE>::do_merge()
         long long append_mem = 0;
         long long append_user = 0;
         int node_id = 0;
-        node = &nodes_[leaf.merge.merge_to];
+        node = &nodes_[leaf.merge.to];
         append_cpu = leaf.cpu.t_u;
         append_mem = leaf.mem.t_u;
         append_user = leaf.user.t_u;
-        node_id = leaf.merge.merge_to;
+        node_id = leaf.merge.to;
         leaf.cpu.t_u = 0;
         leaf.mem.t_u = 0;
         leaf.user.t_u = 0;
@@ -1969,10 +1969,10 @@ void ProfRecord<INST, RESERVE, DECLARE>::do_merge()
             node->cpu.t_u += append_cpu;
             node->mem.t_u += append_mem;
             node->user.t_u += append_user;
-            node->merge.merge_current_child_count++;
-            if (node->merge.merge_current_child_count >= node->merge.merge_child_count)
+            node->merge.merged++;
+            if (node->merge.merged >= node->merge.childs)
             {
-                node->merge.merge_current_child_count = 0;
+                node->merge.merged = 0;
                 append_cpu = node->cpu.t_u;
                 append_mem = node->mem.t_u;
                 append_user = node->user.t_u;
@@ -1991,12 +1991,12 @@ void ProfRecord<INST, RESERVE, DECLARE>::do_merge()
                 node->cpu.t_u = 0;
                 node->mem.t_u = 0;
                 node->user.t_u = 0;
-                if (node->merge.merge_to == 0)
+                if (node->merge.to == 0)
                 {
                     break;
                 }
-                node_id = node->merge.merge_to;
-                node = &nodes_[node->merge.merge_to];
+                node_id = node->merge.to;
+                node = &nodes_[node->merge.to];
                 continue;
             }
             break;
