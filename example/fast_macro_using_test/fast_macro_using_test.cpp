@@ -22,7 +22,7 @@
 
 enum ProfEnumType
 {
-    PROF_REG_BEGIN = ProfInstType::node_declare_begin_id() + 10, //reserve 10;  it's used scene 1~7 case  
+    PROF_REG_BEGIN = ProfInstType::node_declare_begin_id() + 10, //reserve 10;  it's used scene 1~8 case  
     PROF_REG_ALL_MATH,
     PROF_REG_INC,
     PROF_REG_SUB,
@@ -129,12 +129,22 @@ int main(int argc, char* argv[])
         PROF_OUTPUT_TEMP_RECORD("scene_4_tmp_id: inc*1000 cost");
     }
 
-
-
-    //scene 5:  存在多个有交集的性能统计中, 可以先记录性能信息, 然后顺序执行写入<临时条目>性能信息并使用标准<临时条目>输出     
+    //scene 5: scene4的简化版    
+    //test/demo/benchmark **推荐** 
     if (true)
     {
-        static const int scene_5_tmp_id = ProfInstType::INNER_PROF_NULL;
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(cost, 1000, "scene5 inc*1000");
+        for (size_t i = 0; i < 1000; i++)
+        {
+            volatile size_t inc = 0;
+            inc++;
+        }
+    }
+
+    //scene 6:  存在多个有交集的性能统计中, 可以先记录性能信息, 然后顺序执行写入<临时条目>性能信息并使用标准<临时条目>输出     
+    if (true)
+    {
+        static const int scene_6_tmp_id = ProfInstType::INNER_PROF_NULL;
 
         PROF_DEFINE_COUNTER(cost);
         PROF_START_COUNTER(cost);
@@ -156,31 +166,31 @@ int main(int argc, char* argv[])
         }
         PROF_STOP_AND_SAVE_COUNTER(cost);
 
-        PROF_CALL_CPU(scene_5_tmp_id, cost.cycles());
-        PROF_OUTPUT_TEMP_RECORD("scene_5_tmp_id: total cost");
+        PROF_CALL_CPU(scene_6_tmp_id, cost.cycles());
+        PROF_OUTPUT_TEMP_RECORD("scene_6_tmp_id: total cost");
 
         //带count写入 
-        PROF_CALL_CPU_WRAP(scene_5_tmp_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
-        PROF_OUTPUT_TEMP_RECORD("scene_5_tmp_id: per inc");
+        PROF_CALL_CPU_WRAP(scene_6_tmp_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
+        PROF_OUTPUT_TEMP_RECORD("scene_6_tmp_id: per inc");
 
         //同上 更方便  
-        PROF_OUTPUT_MULTI_COUNT_CPU("scene_5_tmp_id: per sub", 1000, cost.cycles() - inc_cost.cycles());
+        PROF_OUTPUT_MULTI_COUNT_CPU("scene_6_tmp_id: per sub", 1000, cost.cycles() - inc_cost.cycles());
 
     }
 
 
-    //scene 6:  以报告形式输出所有当前存在的性能信息  
-    printf("%s", "scene 6: output report.\n");
+    //scene 7:  以报告形式输出所有当前存在的性能信息  
+    printf("%s", "scene 7: output report.\n");
     ProfInst.output_report();
 
-    //scene 7: resident 
-    static const int scene_7_resident_id = scene_3_id + 1;
-    static const int scene_7_unresident_id = scene_3_id + 2;
+    //scene 8: resident 
+    static const int scene_8_resident_id = scene_3_id + 1;
+    static const int scene_8_unresident_id = scene_3_id + 2;
 
     if (true)
     {
-        PROF_REGIST_NODE(scene_7_resident_id, "scene_7_resident_id", PROF_COUNTER_RDTSC, true, false);
-        PROF_REGIST_NODE(scene_7_unresident_id, "scene_7_resident_id", PROF_COUNTER_RDTSC, false, false);
+        PROF_REGIST_NODE(scene_8_resident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, true, false);
+        PROF_REGIST_NODE(scene_8_unresident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, false, false);
 
 
 
@@ -194,28 +204,28 @@ int main(int argc, char* argv[])
         PROF_STOP_AND_SAVE_COUNTER(cost);
 
         //写入记录信息  
-        PROF_CALL_CPU_WRAP(scene_7_resident_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
-        PROF_CALL_CPU_WRAP(scene_7_unresident_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
+        PROF_CALL_CPU_WRAP(scene_8_resident_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
+        PROF_CALL_CPU_WRAP(scene_8_unresident_id, 1000, cost.cycles(), PROF_LEVEL_NORMAL);
 
         //输出报告(只输出<注册条目> )   
-        printf("%s", "scene 7: output report.\n");  
-        PROF_OUTPUT_REPORT(PROF_SER_DELCARE);
+        printf("%s", "scene 8: output report.\n");  
+        PROF_OUTPUT_REPORT(PROF_OUTPUT_FLAG_DELCARE);
 
         //清除unresident记录  
         PROF_CLEAN_DECLARE();
 
         //输出报告(只输出<注册条目> )   
-        printf("%s", "scene 7: output cleaned(unresident)  report.\n");
-        PROF_OUTPUT_REPORT(PROF_SER_DELCARE);
+        printf("%s", "scene 8: output cleaned(unresident)  report.\n");
+        PROF_OUTPUT_REPORT(PROF_OUTPUT_FLAG_DELCARE);
     }
 
 
 
 
-    //scene 8: pre 清除所有声明条目 
+    //scene 10: pre 清除所有声明条目 
     PROF_CLEAN_DECLARE(false);
 
-    //scene 8: 注册条目(适合嵌入到实际项目中而非demo/benchmark/test) 
+    //scene 10: 注册条目(适合嵌入到实际项目中而非demo/benchmark/test) 
     if (true)
     {
         //定义条目   
@@ -320,8 +330,8 @@ int main(int argc, char* argv[])
         PROF_MERGE_INFO();
 
         // 输出报告(只输出<声明条目>)  
-        printf("%s", "scene8 report\n");
-        PROF_OUTPUT_REPORT(PROF_SER_DELCARE);
+        printf("%s", "scene 10 report\n");
+        PROF_OUTPUT_REPORT(PROF_OUTPUT_FLAG_DELCARE);
     }
 
     return 0;

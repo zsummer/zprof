@@ -137,9 +137,7 @@ public:
     ~ProfAutoAnonRecord()
     {
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(ProfInstType::INNER_PROF_NULL, COUNT, counter_.save().cycles());
-        ProfStackSerializer serializer;
-        ProfInst.recursive_serialize(ProfInstType::INNER_PROF_NULL, 0, desc_, strlen(desc_), serializer);
-        ProfInst.reset_node(ProfInstType::INNER_PROF_NULL);
+        ProfInst.output_temp_record(desc_);
     }
 
     ProfCounter<C>& counter() { return counter_; }
@@ -207,7 +205,7 @@ private:
 
 //执行性能数据的层级合并 
 //合并层级进行了扁平压缩 
-#define PROF_MERGE_INFO() ProfInst.merge_prof_info()  
+#define PROF_MERGE_INFO() ProfInst.merge()  
 
 //清零<保留条目>信息(常驻条目除外)  
 #define PROF_CLEAN_RESERVE(...) ProfInst.clean_reserve_info(__VA_ARGS__)  
@@ -293,7 +291,7 @@ private:
 //立刻输出一条信息  
 #define PROF_OUTPUT_RECORD(idx)        do {ProfInst.output_one_record(idx);}while(0)
 
-//输出完整报告 (PROF_SER_ALL)   
+//输出完整报告 (PROF_OUTPUT_FLAG_ALL)   
 #define PROF_OUTPUT_REPORT(...)    ProfInst.output_report(__VA_ARGS__)
 
 //其他立即输出

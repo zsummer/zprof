@@ -128,12 +128,23 @@ int main(int argc, char *argv[])
         ProfInst.output_temp_record("scene_4_tmp_id: inc*1000 cost");
     }
 
-
-
-    //scene 5:  存在多个有交集的性能统计中, 可以先记录性能信息, 然后顺序执行写入<临时条目>性能信息并使用标准<临时条目>输出     
+    //scene 5: scene4的简化版    
+    //test/demo/benchmark **推荐** 
     if (true)
     {
-        static const int scene_5_tmp_id = ProfInstType::INNER_PROF_NULL;
+        ProfAutoAnonRecord<1000> var("scene5 inc*1000");
+
+        for (size_t i = 0; i < 1000; i++)
+        {
+            volatile size_t inc = 0;
+            inc++;
+        }
+    }
+
+    //scene 6:  存在多个有交集的性能统计中, 可以先记录性能信息, 然后顺序执行写入<临时条目>性能信息并使用标准<临时条目>输出     
+    if (true)
+    {
+        static const int scene_6_tmp_id = ProfInstType::INNER_PROF_NULL;
 
         ProfCounter<> cost;
         cost.start();
@@ -156,29 +167,29 @@ int main(int argc, char *argv[])
         }
         cost.stop_and_save();
         
-        ProfInst.call_cpu(scene_5_tmp_id, 1, cost.cycles());
-        ProfInst.output_temp_record("scene_5_tmp_id: total cost");
+        ProfInst.call_cpu(scene_6_tmp_id, 1, cost.cycles());
+        ProfInst.output_temp_record("scene_6_tmp_id: total cost");
 
-        ProfInst.call_cpu(scene_5_tmp_id, 1000, inc_cost.cycles());
-        ProfInst.output_temp_record("scene_5_tmp_id: per inc");
+        ProfInst.call_cpu(scene_6_tmp_id, 1000, inc_cost.cycles());
+        ProfInst.output_temp_record("scene_6_tmp_id: per inc");
 
-        ProfInst.call_cpu(scene_5_tmp_id, 1000, cost.cycles() - inc_cost.cycles());
-        ProfInst.output_temp_record("scene_5_tmp_id: per sub");
+        ProfInst.call_cpu(scene_6_tmp_id, 1000, cost.cycles() - inc_cost.cycles());
+        ProfInst.output_temp_record("scene_6_tmp_id: per sub");
     }
 
 
-    //scene 6:  以报告形式输出所有当前存在的性能信息  
-    printf("%s", "scene 6: output report.\n");
+    //scene 7:  以报告形式输出所有当前存在的性能信息  
+    printf("%s", "scene 7: output report.\n");
     ProfInst.output_report();
 
-    //scene 7: resident 
-    static const int scene_7_resident_id = scene_3_id + 1;
-    static const int scene_7_unresident_id = scene_3_id + 2;
+    //scene 8: resident 
+    static const int scene_8_resident_id = scene_3_id + 1;
+    static const int scene_8_unresident_id = scene_3_id + 2;
 
     if (true)
     {
-        ProfInst.regist_node(scene_7_resident_id, "scene_7_resident_id", PROF_COUNTER_RDTSC, true, false);
-        ProfInst.regist_node(scene_7_unresident_id, "scene_7_resident_id", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist_node(scene_8_resident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, true, false);
+        ProfInst.regist_node(scene_8_unresident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, false, false);
 
         ProfCounter<> cost;
         cost.start();
@@ -189,26 +200,26 @@ int main(int argc, char *argv[])
         }
         cost.stop_and_save();
         //写入记录信息  
-        ProfInst.call_cpu(scene_7_resident_id, 1000, cost.cycles());
-        ProfInst.call_cpu(scene_7_unresident_id, 1000, cost.cycles());
+        ProfInst.call_cpu(scene_8_resident_id, 1000, cost.cycles());
+        ProfInst.call_cpu(scene_8_unresident_id, 1000, cost.cycles());
         //输出报告(只输出<注册条目> )   
-        printf("%s", "scene 7: output report.\n");
-        ProfInst.output_report(PROF_SER_DELCARE);
+        printf("%s", "scene 8: output report.\n");
+        ProfInst.output_report(PROF_OUTPUT_FLAG_DELCARE);
         //清除unresident记录  
         ProfInst.clean_declare_info(true);
         //输出报告(只输出<注册条目> )   
-        printf("%s", "scene 7: output cleaned(unresident)  report.\n");
-        ProfInst.output_report(PROF_SER_DELCARE);
+        printf("%s", "scene 8: output cleaned(unresident)  report.\n");
+        ProfInst.output_report(PROF_OUTPUT_FLAG_DELCARE);
     }
 
 
 
 
-    //scene 8: pre 清除所有声明条目 
+    //scene 10: pre 清除所有声明条目 
     ProfInst.clean_declare_info(false);
 
 
-    //scene 8: 注册条目(适合嵌入到实际项目中而非demo/benchmark/test) 
+    //scene 10: 注册条目(适合嵌入到实际项目中而非demo/benchmark/test) 
     if (true)
     {
         //定义条目   
@@ -307,12 +318,12 @@ int main(int argc, char *argv[])
 
 
 
-        // 合并条目   
-        ProfInst.merge_prof_info();
+        // 合并条目数据     
+        ProfInst.merge();
         // 
         // 输出报告(只输出<声明条目>)  
-        printf("%s", "scene8 report\n");
-        ProfInst.output_report(PROF_SER_DELCARE);
+        printf("%s", "scene 10 report\n");
+        ProfInst.output_report(PROF_OUTPUT_FLAG_DELCARE);
     }
 
     return 0;
