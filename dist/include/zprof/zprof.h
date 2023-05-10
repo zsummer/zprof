@@ -2567,9 +2567,6 @@ private:
 #define PROF_DEFINE_AUTO_RECORD(var, idx) ProfAutoRecord<> var(idx)   
 
 
-
-//-------以下非线程安全 使用了全局serializer进行序列化 ------   
- 
 //-------自动计时器(raii包装, 定义时记录开始时间, 销毁时直接输出性能信息到日志)-----------
 #define PROF_DEFINE_AUTO_ANON_RECORD(var, desc) ProfAutoAnonRecord<> var(desc)
 //-------自动计时器(raii包装, 定义时记录开始时间, 销毁时直接输出性能信息到日志)-----------
