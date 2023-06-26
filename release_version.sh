@@ -21,8 +21,40 @@ rm zprof.h.bak
 cp README.md ./dist/include/zprof/README.md 
 cp COPYRIGHT ./dist/include/zprof/LICENSE 
 
-version=`date +"release zprof version date:%Y-%m-%d %H:%M:%S"`
-echo $version > ./dist/include/zprof/VERSION 
+last_sha1=`git rev-parse HEAD`
+last_date=`git show --pretty=format:"%ci" | head -1`
+last_diff=`git log -1 --stat `
+
+last_dist_sha1=`git log -1 --stat ./src |grep -E "commit ([0-9a-f]*)" |grep -E -o "[0-9a-f]{10,}"`
+last_dist_date=`git show $last_dist_sha1 --pretty=format:"%ci" | head -1`
+last_dist_diff=`git log -1 --stat ./src`
+
+echo ""
+echo "[zprof last commit]:"
+echo $last_sha1
+echo $last_date
+echo ""
+echo "[zprof last diff]:"
+echo $last_diff
+
+
+echo ""
+echo "[./src last commit]:"
+echo $last_dist_sha1
+echo $last_dist_date
+echo ""
+echo "[./src last diff]:"
+echo $last_dist_diff
+
+echo ""
+echo "[write versions]"
+echo "version:" > ./dist/include/zprof/VERSION
+echo "last_sha1(./src)=$last_dist_sha1" >> ./dist/include/zprof/VERSION 
+echo "last_date(./src)=$last_dist_date" >> ./dist/include/zprof/VERSION 
 echo "" >> ./dist/include/zprof/VERSION 
-echo "git log:" >> ./dist/include/zprof/VERSION 
-git log -1 --stat >> ./dist/include/zprof/VERSION 
+echo "git log -1 --stat ./src:" >> ./dist/include/zprof/VERSION 
+echo $last_dist_diff >> ./dist/include/zprof/VERSION
+cat ./dist/include/zprof/VERSION
+
+echo ""
+echo "[write done]"
