@@ -1,0 +1,11 @@
+release zprof version date:2023-05-10 13:46:50
+
+git log:
+commit 729ed7b3cd3cccff858ad891cdd3df49941a5fdd
+Author: zsummer <yawei.zhang@foxmail.com>
+Date:   Tue May 9 21:50:45 2023 +0800
+
+    clean comment
+
+ src/zprof.h | 3 ---
+ 1 file changed, 3 deletions(-)
