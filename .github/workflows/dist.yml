@@ -1,0 +1,40 @@
+name: auto-dist
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  auto-dist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: clone
+        run: |
+          git clone https://${{secrets.ACTIONTOKEN}}@github.com/zsummer/zprof.git zprof-master
+          git clone https://${{secrets.ACTIONTOKEN}}@github.com/zsummer/zprof.git -b dist zprof-dist
+          ls
+          cd zprof-master
+          git config --global user.email "yawei.zhang@foxmail.com"
+          git config --global user.name "zsummer"
+          git status
+          cd ../zprof-dist
+          git config --global user.email "yawei.zhang@foxmail.com"
+          git config --global user.name "zsummer"
+          git status
+      - name: local-dist
+        run: |
+          cd zprof-master
+          bash release_version.sh 
+          git add *
+          git commit -a --allow-empty -m "[skip ci] auto dist"  
+          git push 
+      - name: branch-dist
+        run: |
+          cd zprof-master
+          cp -r dist/* ../zprof-dist/
+          cd ../zprof-dist/
+          git status
+          git add *
+          git diff --cached |wc -l
+          git commit -a --allow-empty -m "[skip ci]auto dist"  
+          git push 
