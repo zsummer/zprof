@@ -29,6 +29,7 @@
 #include <limits.h>
 #include <chrono>
 #include <string.h>
+#include <string>
 #ifdef _WIN32
 #ifndef KEEP_INPUT_QUICK_EDIT
 #define KEEP_INPUT_QUICK_EDIT false
@@ -355,6 +356,67 @@ inline ProfVM prof_get_mem_use()
 #endif
     return vm;
 }
+
+
+inline ProfVM prof_get_sys_mem()
+{
+    ProfVM vm = { 0ULL, 0ULL, 0ULL };
+#ifdef WIN32
+    MEMORYSTATUS state = { 0 };
+    GlobalMemoryStatus(&state);
+
+    vm.vm_size = (unsigned long long)state.dwTotalPhys;
+    vm.rss_size = (unsigned long long)(state.dwTotalPhys - state.dwAvailPhys);
+#else
+    const char* file = "/proc/meminfo";
+    FILE* fp = fopen(file, "r");
+    if (fp != NULL)
+    {
+        char line_buff[256];
+        while (fgets(line_buff, sizeof(line_buff), fp) != NULL)
+        {
+            std::string line = line_buff;
+            //std::transform(line.begin(), line.end(), line.begin(), ::toupper);
+            if (line.compare(0, strlen("MemTotal:"), "MemTotal:", strlen("MemTotal:")) == 0)
+            {
+                int ret = sscanf(line.c_str() + strlen("MemTotal:"), "%lld", &vm.vm_size);
+                if (ret == 1)
+                {
+                    vm.vm_size *=1024;
+                }
+            }
+
+            if (line.compare(0, strlen("MemFree:"), "MemFree:", strlen("MemFree:")) == 0)
+            {
+                int ret = sscanf(line.c_str() + strlen("MemFree:"), "%lld", &vm.rss_size);
+                if (ret == 1)
+                {
+                    vm.rss_size *= 1024;
+                }
+            }
+
+            if (line.compare(0, strlen("Cached:"), "Cached:", strlen("Cached:")) == 0)
+            {
+                int ret = sscanf(line.c_str() + strlen("Cached:"), "%lld", &vm.shr_size);
+                if (ret == 1)
+                {
+                    vm.shr_size *= 1024;
+                }
+            }
+            if (vm.rss_size != 0 && vm.shr_size != 0 && vm.vm_size != 0)
+            {
+                vm.rss_size = vm.vm_size - (vm.rss_size + vm.shr_size);
+                vm.shr_size = 0;
+                break;
+            }
+
+        }
+        fclose(fp);
+    }
+#endif
+    return vm;
+}
+
 
 #ifdef WIN32
 struct PROF_PROCESSOR_POWER_INFORMATION
@@ -2596,6 +2658,7 @@ private:
 
 //输出当前进程的vm/rss信息 
 #define PROF_OUTPUT_SELF_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
+#define PROF_OUTPUT_SYS_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, prof_get_sys_mem()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
 
 
 #else
