@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     //手动使用计时器并直接使用标准时间单位的耗时      
     if (true)
     {
-        ProfCounter<> counter;
+        Clock<> counter;
         counter.start();
         for (size_t i = 0; i < 1000; i++)
         {
@@ -64,10 +64,10 @@ int main(int argc, char *argv[])
     if (true)
     {
         //注册ID  
-        ProfInst.regist(scene_2_id, "scene 2", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(scene_2_id, "scene 2", CLOCK_RDTSC, false, false);
 
         //计算耗时 
-        ProfCounter<> cost;
+        Clock<> cost;
         cost.start();
 
         for (size_t i = 0; i < 1000; i++)
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
         cost.stop_and_save();
 
         //记录到条目
-        ProfInst.record_cpu(scene_2_id, 1, cost.cycles());
+        ProfInst.record_cpu(scene_2_id, 1, cost.duration_ticks());
 
         //立刻输出条目 
         ProfInst.output_one_record(scene_2_id);
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         //注册ID 
-        ProfInst.regist(scene_3_id, "scene 3", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(scene_3_id, "scene 3", CLOCK_RDTSC, false, false);
 
         //计算耗时并记录到scene_3_id 
         if (true)
@@ -146,10 +146,10 @@ int main(int argc, char *argv[])
     {
         static const int scene_6_tmp_id = ProfInstType::INNER_PROF_NULL;
 
-        ProfCounter<> cost;
+        Clock<> cost;
         cost.start();
 
-        ProfCounter<> inc_cost;
+        Clock<> inc_cost;
         inc_cost.start();
 
         for (size_t i = 0; i < 1000; i++)
@@ -167,13 +167,13 @@ int main(int argc, char *argv[])
         }
         cost.stop_and_save();
         
-        ProfInst.record_cpu(scene_6_tmp_id, 1, cost.cycles());
+        ProfInst.record_cpu(scene_6_tmp_id, 1, cost.duration_ticks());
         ProfInst.output_temp_record("scene_6_tmp_id: total cost");
 
-        ProfInst.record_cpu(scene_6_tmp_id, 1000, inc_cost.cycles());
+        ProfInst.record_cpu(scene_6_tmp_id, 1000, inc_cost.duration_ticks());
         ProfInst.output_temp_record("scene_6_tmp_id: per inc");
 
-        ProfInst.record_cpu(scene_6_tmp_id, 1000, cost.cycles() - inc_cost.cycles());
+        ProfInst.record_cpu(scene_6_tmp_id, 1000, cost.duration_ticks() - inc_cost.duration_ticks());
         ProfInst.output_temp_record("scene_6_tmp_id: per sub");
     }
 
@@ -188,10 +188,10 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        ProfInst.regist(scene_8_resident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, true, false);
-        ProfInst.regist(scene_8_unresident_id, "scene_8_resident_id", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(scene_8_resident_id, "scene_8_resident_id", CLOCK_RDTSC, true, false);
+        ProfInst.regist(scene_8_unresident_id, "scene_8_resident_id", CLOCK_RDTSC, false, false);
 
-        ProfCounter<> cost;
+        Clock<> cost;
         cost.start();
         for (size_t i = 0; i < 1000; i++)
         {
@@ -200,16 +200,16 @@ int main(int argc, char *argv[])
         }
         cost.stop_and_save();
         //写入记录信息  
-        ProfInst.record_cpu(scene_8_resident_id, 1000, cost.cycles());
-        ProfInst.record_cpu(scene_8_unresident_id, 1000, cost.cycles());
+        ProfInst.record_cpu(scene_8_resident_id, 1000, cost.duration_ticks());
+        ProfInst.record_cpu(scene_8_unresident_id, 1000, cost.duration_ticks());
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output report.\n");
-        ProfInst.output_report(PROF_OUTPUT_FLAG_DELCARE);
+        ProfInst.output_report(OUT_FLAG_DELCARE);
         //清除unresident记录  
         ProfInst.reset_declare_node(true);
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output cleaned(unresident)  report.\n");
-        ProfInst.output_report(PROF_OUTPUT_FLAG_DELCARE);
+        ProfInst.output_report(OUT_FLAG_DELCARE);
     }
 
 
@@ -223,15 +223,15 @@ int main(int argc, char *argv[])
     if (true)
     {
         //定义条目   
-        ProfInst.regist(PROF_REG_ALL_MATH, "all math", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_INC, "inc", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_SUB, "sub", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_MUL, "mul", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_DIV, "div", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_ALL_MATH, "all math", CLOCK_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_INC, "inc", CLOCK_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_SUB, "sub", CLOCK_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_MUL, "mul", CLOCK_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_DIV, "div", CLOCK_RDTSC, false, false);
 
-        ProfInst.regist(PROF_REG_VM_USE, "self vm use:", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_TIMMER, "timer 50ms", PROF_COUNTER_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_SELF_SIZE, "self memory size", PROF_COUNTER_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_VM_USE, "self vm use:", CLOCK_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_TIMMER, "timer 50ms", CLOCK_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_SELF_SIZE, "self memory size", CLOCK_RDTSC, false, false);
 
 
 
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 
         // 记录条目性能数据 
     
-        ProfCounter<> cost;
+        Clock<> cost;
         //性能统计  
         if (true)
         {
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
                 volatile size_t inc = 0;
                 inc++;
             }
-            ProfInst.record_cpu(PROF_REG_INC, 1000, cost.stop_and_save().cycles());
+            ProfInst.record_cpu(PROF_REG_INC, 1000, cost.stop_and_save().duration_ticks());
 
             cost.start();
             for (size_t i = 0; i < 1000; i++)
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
                 volatile size_t sub = 0;
                 sub--;
             }
-            ProfInst.record_cpu(PROF_REG_SUB, 1000, cost.stop_and_save().cycles());
+            ProfInst.record_cpu(PROF_REG_SUB, 1000, cost.stop_and_save().duration_ticks());
 
             cost.start();
             for (size_t i = 0; i < 1000; i++)
@@ -278,7 +278,7 @@ int main(int argc, char *argv[])
                 volatile size_t mul = i;
                 mul*=1000;
             }
-            ProfInst.record_cpu(PROF_REG_MUL, 1000, cost.stop_and_save().cycles());
+            ProfInst.record_cpu(PROF_REG_MUL, 1000, cost.stop_and_save().duration_ticks());
 
             cost.start();
             for (size_t i = 0; i < 1000; i++)
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
                 volatile size_t div = i;
                 div /= 1000;
             }
-            ProfInst.record_cpu(PROF_REG_DIV, 1000, cost.stop_and_save().cycles());
+            ProfInst.record_cpu(PROF_REG_DIV, 1000, cost.stop_and_save().duration_ticks());
         }
 
         //vm统计  
@@ -294,10 +294,10 @@ int main(int argc, char *argv[])
         {
             cost.start();
             //记录当前进程的vm使用情况  
-            ProfInst.record_vm(PROF_REG_VM_USE, prof_get_mem_use());
+            ProfInst.record_vm(PROF_REG_VM_USE, get_self_mem());
 
             //同时可以记录record_vm这行的消耗到同一条目下的cpu消耗信息中 
-            ProfInst.record_cpu(PROF_REG_VM_USE, cost.stop_and_save().cycles());
+            ProfInst.record_cpu(PROF_REG_VM_USE, cost.stop_and_save().duration_ticks());
         }
 
         //记录字节数量  
@@ -323,7 +323,7 @@ int main(int argc, char *argv[])
         // 
         // 输出报告(只输出<声明条目>)  
         printf("%s", "scene 10 report\n");
-        ProfInst.output_report(PROF_OUTPUT_FLAG_DELCARE);
+        ProfInst.output_report(OUT_FLAG_DELCARE);
     }
 
     return 0;

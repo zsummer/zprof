@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
         check_array[i] = rand()% THRESHLOD;
     }
 
-    ProfCounter<PROF_COUNTER_RDTSC_BTB> cost;
+    Clock<CLOCK_RDTSC_BTB> cost;
     volatile int val = 0;
     val++;
     volatile int loops = ARRAY_SIZE;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
             val -= check_array[i] <= THRESHLOD / 2 ? check_array[i] : 0;
         }
         cost.stop_and_save();
-        LogInfo() << "un sorted array ternary operator cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
+        LogInfo() << "un sorted array ternary operator cost:" << cost.duration_ticks() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
 
 
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
             }
         }
         cost.stop_and_save();
-        LogInfo() << "un sorted array cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
+        LogInfo() << "un sorted array cost:" << cost.duration_ticks() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
     if (true)
     {
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
             }
         }
         cost.stop_and_save();
-        LogInfo() << "un sorted array two jmp cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
+        LogInfo() << "un sorted array two jmp cost:" << cost.duration_ticks() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
 
 
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
             val -= check_array[i] <= THRESHLOD / 2 ? check_array[i] : 0;
         }
         cost.stop_and_save();
-        LogInfo() << "sorted array ternary operator cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
+        LogInfo() << "sorted array ternary operator cost:" << cost.duration_ticks() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
 
 
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
             }
         }
         cost.stop_and_save();
-        LogInfo() << "sorted array cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
+        LogInfo() << "sorted array cost:" << cost.duration_ticks() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
     if (true)
     {
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
 
         }
         cost.stop_and_save();
-        LogInfo() << "sorted array two jmp cost:" << cost.cycles() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
+        LogInfo() << "sorted array two jmp cost:" << cost.duration_ticks() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
 
     return 0;

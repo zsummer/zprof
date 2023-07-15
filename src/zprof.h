@@ -41,48 +41,48 @@
 
 
 //默认的全局实例定义 如需扩展可更换INST ID使用额外的全局实例      
-#define ProfInstType ProfRecord<PROF_DEFAULT_INST_ID, PROF_RESERVE_COUNT, PROF_DECLARE_COUNT>
+#define ProfInstType Record<PROF_DEFAULT_INST_ID, PROF_RESERVE_COUNT, PROF_DECLARE_COUNT>
 #define ProfInst ProfInstType::instance()
 
 
 //包装函数 根据模版参数在编译阶段直接使用不同的入口  从而减少常见使用场景下的运行时判断消耗.  
-template<bool IS_BAT, ProfLevel PROF_LEVEL>
+template<bool IS_BAT, RecordLevel PROF_LEVEL>
 inline void ProfRecordWrap(int idx, long long count, long long cost)
 {
 
 }
 
 template<>
-inline void ProfRecordWrap<true, PROF_LEVEL_NORMAL>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<true, RECORD_LEVEL_NORMAL>(int idx, long long count, long long cost)
 {
     ProfInst.record_cpu(idx, count, cost);
 }
 
 template<>
-inline void ProfRecordWrap<false, PROF_LEVEL_NORMAL>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<false, RECORD_LEVEL_NORMAL>(int idx, long long count, long long cost)
 {
     (void)count;
     ProfInst.record_cpu(idx, cost);
 }
 template<>
-inline void ProfRecordWrap<true, PROF_LEVEL_FAST>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<true, RECORD_LEVEL_FAST>(int idx, long long count, long long cost)
 {
     ProfInst.record_cpu_no_sm(idx, count, cost);
 }
 template<>
-inline void ProfRecordWrap<false, PROF_LEVEL_FAST>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<false, RECORD_LEVEL_FAST>(int idx, long long count, long long cost)
 {
     (void)count;
     ProfInst.record_cpu_no_sm(idx, cost);
 }
 
 template<>
-inline void ProfRecordWrap<true, PROF_LEVEL_FULL>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<true, RECORD_LEVEL_FULL>(int idx, long long count, long long cost)
 {
     ProfInst.record_cpu_full(idx, count, cost);
 }
 template<>
-inline void ProfRecordWrap<false, PROF_LEVEL_FULL>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<false, RECORD_LEVEL_FULL>(int idx, long long count, long long cost)
 {
     (void)count;
     ProfInst.record_cpu_full(idx, cost);
@@ -97,8 +97,8 @@ struct ProfCountIsGreatOne
 
 //RAII小函数  
 //用于快速记录<注册条目>的性能信息  
-template <long long COUNT = 1, ProfLevel PROF_LEVEL = PROF_LEVEL_NORMAL,
-    ProfCounterType C = PROF_COUNTER_DEFAULT>
+template <long long COUNT = 1, RecordLevel PROF_LEVEL = RECORD_LEVEL_NORMAL,
+    ClockType C = CLOCK_DEFAULT>
 class ProfAutoRecord
 {
 public:
@@ -110,11 +110,11 @@ public:
     }
     ~ProfAutoRecord()
     {
-        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(idx_, COUNT, counter_.save().cycles());
+        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(idx_, COUNT, counter_.save().duration_ticks());
     }
-    ProfCounter<C>& counter() { return counter_; }
+    Clock<C>& counter() { return counter_; }
 private:
-    ProfCounter<C> counter_;
+    Clock<C> counter_;
     int idx_;
 };
 
@@ -123,8 +123,8 @@ private:
 //RAII小函数  
 //一次性记录并直接输出到日志 不需要提前注册任何条目  
 //整体性能影响要稍微高于<注册条目>  但消耗部分并不影响记录本身. 使用在常见的一次性流程或者demo场景中.    
-template <long long COUNT = 1LL, ProfLevel PROF_LEVEL = PROF_LEVEL_NORMAL,
-    ProfCounterType C = PROF_COUNTER_DEFAULT>
+template <long long COUNT = 1LL, RecordLevel PROF_LEVEL = RECORD_LEVEL_NORMAL,
+    ClockType C = CLOCK_DEFAULT>
 class ProfAutoAnonRecord
 {
 public:
@@ -136,13 +136,13 @@ public:
     }
     ~ProfAutoAnonRecord()
     {
-        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(ProfInstType::INNER_PROF_NULL, COUNT, counter_.save().cycles());
+        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(ProfInstType::INNER_PROF_NULL, COUNT, counter_.save().duration_ticks());
         ProfInst.output_temp_record(desc_);
     }
 
-    ProfCounter<C>& counter() { return counter_; }
+    Clock<C>& counter() { return counter_; }
 private:
-    ProfCounter<C> counter_;
+    Clock<C> counter_;
     char desc_[PROF_NAME_MAX_SIZE];
 };
 
@@ -161,13 +161,13 @@ private:
 #define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist(id, name, ct, resident, re_reg)  
 
 //快速注册条目: 提供默认计时方式, 默认该条目不开启常驻模式, 一旦调用clear相关接口该条目记录的信息会被清零.  默认该条目未被注册过 当前为新注册  
-#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, PROF_COUNTER_DEFAULT,  false, false)
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, CLOCK_DEFAULT,  false, false)
 
 //快速注册条目: 同上, 名字也默认提供 即ID自身    
 #define PROF_FAST_REGIST_NODE(id)  PROF_FAST_REGIST_NODE_ALIAS(id, #id)
 
 //快速注册条目: 同上 但是为常驻条目 
-#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, PROF_COUNTER_DEFAULT,  true, false)  
+#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, CLOCK_DEFAULT,  true, false)  
 
 //绑定展示层级(父子)关系  
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid) 
@@ -222,7 +222,7 @@ private:
 #define PROF_RECORD_CPU_SAMPLE(idx, cost) ProfInst.record_cpu(idx, cost)   
 
 //记录性能消耗信息(携带总耗时和执行次数) 平均耗时约为6ns      
-//COUNT为常数 cost为总耗时, 根据记录等级选择性存储 平滑数据, 抖动偏差 等     ProfLevel:PROF_LEVEL_NORMAL  
+//COUNT为常数 cost为总耗时, 根据记录等级选择性存储 平滑数据, 抖动偏差 等     RecordLevel:RECORD_LEVEL_NORMAL  
 #define PROF_RECORD_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL)  \
         ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>((int)(idx), (long long)(COUNT), (long long)cost)  
 //记录性能消耗信息: 同上, 但count非常数  
@@ -230,7 +230,7 @@ private:
         ProfRecordWrap<true, PROF_LEVEL>((int)(idx), (long long)(count), (long long)cost)
 
 //同PROF_RECORD_CPU_SAMPLE  
-#define PROF_RECORD_CPU(idx, cost) PROF_RECORD_CPU_WRAP((idx), 1, (cost), PROF_LEVEL_NORMAL)
+#define PROF_RECORD_CPU(idx, cost) PROF_RECORD_CPU_WRAP((idx), 1, (cost), RECORD_LEVEL_NORMAL)
 
 //记录内存字节数    
 //输出日志时 进行可读性处理 带k,m,g等单位  
@@ -249,10 +249,10 @@ private:
 
 //-------手动计时器-----------
 //定义一个计时器  
-#define PROF_DEFINE_COUNTER(var)  ProfCounter<> var
+#define PROF_DEFINE_COUNTER(var)  Clock<> var
 
 //定义一个带起始时间戳的计时器(通常场景很少用这个)  
-#define PROF_DEFINE_COUNTER_INIT(tc, start)  ProfCounter<> tc(start)  
+#define PROF_DEFINE_COUNTER_INIT(tc, start)  Clock<> tc(start)  
 
 //设置当前时间为 定时器开始时间    
 #define PROF_START_COUNTER(var) var.start()   
@@ -264,7 +264,7 @@ private:
 #define PROF_STOP_AND_SAVE_COUNTER(var) var.stop_and_save()  
 
 //设置当前时间为定时器结束时间 并写入idx对应的条目中  
-#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).stop_and_save().cycles(), PROF_LEVEL_NORMAL)
+#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).stop_and_save().duration_ticks(), RECORD_LEVEL_NORMAL)
 
 
 
@@ -288,11 +288,11 @@ private:
 //立刻输出一条信息  
 #define PROF_OUTPUT_RECORD(idx)        do {ProfInst.output_one_record(idx);}while(0)
 
-//输出完整报告 (PROF_OUTPUT_FLAG_ALL)   
+//输出完整报告 (OUT_FLAG_ALL)   
 #define PROF_OUTPUT_REPORT(...)    ProfInst.output_report(__VA_ARGS__)
 
 //其他立即输出
-#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, PROF_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, RECORD_LEVEL_FAST>((int)ProfInstType::INNER_PROF_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_RECORD_USER(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_RECORD_MEM(ProfInstType::INNER_PROF_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
@@ -300,8 +300,8 @@ private:
 #define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_RECORD_MEM(ProfInstType::INNER_PROF_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 
 //输出当前进程的vm/rss信息 
-#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
-#define PROF_OUTPUT_SYS_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, prof_get_sys_mem()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
+#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, get_self_mem()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
+#define PROF_OUTPUT_SYS_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, get_sys_mem()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
 
 
 #else

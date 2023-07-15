@@ -63,11 +63,11 @@ int main(int argc, char *argv[])
         if (ret != 0)
         {
             LogInfo() << "rename full. rename count:" << i;
-            PROF_RECORD_VM(RENAME_ID, prof_get_mem_use());
+            PROF_RECORD_VM(RENAME_ID, get_self_mem());
             PROF_OUTPUT_RECORD(RENAME_ID);
         }
     }
-    PROF_RECORD_VM(RENAME_ID, prof_get_mem_use());
+    PROF_RECORD_VM(RENAME_ID, get_self_mem());
     PROF_OUTPUT_RECORD(RENAME_ID);
 
     for (unsigned int i = 0; i < 64; i++)

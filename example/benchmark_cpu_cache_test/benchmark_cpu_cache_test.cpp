@@ -95,9 +95,9 @@ int main(int argc, char *argv[])
                 long long count = 0;
                 for (size_t i = 0; i < 100; i++)
                 {
-                    begin_cicle = prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
+                    begin_cicle = get_tick<CLOCK_RDTSC_BTB>();
                     FIVE_HUNDRED;
-                    end_cicle = prof_get_time_cycle<PROF_COUNTER_RDTSC_BTB>();
+                    end_cicle = get_tick<CLOCK_RDTSC_BTB>();
                     total += end_cicle - begin_cicle;
                     count += 500;
                 }
