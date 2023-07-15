@@ -488,9 +488,9 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* title)
     particle_for_ns_[PROF_COUNTER_NULL] = 0;
     particle_for_ns_[PROF_COUNTER_SYS] = prof_get_time_inverse_frequency<PROF_COUNTER_SYS>();
     particle_for_ns_[PROF_COUNTER_CLOCK] = prof_get_time_inverse_frequency<PROF_COUNTER_CLOCK>();
-    particle_for_ns_[PROF_CONNTER_CHRONO] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO>();
-    particle_for_ns_[PROF_CONNTER_CHRONO_STEADY] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_STEADY>();
-    particle_for_ns_[PROF_CONNTER_CHRONO_SYS] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_SYS>();
+    particle_for_ns_[PROF_COUNTER_CHRONO] = prof_get_time_inverse_frequency<PROF_COUNTER_CHRONO>();
+    particle_for_ns_[PROF_COUNTER_CHRONO_STEADY] = prof_get_time_inverse_frequency<PROF_COUNTER_CHRONO_STEADY>();
+    particle_for_ns_[PROF_COUNTER_CHRONO_SYS] = prof_get_time_inverse_frequency<PROF_COUNTER_CHRONO_SYS>();
     particle_for_ns_[PROF_COUNTER_RDTSC] = prof_get_time_inverse_frequency<PROF_COUNTER_RDTSC>();
     particle_for_ns_[PROF_COUNTER_RDTSC_BTB] = particle_for_ns_[PROF_COUNTER_RDTSC];
     particle_for_ns_[PROF_COUNTER_RDTSCP] = particle_for_ns_[PROF_COUNTER_RDTSC];

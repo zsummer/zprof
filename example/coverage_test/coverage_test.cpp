@@ -199,10 +199,10 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "PROF_CONNTER_CHRONO bat 1000w");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "PROF_COUNTER_CHRONO bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += prof_get_time_cycle<PROF_CONNTER_CHRONO>();
+            cycles += prof_get_time_cycle<PROF_COUNTER_CHRONO>();
         }
     }
 
@@ -350,10 +350,10 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles += prof_get_time_cycle<PROF_CONNTER_CHRONO>();
+            cycles += prof_get_time_cycle<PROF_COUNTER_CHRONO>();
             PROF_RECORD_CPU(ProfInstType::INNER_PROF_NULL, cost.stop_and_save().cycles());
         }
-        PROF_OUTPUT_TEMP_RECORD("PROF_CONNTER_CHRONO dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("PROF_COUNTER_CHRONO dis 1000w");
     }
 
     if (true)
@@ -815,7 +815,7 @@ int main(int argc, char *argv[])
         ProfCounter<PROF_COUNTER_RDTSC> rdtsc;
         ProfCounter<PROF_COUNTER_SYS> sys;
         ProfCounter<PROF_COUNTER_CLOCK> linux_clock;
-        ProfCounter<PROF_CONNTER_CHRONO> chrono_clock;
+        ProfCounter<PROF_COUNTER_CHRONO> chrono_clock;
         rdtsc.start();
         sys.start();
         linux_clock.start();
