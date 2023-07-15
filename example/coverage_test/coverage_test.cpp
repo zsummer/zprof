@@ -72,8 +72,7 @@ int main(int argc, char *argv[])
 
     //ProfInst.init("inner prof");
     regist_prof();
-    PROF_DEFINE_AUTO_ANON_RECORD(delta, "self use mem in main func begin and exit");
-    PROF_OUTPUT_SELF_MEM("self use mem in main func begin");
+
     if (true)
     {
         PROF_DEFINE_AUTO_ANON_RECORD(guard, "start fnlog use");
@@ -82,7 +81,9 @@ int main(int argc, char *argv[])
 
     LogDebug() << " main begin test. ";
     volatile double cycles = 0.0f;
-
+    PROF_DEFINE_AUTO_ANON_RECORD(delta, "self use mem in main func begin and exit");
+    PROF_OUTPUT_SELF_MEM("self use mem in main func begin");
+    PROF_OUTPUT_SYS_MEM("sys use mem");
 
     
     if (false)
@@ -797,7 +798,7 @@ int main(int argc, char *argv[])
     PROF_DO_MERGE();
     PROF_OUTPUT_REPORT();
     PROF_OUTPUT_SELF_MEM("now memory");
-
+    PROF_OUTPUT_SYS_MEM("now sys use mem");
 
     PROF_RESET_CHILD(ENUM_ENTRY);
     entry_mem_test();

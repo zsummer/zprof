@@ -301,6 +301,7 @@ private:
 
 //输出当前进程的vm/rss信息 
 #define PROF_OUTPUT_SELF_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, prof_get_mem_use()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
+#define PROF_OUTPUT_SYS_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_PROF_NULL, prof_get_sys_mem()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
 
 
 #else
