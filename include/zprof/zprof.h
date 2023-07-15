@@ -106,9 +106,9 @@ enum ProfCounterType
     PROF_COUNTER_NULL,
     PROF_COUNTER_SYS,
     PROF_COUNTER_CLOCK,
-    PROF_CONNTER_CHRONO,
-    PROF_CONNTER_CHRONO_STEADY,
-    PROF_CONNTER_CHRONO_SYS,
+    PROF_COUNTER_CHRONO,
+    PROF_COUNTER_CHRONO_STEADY,
+    PROF_COUNTER_CHRONO_SYS,
 
     PROF_COUNTER_RDTSC_PURE,
     PROF_COUNTER_RDTSC_NOFENCE,
@@ -301,19 +301,19 @@ PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_SYS>()
 }
 
 template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_CHRONO>()
 {
     return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 }
 
 template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO_STEADY>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_CHRONO_STEADY>()
 {
     return std::chrono::steady_clock().now().time_since_epoch().count();
 }
 
 template<>
-PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_CONNTER_CHRONO_SYS>()
+PROF_ALWAYS_INLINE long long prof_get_time_cycle<PROF_COUNTER_CHRONO_SYS>()
 {
     return std::chrono::system_clock().now().time_since_epoch().count();
 }
@@ -509,21 +509,21 @@ PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_SYS>()
 }
 
 template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_CHRONO>()
 {
     static double chrono_frequency = std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
     return chrono_frequency;
 }
 
 template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO_STEADY>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_CHRONO_STEADY>()
 {
     static double chrono_frequency = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
     return chrono_frequency;
 }
 
 template<>
-PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_CONNTER_CHRONO_SYS>()
+PROF_ALWAYS_INLINE double prof_get_time_frequency<PROF_COUNTER_CHRONO_SYS>()
 {
     static double chrono_frequency = std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
     return chrono_frequency;
@@ -1502,9 +1502,9 @@ int ProfRecord<INST, RESERVE, DECLARE>::init(const char* title)
     particle_for_ns_[PROF_COUNTER_NULL] = 0;
     particle_for_ns_[PROF_COUNTER_SYS] = prof_get_time_inverse_frequency<PROF_COUNTER_SYS>();
     particle_for_ns_[PROF_COUNTER_CLOCK] = prof_get_time_inverse_frequency<PROF_COUNTER_CLOCK>();
-    particle_for_ns_[PROF_CONNTER_CHRONO] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO>();
-    particle_for_ns_[PROF_CONNTER_CHRONO_STEADY] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_STEADY>();
-    particle_for_ns_[PROF_CONNTER_CHRONO_SYS] = prof_get_time_inverse_frequency<PROF_CONNTER_CHRONO_SYS>();
+    particle_for_ns_[PROF_COUNTER_CHRONO] = prof_get_time_inverse_frequency<PROF_COUNTER_CHRONO>();
+    particle_for_ns_[PROF_COUNTER_CHRONO_STEADY] = prof_get_time_inverse_frequency<PROF_COUNTER_CHRONO_STEADY>();
+    particle_for_ns_[PROF_COUNTER_CHRONO_SYS] = prof_get_time_inverse_frequency<PROF_COUNTER_CHRONO_SYS>();
     particle_for_ns_[PROF_COUNTER_RDTSC] = prof_get_time_inverse_frequency<PROF_COUNTER_RDTSC>();
     particle_for_ns_[PROF_COUNTER_RDTSC_BTB] = particle_for_ns_[PROF_COUNTER_RDTSC];
     particle_for_ns_[PROF_COUNTER_RDTSCP] = particle_for_ns_[PROF_COUNTER_RDTSC];
