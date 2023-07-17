@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     if (true)
     {
         //注册ID  
-        PROF_REGIST_NODE(scene_2_id, "scene 2", CLOCK_RDTSC, false, false);
+        PROF_REGIST_NODE(scene_2_id, "scene 2", zprof::CLOCK_RDTSC, false, false);
 
         //计算耗时 
         PROF_DEFINE_COUNTER(cost);
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     //scene 4: 使用<临时条目>输出性能信息 而不新增注册条目    
     if (true)
     {
-        static const int scene_4_tmp_id = ProfInstType::INNER_PROF_NULL;
+        static const int scene_4_tmp_id = ProfInstType::INNER_NULL;
         if (true)
         {
             PROF_DEFINE_AUTO_RECORD(cost, scene_4_tmp_id);
@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
     //scene 6:  存在多个有交集的性能统计中, 可以先记录性能信息, 然后顺序执行写入<临时条目>性能信息并使用标准<临时条目>输出     
     if (true)
     {
-        static const int scene_6_tmp_id = ProfInstType::INNER_PROF_NULL;
+        static const int scene_6_tmp_id = ProfInstType::INNER_NULL;
 
         PROF_DEFINE_COUNTER(cost);
         PROF_START_COUNTER(cost);
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
         PROF_OUTPUT_TEMP_RECORD("scene_6_tmp_id: total cost");
 
         //带count写入 
-        PROF_RECORD_CPU_WRAP(scene_6_tmp_id, 1000, cost.duration_ticks(), RECORD_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(scene_6_tmp_id, 1000, cost.duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
         PROF_OUTPUT_TEMP_RECORD("scene_6_tmp_id: per inc");
 
         //同上 更方便  
@@ -189,8 +189,8 @@ int main(int argc, char* argv[])
 
     if (true)
     {
-        PROF_REGIST_NODE(scene_8_resident_id, "scene_8_resident_id", CLOCK_RDTSC, true, false);
-        PROF_REGIST_NODE(scene_8_unresident_id, "scene_8_resident_id", CLOCK_RDTSC, false, false);
+        PROF_REGIST_NODE(scene_8_resident_id, "scene_8_resident_id", zprof::CLOCK_RDTSC, true, false);
+        PROF_REGIST_NODE(scene_8_unresident_id, "scene_8_resident_id", zprof::CLOCK_RDTSC, false, false);
 
 
 
@@ -204,19 +204,19 @@ int main(int argc, char* argv[])
         PROF_STOP_AND_SAVE_COUNTER(cost);
 
         //写入记录信息  
-        PROF_RECORD_CPU_WRAP(scene_8_resident_id, 1000, cost.duration_ticks(), RECORD_LEVEL_NORMAL);
-        PROF_RECORD_CPU_WRAP(scene_8_unresident_id, 1000, cost.duration_ticks(), RECORD_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(scene_8_resident_id, 1000, cost.duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(scene_8_unresident_id, 1000, cost.duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
 
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output report.\n");  
-        PROF_OUTPUT_REPORT(OUT_FLAG_DELCARE);
+        PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
 
         //清除unresident记录  
         PROF_RESET_DECLARE();
 
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output cleaned(unresident)  report.\n");
-        PROF_OUTPUT_REPORT(OUT_FLAG_DELCARE);
+        PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
     }
 
 
@@ -270,7 +270,7 @@ int main(int argc, char* argv[])
                 volatile size_t inc = 0;
                 inc++;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_INC, 1000, cost.stop_and_save().duration_ticks(), RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_INC, 1000, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
                 volatile size_t sub = 0;
                 sub--;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_SUB, 1000, cost.stop_and_save().duration_ticks(), RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_SUB, 1000, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -286,7 +286,7 @@ int main(int argc, char* argv[])
                 volatile size_t mul = i;
                 mul *= 1000;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_MUL, 1000, cost.stop_and_save().duration_ticks(), RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_MUL, 1000, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
                 volatile size_t div = i;
                 div /= 1000;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_DIV, 1000, cost.stop_and_save().duration_ticks(), RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_DIV, 1000, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
         }
 
         //vm统计  
@@ -302,10 +302,10 @@ int main(int argc, char* argv[])
         {
             PROF_RESTART_COUNTER(cost);
             //记录当前进程的vm使用情况  
-            PROF_RECORD_VM(PROF_REG_VM_USE, get_self_mem());
+            PROF_RECORD_VM(PROF_REG_VM_USE, zprof::get_self_mem());
 
             //同时可以记录record_vm这行的消耗到同一条目下的cpu消耗信息中 
-            PROF_RECORD_CPU_WRAP(PROF_REG_VM_USE, 1, cost.stop_and_save().duration_ticks(), RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_VM_USE, 1, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
         }
 
         //记录字节数量  
@@ -331,7 +331,7 @@ int main(int argc, char* argv[])
 
         // 输出报告(只输出<声明条目>)  
         printf("%s", "scene 10 report\n");
-        PROF_OUTPUT_REPORT(OUT_FLAG_DELCARE);
+        PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
     }
 
     return 0;

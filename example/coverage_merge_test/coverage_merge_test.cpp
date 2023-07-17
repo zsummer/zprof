@@ -61,9 +61,9 @@ while(0)
 
 
 
-static inline void OutputLog(const ProfSerializer& serializer)
+static inline void OutputLog(const zprof::Report& rp)
 {
-    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(serializer.buff(), (int)serializer.offset());
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(rp.buff(), (int)rp.offset());
 }
 
 int check_merge_to_count(int id)
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 
 
     PROF_DO_MERGE();
-    PROF_OUTPUT_REPORT(OUT_FLAG_DELCARE);
+    PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
 
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.childs == 2);
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merged == 0);
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.sum == 4);
 
 
-    PROF_OUTPUT_REPORT(OUT_FLAG_DELCARE);
+    PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
 
     LogInfo() << "test success.";
 

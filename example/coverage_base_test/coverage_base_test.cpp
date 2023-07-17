@@ -62,14 +62,14 @@ while(0)
 
 
 
-#define START_PROF_COUNTER(T) Clock<T> var_##T;  var_##T.start();
+#define START_PROF_COUNTER(T) zprof::Clock<zprof::T> var_##T;  var_##T.start();
 #define RESTART_PROF_COUNTER(T) var_##T.start();
-#define RECORD_PROF_COUNTER(T) ProfInst.record_cpu_full(ProfInst.declare_begin_id() + T, var_##T.stop_and_save().duration_ticks());;
+#define RECORD_PROF_COUNTER(T) ProfInst.record_cpu_full(ProfInst.declare_begin_id() + zprof::T, var_##T.stop_and_save().duration_ticks());;
 
 
-static inline void OutputLog(const ProfSerializer& serializer)
+static inline void OutputLog(const zprof::Report& rp)
 {
-    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(serializer.buff(), (int)serializer.offset());
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(rp.buff(), (int)rp.offset());
 }
 
 int main(int argc, char *argv[])
@@ -82,18 +82,18 @@ int main(int argc, char *argv[])
 
     PROF_SET_OUTPUT(&OutputLog);
 
-    ASSERT_TEST(get_self_mem().vm_size > 0);
-    ASSERT_TEST(get_self_mem().rss_size > 0);
-    ASSERT_TEST(get_self_mem().rss_size <= get_self_mem().vm_size);
+    ASSERT_TEST(zprof::get_self_mem().vm_size > 0);
+    ASSERT_TEST(zprof::get_self_mem().rss_size > 0);
+    ASSERT_TEST(zprof::get_self_mem().rss_size <= zprof::get_self_mem().vm_size);
 
-    for (int i = CLOCK_NULL; i < CLOCK_MAX; i++)
+    for (int i = zprof::CLOCK_NULL; i < zprof::CLOCK_MAX; i++)
     {
         ASSERT_TEST(ProfInst.particle_for_ns(i) > 0.1, "i=", i); //CPU 10Ghz; 0.1ns  
         ASSERT_TEST(ProfInst.particle_for_ns(i) < 1000*1000*1000, "i=", i); //the clock particle is second ?  
     }
     
     int compact_len = (int)ProfInst.compact_writer().offset();
-    for (int i = CLOCK_NULL; i < CLOCK_MAX; i++)
+    for (int i = zprof::CLOCK_NULL; i < zprof::CLOCK_MAX; i++)
     {
         int decl_id = ProfInst.declare_begin_id() + i;
         ASSERT_TEST(!ProfInst.node(decl_id).active);
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     }
 
     
-    for (int i = CLOCK_NULL; i < CLOCK_MAX; i++)
+    for (int i = zprof::CLOCK_NULL; i < zprof::CLOCK_MAX; i++)
     {
         int decl_id = ProfInst.declare_begin_id() + i;
         char buf[100];
@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
             RECORD_PROF_COUNTER(CLOCK_RDTSC_LOCK);
         }
 
-        for (int i = CLOCK_NULL+1; i < CLOCK_MAX; i++)
+        for (int i = zprof::CLOCK_NULL+1; i < zprof::CLOCK_MAX; i++)
         {
             int decl_id = ProfInst.declare_begin_id() + i;
 

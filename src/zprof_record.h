@@ -20,7 +20,7 @@
 #define ZPROF_RECORD_H
 
 #include "zprof_clock.h"
-#include "zprof_serialize.h"
+#include "zprof_report.h"
 #include <algorithm>
 #include <functional>
 #include <atomic>
@@ -125,9 +125,9 @@ namespace zprof
 
     /*
     #ifdef _FN_LOG_LOG_H_
-    static inline void ProfDefaultFNLogFunc(const ProfSerializer& serializer)
+    static inline void ProfDefaultFNLogFunc(const Report& rp)
     {
-        LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(serializer.buff(), (int)serializer.offset());
+        LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(rp.buff(), (int)rp.offset());
     }
     #endif
     */
@@ -136,33 +136,33 @@ namespace zprof
     class Record 
     {
     public:
-        using Output = void(*)(const ProfSerializer& serializer);
+        using ReportProc = void(*)(const Report& rp);
         enum InnerType
         {
-            INNER_PROF_NULL,
-            INNER_PROF_INIT_COST,
-            INNER_PROF_MERGE_COST,
-            INNER_PROF_REPORT_COST,
-            INNER_PROF_SERIALIZE_COST,
-            INNER_PROF_OUTPUT_COST,
-            INNER_PROF_MEM_INFO_COST,
+            INNER_NULL,
+            INNER_INIT_COST,
+            INNER_MERGE_COST,
+            INNER_REPORT_COST,
+            INNER_SERIALIZE_COST,
+            INNER_OUTPUT_COST,
+            INNER_MEM_INFO_COST,
             INNER_CLOCK_COST,
-            INNER_PROF_RECORD_COST,
-            INNER_PROF_RECORD_SM_COST,
-            INNER_PROF_RECORD_FULL_COST,
+            INNER_RECORD_COST,
+            INNER_RECORD_SM_COST,
+            INNER_RECORD_FULL_COST,
             INNER_CLOCK_RECORD_COST,
-            INNER_PROF_ORIGIN_INC,
-            INNER_PROF_ATOM_RELEAX,
-            INNER_PROF_ATOM_COST,
-            INNER_PROF_ATOM_SEQ_COST,
-            INNER_PROF_MAX,
+            INNER_ORIGIN_INC,
+            INNER_ATOM_RELEAX,
+            INNER_ATOM_COST,
+            INNER_ATOM_SEQ_COST,
+            INNER_MAX,
         };
 
         static constexpr int inst_id() { return INST; }
 
 
 
-        static constexpr int reserve_begin_id() { return INNER_PROF_MAX; }
+        static constexpr int reserve_begin_id() { return INNER_MAX; }
         static constexpr int reserve_count() { return RESERVE; }
         static constexpr int reserve_end_id() { return reserve_begin_id() + reserve_count(); }
 
@@ -171,13 +171,13 @@ namespace zprof
         static constexpr int declare_end_id() { return declare_begin_id() + declare_count(); }
         inline int declare_window() { return declare_window_; }
 
-        static constexpr int begin_id() { return INNER_PROF_NULL + 1; }
+        static constexpr int begin_id() { return INNER_NULL + 1; }
         static constexpr int count() { return declare_end_id() - 1; }
         static constexpr int end_id() { return begin_id() + count(); }
         static constexpr int max_count() { return count(); }
 
         static constexpr int compact_data_size() { return 30 * (1+end_id()); } //reserve node no name 
-        static_assert(end_id() == INNER_PROF_MAX + reserve_count() + declare_count(), "");
+        static_assert(end_id() == INNER_MAX + reserve_count() + declare_count(), "");
 
     public:
         long long init_timestamp_;
@@ -385,7 +385,7 @@ namespace zprof
     
 
         //递归展开  
-        int recursive_output(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializer& serializer);
+        int recursive_output(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, Report& rp);
     
 
         //完整报告  
@@ -396,7 +396,7 @@ namespace zprof
 
 
     public:
-        ProfSerializer& compact_writer() { return compact_writer_; }
+        Report& compact_writer() { return compact_writer_; }
         RecordNode& node(int idx) { return nodes_[idx]; }
     
         double particle_for_ns(int t) { return  particle_for_ns_[t == CLOCK_NULL ? CLOCK_DEFAULT : t]; }
@@ -406,12 +406,12 @@ namespace zprof
 
      //output interface
     public:
-        void set_output(Output func) { output_ = func; }
+        void set_output(ReportProc func) { output_ = func; }
     protected:
-        void output_and_clean(ProfSerializer& s) { s.closing_string(); output_(s); s.reset_offset(); }
-        static void default_output(const ProfSerializer& serializer) { printf("%s\n", serializer.buff()); }
+        void output_and_clean(Report& s) { s.closing_string(); output_(s); s.reset_offset(); }
+        static void default_output(const Report& rp) { printf("%s\n", rp.buff()); }
     private:
-        Output output_;
+        ReportProc output_;
 
     //merge data and interface 
     public:
@@ -426,7 +426,7 @@ namespace zprof
     private:
         int title_;
         char compact_data_[compact_data_size()];
-        ProfSerializer compact_writer_;
+        Report compact_writer_;
         int unknown_desc_;
         int reserve_desc_;
         int no_name_space_;
@@ -481,7 +481,7 @@ namespace zprof
             compact_writer_.push_char('\0');
             compact_writer_.closing_string();
         }
-        Clock<> counter;
+        zprof::Clock<> counter;
         counter.start();
 
         last_timestamp_ = time(NULL);
@@ -508,50 +508,50 @@ namespace zprof
             regist(i, "reserve", CLOCK_DEFAULT, false, false);
         }
 
-        regist(INNER_PROF_NULL, "INNER_PROF_NULL", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_INIT_COST, "INIT_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_MERGE_COST, "MERGE_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_NULL, "INNER_NULL", CLOCK_DEFAULT, true, true);
+        regist(INNER_INIT_COST, "INIT_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_MERGE_COST, "MERGE_COST", CLOCK_DEFAULT, true, true);
 
-        regist(INNER_PROF_REPORT_COST, "REPORT_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_SERIALIZE_COST, "SERIALIZE_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_OUTPUT_COST, "OUTPUT_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_REPORT_COST, "REPORT_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_SERIALIZE_COST, "SERIALIZE_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_OUTPUT_COST, "OUTPUT_COST", CLOCK_DEFAULT, true, true);
     
-        regist(INNER_PROF_MEM_INFO_COST, "MEM_INFO_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_MEM_INFO_COST, "MEM_INFO_COST", CLOCK_DEFAULT, true, true);
 
         regist(INNER_CLOCK_COST, "COUNTER_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_RECORD_COST, "RECORD_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_RECORD_SM_COST, "RECORD_SM_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_RECORD_FULL_COST, "RECORD_FULL_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_RECORD_COST, "RECORD_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_RECORD_SM_COST, "RECORD_SM_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_RECORD_FULL_COST, "RECORD_FULL_COST", CLOCK_DEFAULT, true, true);
         regist(INNER_CLOCK_RECORD_COST, "COUNTER_RECORD_COST", CLOCK_DEFAULT, true, true);
 
-        regist(INNER_PROF_ORIGIN_INC, "ORIGIN_INC", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_ATOM_RELEAX, "ATOM_RELEAX", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_ATOM_COST, "ATOM_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_PROF_ATOM_SEQ_COST, "ATOM_SEQ_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_ORIGIN_INC, "ORIGIN_INC", CLOCK_DEFAULT, true, true);
+        regist(INNER_ATOM_RELEAX, "ATOM_RELEAX", CLOCK_DEFAULT, true, true);
+        regist(INNER_ATOM_COST, "ATOM_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_ATOM_SEQ_COST, "ATOM_SEQ_COST", CLOCK_DEFAULT, true, true);
 
 
 
 
         if (true)
         {
-            Clock<> self_mem_cost;
+            zprof::Clock<> self_mem_cost;
             self_mem_cost.start();
-            record_vm(INNER_PROF_MEM_INFO_COST, get_self_mem());
-            record_cpu(INNER_PROF_MEM_INFO_COST, self_mem_cost.stop_and_save().duration_ticks());
-            record_mem(INNER_PROF_MEM_INFO_COST, 1, sizeof(*this));
-            record_user(INNER_PROF_MEM_INFO_COST, 1, max_count());
+            record_vm(INNER_MEM_INFO_COST, get_self_mem());
+            record_cpu(INNER_MEM_INFO_COST, self_mem_cost.stop_and_save().duration_ticks());
+            record_mem(INNER_MEM_INFO_COST, 1, sizeof(*this));
+            record_user(INNER_MEM_INFO_COST, 1, max_count());
         }
 
         if (true)
         {
-            Clock<> cost;
+            zprof::Clock<> cost;
             cost.start();
             for (int i = 0; i < 1000; i++)
             {
-                Clock<> test_cost;
+                zprof::Clock<> test_cost;
                 test_cost.start();
                 test_cost.stop_and_save();
-                record_cpu(INNER_PROF_NULL, test_cost.duration_ticks());
+                record_cpu(INNER_NULL, test_cost.duration_ticks());
             }
             record_cpu(INNER_CLOCK_RECORD_COST, 1000, cost.stop_and_save().duration_ticks());
 
@@ -565,23 +565,23 @@ namespace zprof
             cost.start();
             for (int i = 0; i < 1000; i++)
             {
-                record_cpu_no_sm(INNER_PROF_NULL, cost.stop_and_save().duration_ticks());
+                record_cpu_no_sm(INNER_NULL, cost.stop_and_save().duration_ticks());
             }
-            record_cpu(INNER_PROF_RECORD_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_RECORD_COST, 1000, cost.stop_and_save().duration_ticks());
 
             cost.start();
             for (int i = 0; i < 1000; i++)
             {
-                record_cpu(INNER_PROF_NULL, 1, cost.stop_and_save().duration_ticks());
+                record_cpu(INNER_NULL, 1, cost.stop_and_save().duration_ticks());
             }
-            record_cpu(INNER_PROF_RECORD_SM_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_RECORD_SM_COST, 1000, cost.stop_and_save().duration_ticks());
 
             cost.start();
             for (int i = 0; i < 1000; i++)
             {
-                record_cpu_full(INNER_PROF_NULL, 1, cost.stop_and_save().duration_ticks());
+                record_cpu_full(INNER_NULL, 1, cost.stop_and_save().duration_ticks());
             }
-            record_cpu(INNER_PROF_RECORD_FULL_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_RECORD_FULL_COST, 1000, cost.stop_and_save().duration_ticks());
 
 
             std::atomic<long long> atomll_test(0);
@@ -591,21 +591,21 @@ namespace zprof
             {
                 origin_feetch_add_test++;
             }
-            record_cpu(INNER_PROF_ORIGIN_INC, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_ORIGIN_INC, 1000, cost.stop_and_save().duration_ticks());
 
             cost.start();
             for (int i = 0; i < 1000; i++)
             {
                 atomll_test.fetch_add(1, std::memory_order_relaxed);
             }
-            record_cpu(INNER_PROF_ATOM_RELEAX, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_ATOM_RELEAX, 1000, cost.stop_and_save().duration_ticks());
 
             cost.start();
             for (int i = 0; i < 1000; i++)
             {
                 atomll_test++;
             }
-            record_cpu(INNER_PROF_ATOM_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_ATOM_COST, 1000, cost.stop_and_save().duration_ticks());
 
         
             cost.start();
@@ -613,12 +613,12 @@ namespace zprof
             {
                 atomll_test.fetch_add(1, std::memory_order_seq_cst);
             }
-            record_cpu(INNER_PROF_ATOM_SEQ_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_ATOM_SEQ_COST, 1000, cost.stop_and_save().duration_ticks());
 
-            reset_node(INNER_PROF_NULL);
+            reset_node(INNER_NULL);
         }
 
-        record_cpu(INNER_PROF_INIT_COST, counter.stop_and_save().duration_ticks());
+        record_cpu(INNER_INIT_COST, counter.stop_and_save().duration_ticks());
 
         return 0;
     }
@@ -702,7 +702,7 @@ namespace zprof
         }
 
 
-        nodes_[idx].traits.name = (int)compact_writer_.offset();// node name is "" when compact serializer full 
+        nodes_[idx].traits.name = (int)compact_writer_.offset();// node name is "" when compact rp full 
         compact_writer_.push_string(name);
         compact_writer_.push_char('\0');
         compact_writer_.closing_string();
@@ -918,21 +918,21 @@ namespace zprof
                 break;
             } while (true);
         }
-        record_cpu(INNER_PROF_MERGE_COST, cost.stop_and_save().duration_ticks());
+        record_cpu(INNER_MERGE_COST, cost.stop_and_save().duration_ticks());
     }
 
 
 
 
     template<int INST, int RESERVE, int DECLARE>
-    int Record<INST, RESERVE, DECLARE>::recursive_output(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, ProfSerializer& serializer)
+    int Record<INST, RESERVE, DECLARE>::recursive_output(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, Report& rp)
     {
         if (entry_idx >= end_id())
         {
             return -1;
         }
 
-        if (serializer.buff_len() <= PROF_LINE_MIN_SIZE)
+        if (rp.buff_len() <= PROF_LINE_MIN_SIZE)
         {
             return -2;
         }
@@ -963,7 +963,7 @@ namespace zprof
 
 
     
-        Clock<> cost_single_serialize;
+        zprof::Clock<> single_line_cost;
 
         const char* name = &compact_data_[node.traits.name];
         size_t name_len = node.traits.name_len;
@@ -982,177 +982,177 @@ namespace zprof
             return -5;
         }
 
-        serializer.reset_offset();
+        rp.reset_offset();
 
     #define STRLEN(str) str, strlen(str)
         if (node.cpu.c > 0)
         {
-            cost_single_serialize.start();
-            serializer.push_indent(depth * 2);
-            serializer.push_string(STRLEN("|"));
-            serializer.push_number((unsigned long long)entry_idx, 3);
-            serializer.push_string(STRLEN("| "));
-            serializer.push_string(name, name_len);
-            serializer.push_blank(name_blank);
-            serializer.push_string(STRLEN(" |"));
+            single_line_cost.start();
+            rp.push_indent(depth * 2);
+            rp.push_string(STRLEN("|"));
+            rp.push_number((unsigned long long)entry_idx, 3);
+            rp.push_string(STRLEN("| "));
+            rp.push_string(name, name_len);
+            rp.push_blank(name_blank);
+            rp.push_string(STRLEN(" |"));
 
-            serializer.push_string(STRLEN("\tcpu*|-- "));
+            rp.push_string(STRLEN("\tcpu*|-- "));
             if (true)
             {
-                serializer.push_human_count(node.cpu.c);
-                serializer.push_string(STRLEN("c, "));
-                serializer.push_human_time((long long)(node.cpu.sum * cpu_rate / node.cpu.c));
-                serializer.push_string(STRLEN(", "));
-                serializer.push_human_time((long long)(node.cpu.sum * cpu_rate));
+                rp.push_human_count(node.cpu.c);
+                rp.push_string(STRLEN("c, "));
+                rp.push_human_time((long long)(node.cpu.sum * cpu_rate / node.cpu.c));
+                rp.push_string(STRLEN(", "));
+                rp.push_human_time((long long)(node.cpu.sum * cpu_rate));
             }
 
         
             if (node.cpu.min_u != LLONG_MAX && node.cpu.max_u > 0)
             {
-                serializer.push_string(STRLEN(" --|\tmax-min:|-- "));
-                serializer.push_human_time((long long)(node.cpu.max_u * cpu_rate));
-                serializer.push_string(STRLEN(", "));
-                serializer.push_human_time((long long)(node.cpu.min_u * cpu_rate));
+                rp.push_string(STRLEN(" --|\tmax-min:|-- "));
+                rp.push_human_time((long long)(node.cpu.max_u * cpu_rate));
+                rp.push_string(STRLEN(", "));
+                rp.push_human_time((long long)(node.cpu.min_u * cpu_rate));
             }
 
         
             if (node.cpu.dv > 0 || node.cpu.sm > 0)
             {
-                serializer.push_string(STRLEN(" --|\tdv-sm:|-- "));
-                serializer.push_human_time((long long)(node.cpu.dv * cpu_rate / node.cpu.c));
-                serializer.push_string(STRLEN(", "));
-                serializer.push_human_time((long long)(node.cpu.sm * cpu_rate));
+                rp.push_string(STRLEN(" --|\tdv-sm:|-- "));
+                rp.push_human_time((long long)(node.cpu.dv * cpu_rate / node.cpu.c));
+                rp.push_string(STRLEN(", "));
+                rp.push_human_time((long long)(node.cpu.sm * cpu_rate));
             }
 
         
             if (node.cpu.h_sm > 0 || node.cpu.l_sm > 0)
             {
-                serializer.push_string(STRLEN(" --|\th-l:|-- "));
-                serializer.push_human_time((long long)(node.cpu.h_sm * cpu_rate));
-                serializer.push_string(STRLEN(", "));
-                serializer.push_human_time((long long)(node.cpu.l_sm * cpu_rate));
+                rp.push_string(STRLEN(" --|\th-l:|-- "));
+                rp.push_human_time((long long)(node.cpu.h_sm * cpu_rate));
+                rp.push_string(STRLEN(", "));
+                rp.push_human_time((long long)(node.cpu.l_sm * cpu_rate));
             }
-            serializer.push_string(STRLEN(" --|"));
-            cost_single_serialize.stop_and_save();
-            record_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.duration_ticks());
+            rp.push_string(STRLEN(" --|"));
+            single_line_cost.stop_and_save();
+            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.duration_ticks());
 
-            cost_single_serialize.start();
-            output_and_clean(serializer);
-            cost_single_serialize.stop_and_save();
-            record_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.duration_ticks());
+            single_line_cost.start();
+            output_and_clean(rp);
+            single_line_cost.stop_and_save();
+            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.duration_ticks());
 
         }
 
         if (node.mem.c > 0)
         {
-            cost_single_serialize.start();
-            serializer.push_indent(depth * 2);
-            serializer.push_string(STRLEN("|"));
-            serializer.push_number((unsigned long long)entry_idx, 3);
-            serializer.push_string(STRLEN("| "));
-            serializer.push_string(name, name_len);
-            serializer.push_blank(name_blank);
-            serializer.push_string(STRLEN(" |"));
+            single_line_cost.start();
+            rp.push_indent(depth * 2);
+            rp.push_string(STRLEN("|"));
+            rp.push_number((unsigned long long)entry_idx, 3);
+            rp.push_string(STRLEN("| "));
+            rp.push_string(name, name_len);
+            rp.push_blank(name_blank);
+            rp.push_string(STRLEN(" |"));
 
-            serializer.push_string(STRLEN("\tmem*|-- "));
+            rp.push_string(STRLEN("\tmem*|-- "));
             if (true)
             {
-                serializer.push_human_count(node.mem.c);
-                serializer.push_string(STRLEN("c, "));
-                serializer.push_human_mem(node.mem.sum / node.mem.c);
-                serializer.push_string(STRLEN(", "));
-                serializer.push_human_mem(node.mem.sum);
+                rp.push_human_count(node.mem.c);
+                rp.push_string(STRLEN("c, "));
+                rp.push_human_mem(node.mem.sum / node.mem.c);
+                rp.push_string(STRLEN(", "));
+                rp.push_human_mem(node.mem.sum);
             }
 
-            serializer.push_string(STRLEN(" --||-- "));
+            rp.push_string(STRLEN(" --||-- "));
             if (node.mem.delta > 0)
             {
-                serializer.push_human_mem(node.mem.sum - node.mem.delta);
-                serializer.push_string(STRLEN(", "));
-                serializer.push_human_mem(node.mem.delta);
+                rp.push_human_mem(node.mem.sum - node.mem.delta);
+                rp.push_string(STRLEN(", "));
+                rp.push_human_mem(node.mem.delta);
             }
-            serializer.push_string(STRLEN(" --|"));
-            cost_single_serialize.stop_and_save();
-            record_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.duration_ticks());
+            rp.push_string(STRLEN(" --|"));
+            single_line_cost.stop_and_save();
+            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.duration_ticks());
 
 
-            cost_single_serialize.start();
-            output_and_clean(serializer);
-            cost_single_serialize.stop_and_save();
-            record_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.duration_ticks());
+            single_line_cost.start();
+            output_and_clean(rp);
+            single_line_cost.stop_and_save();
+            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.duration_ticks());
         }
 
         if (node.vm.rss_size + node.vm.vm_size > 0)
         {
-            cost_single_serialize.start();
-            serializer.push_indent(depth * 2);
-            serializer.push_string(STRLEN("|"));
-            serializer.push_number((unsigned long long)entry_idx, 3);
-            serializer.push_string(STRLEN("| "));
-            serializer.push_string(name, name_len);
-            serializer.push_blank(name_blank);
-            serializer.push_string(STRLEN(" |"));
+            single_line_cost.start();
+            rp.push_indent(depth * 2);
+            rp.push_string(STRLEN("|"));
+            rp.push_number((unsigned long long)entry_idx, 3);
+            rp.push_string(STRLEN("| "));
+            rp.push_string(name, name_len);
+            rp.push_blank(name_blank);
+            rp.push_string(STRLEN(" |"));
 
 
-            serializer.push_string(STRLEN("\t vm*|-- "));
+            rp.push_string(STRLEN("\t vm*|-- "));
             if (true)
             {
-                serializer.push_human_mem(node.vm.vm_size);
-                serializer.push_string(STRLEN("(vm), "));
-                serializer.push_human_mem(node.vm.rss_size);
-                serializer.push_string(STRLEN("(rss), "));
-                serializer.push_human_mem(node.vm.shr_size);
-                serializer.push_string(STRLEN("(shr), "));
-                serializer.push_human_mem(node.vm.rss_size - node.vm.shr_size);
-                serializer.push_string(STRLEN("(uss)"));
+                rp.push_human_mem(node.vm.vm_size);
+                rp.push_string(STRLEN("(vm), "));
+                rp.push_human_mem(node.vm.rss_size);
+                rp.push_string(STRLEN("(rss), "));
+                rp.push_human_mem(node.vm.shr_size);
+                rp.push_string(STRLEN("(shr), "));
+                rp.push_human_mem(node.vm.rss_size - node.vm.shr_size);
+                rp.push_string(STRLEN("(uss)"));
             }
 
-            serializer.push_string(STRLEN(" --|"));
-            cost_single_serialize.stop_and_save();
-            record_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.duration_ticks());
+            rp.push_string(STRLEN(" --|"));
+            single_line_cost.stop_and_save();
+            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.duration_ticks());
 
-            cost_single_serialize.start();
-            output_and_clean(serializer);
-            cost_single_serialize.stop_and_save();
-            record_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.duration_ticks());
+            single_line_cost.start();
+            output_and_clean(rp);
+            single_line_cost.stop_and_save();
+            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.duration_ticks());
         }
 
         if (node.user.c > 0)
         {
-            cost_single_serialize.start();
-            serializer.push_indent(depth * 2);
-            serializer.push_string(STRLEN("|"));
-            serializer.push_number((unsigned long long)entry_idx, 3);
-            serializer.push_string(STRLEN("| "));
-            serializer.push_string(name, name_len);
-            serializer.push_blank(name_blank);
-            serializer.push_string(STRLEN(" |"));
+            single_line_cost.start();
+            rp.push_indent(depth * 2);
+            rp.push_string(STRLEN("|"));
+            rp.push_number((unsigned long long)entry_idx, 3);
+            rp.push_string(STRLEN("| "));
+            rp.push_string(name, name_len);
+            rp.push_blank(name_blank);
+            rp.push_string(STRLEN(" |"));
 
 
-            serializer.push_string(STRLEN("\tuser*|-- "));
+            rp.push_string(STRLEN("\tuser*|-- "));
             if (true)
             {
-                serializer.push_human_count(node.user.c);
-                serializer.push_string(STRLEN("c, "));
-                serializer.push_human_count(node.user.sum / node.user.c);
-                serializer.push_string(STRLEN(", "));
-                serializer.push_human_count(node.user.sum);
+                rp.push_human_count(node.user.c);
+                rp.push_string(STRLEN("c, "));
+                rp.push_human_count(node.user.sum / node.user.c);
+                rp.push_string(STRLEN(", "));
+                rp.push_human_count(node.user.sum);
             }
 
-            serializer.push_string(STRLEN(" --|"));
-            cost_single_serialize.stop_and_save();
-            record_cpu_full(INNER_PROF_SERIALIZE_COST, cost_single_serialize.duration_ticks());
+            rp.push_string(STRLEN(" --|"));
+            single_line_cost.stop_and_save();
+            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.duration_ticks());
 
-            cost_single_serialize.start();
-            output_and_clean(serializer);
-            cost_single_serialize.stop_and_save();
-            record_cpu_full(INNER_PROF_OUTPUT_COST, cost_single_serialize.duration_ticks());
+            single_line_cost.start();
+            output_and_clean(rp);
+            single_line_cost.stop_and_save();
+            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.duration_ticks());
         }
 
         if (depth > PROF_MAX_DEPTH)
         {
-            serializer.push_indent(depth * 2);
-            output_and_clean(serializer);
+            rp.push_indent(depth * 2);
+            output_and_clean(rp);
             return -4;
         }
 
@@ -1161,7 +1161,7 @@ namespace zprof
             RecordNode& child = nodes_[i];
             if (child.show.upper == entry_idx)
             {
-                int ret = recursive_output(i, depth + 1, NULL, 0, serializer);
+                int ret = recursive_output(i, depth + 1, NULL, 0, rp);
                 if (ret < 0)
                 {
                     return ret;
@@ -1180,8 +1180,8 @@ namespace zprof
     template<int INST, int RESERVE, int DECLARE>
     int Record<INST, RESERVE, DECLARE>::output_one_record(int entry_idx)
     {
-        ProfStackSerializer serializer;
-        int ret = recursive_output(entry_idx, 0, NULL, 0, serializer);
+        StaticReport rp;
+        int ret = recursive_output(entry_idx, 0, NULL, 0, rp);
         (void)ret;
         return ret;
     }
@@ -1189,8 +1189,8 @@ namespace zprof
     template<int INST, int RESERVE, int DECLARE>
     int Record<INST, RESERVE, DECLARE>::output_temp_record(const char* opt_name, size_t opt_name_len)
     {
-        ProfStackSerializer serializer;
-        int ret = recursive_output(0, 0, opt_name, opt_name_len, serializer);
+        StaticReport rp;
+        int ret = recursive_output(0, 0, opt_name, opt_name_len, rp);
         reset_node(0);//reset  
         return ret;
     }
@@ -1208,75 +1208,75 @@ namespace zprof
         {
             return -1;
         }
-        Clock<> cost;
+        zprof::Clock<> cost;
         cost.start();
-        ProfStackSerializer serializer;
+        StaticReport rp;
 
-        serializer.reset_offset();
-        output_and_clean(serializer);
+        rp.reset_offset();
+        output_and_clean(rp);
 
 
-        serializer.push_char('=', 30);
-        serializer.push_char('\t');
-        serializer.push_string(title());
-        serializer.push_string(STRLEN(" begin output: "));
-        serializer.push_now_date();
-        serializer.push_char('\t');
-        serializer.push_char('=', 30);
-        output_and_clean(serializer);
+        rp.push_char('=', 30);
+        rp.push_char('\t');
+        rp.push_string(title());
+        rp.push_string(STRLEN(" begin output: "));
+        rp.push_now_date();
+        rp.push_char('\t');
+        rp.push_char('=', 30);
+        output_and_clean(rp);
 
-        serializer.push_string(STRLEN("| -- index -- | ---    cpu  ------------ | ----------   hits, avg, sum   ---------- | ---- max, min ---- | ------ dv, sm ------ |  --- hsm, lsm --- | "));
-        output_and_clean(serializer);
-        serializer.push_string(STRLEN("| -- index -- | ---    mem  ---------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | "));
-        output_and_clean(serializer);
-        serializer.push_string(STRLEN("| -- index -- | ---    vm  ------------ | ----------   vm, rss, shr, uss   ------------------ | " ));
-        output_and_clean(serializer);
+        rp.push_string(STRLEN("| -- index -- | ---    cpu  ------------ | ----------   hits, avg, sum   ---------- | ---- max, min ---- | ------ dv, sm ------ |  --- hsm, lsm --- | "));
+        output_and_clean(rp);
+        rp.push_string(STRLEN("| -- index -- | ---    mem  ---------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | "));
+        output_and_clean(rp);
+        rp.push_string(STRLEN("| -- index -- | ---    vm  ------------ | ----------   vm, rss, shr, uss   ------------------ | " ));
+        output_and_clean(rp);
 
-        serializer.push_string(STRLEN("| -- index -- | ---    user  ----------- | -----------  hits, avg, sum   ---------- | "));
-        output_and_clean(serializer);
+        rp.push_string(STRLEN("| -- index -- | ---    user  ----------- | -----------  hits, avg, sum   ---------- | "));
+        output_and_clean(rp);
 
         if (flags & OUT_FLAG_INNER)
         {
-            serializer.push_string(STRLEN(PROF_LINE_FEED));
-            for (int i = INNER_PROF_NULL + 1; i < INNER_PROF_MAX; i++)
+            rp.push_string(STRLEN(PROF_LINE_FEED));
+            for (int i = INNER_NULL + 1; i < INNER_MAX; i++)
             {
-                int ret = recursive_output(i, 0, NULL, 0, serializer);
+                int ret = recursive_output(i, 0, NULL, 0, rp);
                 (void)ret;
             }
         }
 
         if (flags & OUT_FLAG_RESERVE)
         {
-            serializer.push_string(STRLEN(PROF_LINE_FEED));
+            rp.push_string(STRLEN(PROF_LINE_FEED));
             for (int i = reserve_begin_id(); i < reserve_end_id(); i++)
             {
-                int ret = recursive_output(i, 0, NULL, 0, serializer);
+                int ret = recursive_output(i, 0, NULL, 0, rp);
                 (void)ret;
             }
         }
     
         if (flags & OUT_FLAG_DELCARE)
         {
-            serializer.push_string(STRLEN(PROF_LINE_FEED));
+            rp.push_string(STRLEN(PROF_LINE_FEED));
             for (int i = declare_begin_id(); i < declare_window(); )
             {
-                int ret = recursive_output(i, 0, NULL, 0, serializer);
+                int ret = recursive_output(i, 0, NULL, 0, rp);
                 (void)ret;
                 i += nodes_[i].show.jumps + 1;
             }
         }
 
-        serializer.reset_offset();
-        serializer.push_char('=', 30);
-        serializer.push_char('\t');
-        serializer.push_string(" end : ");
-        serializer.push_now_date();
-        serializer.push_char('\t');
-        serializer.push_char('=', 30);
-        output_and_clean(serializer);
-        output_and_clean(serializer);
+        rp.reset_offset();
+        rp.push_char('=', 30);
+        rp.push_char('\t');
+        rp.push_string(" end : ");
+        rp.push_now_date();
+        rp.push_char('\t');
+        rp.push_char('=', 30);
+        output_and_clean(rp);
+        output_and_clean(rp);
 
-        record_cpu(INNER_PROF_REPORT_COST, cost.stop_and_save().duration_ticks());
+        record_cpu(INNER_REPORT_COST, cost.stop_and_save().duration_ticks());
         return 0;
     }
 

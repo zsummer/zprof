@@ -22,9 +22,9 @@
 #include <random>
 
 
-static inline void OutputLog(const ProfSerializer& serializer)
+static inline void OutputLog(const zprof::Report& rp)
 {
-    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(serializer.buff(), (int)serializer.offset());
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(rp.buff(), (int)rp.offset());
 }
 
 int main(int argc, char *argv[])
@@ -63,11 +63,11 @@ int main(int argc, char *argv[])
         if (ret != 0)
         {
             LogInfo() << "rename full. rename count:" << i;
-            PROF_RECORD_VM(RENAME_ID, get_self_mem());
+            PROF_RECORD_VM(RENAME_ID, zprof::get_self_mem());
             PROF_OUTPUT_RECORD(RENAME_ID);
         }
     }
-    PROF_RECORD_VM(RENAME_ID, get_self_mem());
+    PROF_RECORD_VM(RENAME_ID, zprof::get_self_mem());
     PROF_OUTPUT_RECORD(RENAME_ID);
 
     for (unsigned int i = 0; i < 64; i++)

@@ -60,14 +60,14 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        Clock<CLOCK_RDTSC_NOFENCE> counter;
+        zprof::Clock<zprof::CLOCK_RDTSC_NOFENCE> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
         long long empty_cost = counter.duration_ticks();
-        long long empty_cost_ns = counter.duration_ns();
+        long long empty_duration_ns = counter.duration_ns();
         empty_cost = counter.duration_ticks();
-        empty_cost_ns = counter.duration_ns();
+        empty_duration_ns = counter.duration_ns();
 
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
@@ -78,21 +78,21 @@ int main(int argc, char *argv[])
         val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
-        LogInfo() << "no fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_cost_ns << "ns." <<"salt:" << val[2];
+        LogInfo() << "no fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
+            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." <<"salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        Clock<CLOCK_RDTSC> counter;
+        zprof::Clock<zprof::CLOCK_RDTSC> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
         long long empty_cost = counter.duration_ticks();
-        long long empty_cost_ns = counter.duration_ns();
+        long long empty_duration_ns = counter.duration_ns();
         empty_cost = counter.duration_ticks();
-        empty_cost_ns = counter.duration_ns();
+        empty_duration_ns = counter.duration_ns();
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
@@ -102,21 +102,21 @@ int main(int argc, char *argv[])
         val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
-        LogInfo() << "load fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_cost_ns << "ns." << "salt:" << val[2];
+        LogInfo() << "load fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
+            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        Clock<CLOCK_RDTSC_BTB> counter;
+        zprof::Clock<zprof::CLOCK_RDTSC_BTB> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
         long long empty_cost = counter.duration_ticks();
-        long long empty_cost_ns = counter.duration_ns();
+        long long empty_duration_ns = counter.duration_ns();
         empty_cost = counter.duration_ticks();
-        empty_cost_ns = counter.duration_ns();
+        empty_duration_ns = counter.duration_ns();
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
@@ -126,21 +126,21 @@ int main(int argc, char *argv[])
         val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
-        LogInfo() << "load fence btb rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_cost_ns << "ns." << "salt:" << val[2];
+        LogInfo() << "load fence btb rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
+            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        Clock<CLOCK_RDTSC_MFENCE> counter;
+        zprof::Clock<zprof::CLOCK_RDTSC_MFENCE> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
         long long empty_cost = counter.duration_ticks();
-        long long empty_cost_ns = counter.duration_ns();
+        long long empty_duration_ns = counter.duration_ns();
         empty_cost = counter.duration_ticks();
-        empty_cost_ns = counter.duration_ns();
+        empty_duration_ns = counter.duration_ns();
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
@@ -150,21 +150,21 @@ int main(int argc, char *argv[])
         val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
-        LogInfo() << "load&store fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_cost_ns << "ns." << "salt:" << val[2];
+        LogInfo() << "load&store fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
+            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        Clock<CLOCK_RDTSC_MFENCE_BTB> counter;
+        zprof::Clock<zprof::CLOCK_RDTSC_MFENCE_BTB> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
         long long empty_cost = counter.duration_ticks();
-        long long empty_cost_ns = counter.duration_ns();
+        long long empty_duration_ns = counter.duration_ns();
         empty_cost = counter.duration_ticks();
-        empty_cost_ns = counter.duration_ns();
+        empty_duration_ns = counter.duration_ns();
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
@@ -174,21 +174,21 @@ int main(int argc, char *argv[])
         val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
-        LogInfo() << "load&store fence back to back rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_cost_ns << "ns." << "salt:" << val[2];
+        LogInfo() << "load&store fence back to back rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
+            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        Clock<CLOCK_RDTSC_LOCK> counter;
+        zprof::Clock<zprof::CLOCK_RDTSC_LOCK> counter;
         //record empty cost 
         counter.start();
         counter.stop_and_save();
         long long empty_cost = counter.duration_ticks();
-        long long empty_cost_ns = counter.duration_ns();
+        long long empty_duration_ns = counter.duration_ns();
         empty_cost = counter.duration_ticks();
-        empty_cost_ns = counter.duration_ns();
+        empty_duration_ns = counter.duration_ns();
 
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
@@ -199,8 +199,8 @@ int main(int argc, char *argv[])
         val[1] = val[2] == 0 ? val[0] : val[1];
         counter.stop_and_save();
 
-        LogInfo() << "lock rdtsc: empty cost:" << empty_cost << "cycles," << empty_cost_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_cost_ns << "ns." << "salt:" << val[2];
+        LogInfo() << "lock rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
+            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
 

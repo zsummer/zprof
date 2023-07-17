@@ -1,6 +1,6 @@
 version:
-last_sha1(./src)=4e195fe52a1a3b4c874149ceb14bb53548bee5fd
-last_date(./src)=2023-07-15 22:10:49 +0800
+last_sha1(./src)=866ca2ee6564067e348c23bfa5af54a541b37b4f
+last_date(./src)=2023-07-17 15:00:09 +0800
 
 git log -1 --stat ./src:
-commit 4e195fe52a1a3b4c874149ceb14bb53548bee5fd Author: zsummer <yawei.zhang@foxmail.com> Date: Sat Jul 15 22:10:49 2023 +0800 sys memory src/zprof.h | 1 + src/zprof_counter.h | 62 +++++++++++++++++++++++++++++++++++++++++++++++++++++ 2 files changed, 63 insertions(+)
+commit 866ca2ee6564067e348c23bfa5af54a541b37b4f Author: zsummer <yawei.zhang@foxmail.com> Date: Mon Jul 17 15:00:09 2023 +0800 rename src/zprof.h | 4 ++-- 1 file changed, 2 insertions(+), 2 deletions(-)

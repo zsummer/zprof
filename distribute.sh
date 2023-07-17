@@ -7,8 +7,8 @@ echo "#ifdef __GNUG__" > zprof.h.bak
 echo "#pragma GCC push_options" >> zprof.h.bak
 echo "#pragma GCC optimize (\"O2\")" >> zprof.h.bak
 echo "#endif" >> zprof.h.bak
-cat src/zprof_counter.h  |sed `echo -e 's/\xEF\xBB\xBF//'` >> zprof.h.bak
-cat src/zprof_serialize.h  |sed `echo -e 's/\xEF\xBB\xBF//'` >> zprof.h.bak
+cat src/zprof_clock.h  |sed `echo -e 's/\xEF\xBB\xBF//'` >> zprof.h.bak
+cat src/zprof_report.h  |sed `echo -e 's/\xEF\xBB\xBF//'` >> zprof.h.bak
 cat src/zprof_record.h  |sed `echo -e 's/\xEF\xBB\xBF//'` >> zprof.h.bak
 cat src/zprof.h  |sed `echo -e 's/\xEF\xBB\xBF//'` >> zprof.h.bak
 echo "#ifdef __GNUG__" >> zprof.h.bak

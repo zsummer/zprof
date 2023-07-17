@@ -20,14 +20,14 @@
 #include <thread> //use this_thread::sleep  
 #include "fn_log.h"
 
-static inline void OutputLog(const ProfSerializer& serializer)
+static inline void OutputLog(const zprof::Report& rp)
 {
-    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(serializer.buff(), (int)serializer.offset());
+    LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_DEBUG, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(rp.buff(), (int)rp.offset());
 }
 
-static inline void OutputPrint(const ProfSerializer& serializer)
+static inline void OutputPrint(const zprof::Report& rp)
 {
-    printf("%s\n", serializer.buff());
+    printf("%s\n", rp.buff());
 }
 
 

@@ -16,8 +16,8 @@
 * limitations under the License.
 */
 
-#ifndef ZPROF_SERIALIZE_H
-#define ZPROF_SERIALIZE_H
+#ifndef ZPROF_REPORT_H
+#define ZPROF_REPORT_H
 
 #include <cstddef>
 #include <cstring>
@@ -49,11 +49,11 @@ namespace zprof
     #define PROF_LINE_MIN_SIZE 200
     #define PROF_MAX_DEPTH 5
 
-    class ProfSerializer
+    class Report
     {
     public:
-        ProfSerializer() = delete;
-        explicit ProfSerializer(char* buff, size_t buff_size)
+        Report() = delete;
+        explicit Report(char* buff, size_t buff_size)
         {
             buff_ = buff;
             buff_len_ = buff_size;
@@ -61,18 +61,18 @@ namespace zprof
         }
 
 
-        inline ProfSerializer& push_human_count(long long count);
-        inline ProfSerializer& push_human_time(long long ns);
-        inline ProfSerializer& push_human_mem(long long bytes);
-        inline ProfSerializer& push_char(char ch, int repeat = 1);
-        inline ProfSerializer& push_string(const char* str);
-        inline ProfSerializer& push_string(const char* str, size_t size);
-        inline ProfSerializer& push_now_date();
-        inline ProfSerializer& push_number(unsigned long long number, int wide = 0);
-        inline ProfSerializer& push_number(long long number, int wide = 0);
+        inline Report& push_human_count(long long count);
+        inline Report& push_human_time(long long ns);
+        inline Report& push_human_mem(long long bytes);
+        inline Report& push_char(char ch, int repeat = 1);
+        inline Report& push_string(const char* str);
+        inline Report& push_string(const char* str, size_t size);
+        inline Report& push_now_date();
+        inline Report& push_number(unsigned long long number, int wide = 0);
+        inline Report& push_number(long long number, int wide = 0);
 
-        inline ProfSerializer& push_indent(int count);
-        inline ProfSerializer& push_blank(int count);
+        inline Report& push_indent(int count);
+        inline Report& push_blank(int count);
 
 
         inline void closing_string();
@@ -93,7 +93,7 @@ namespace zprof
 
 
 
-    inline ProfSerializer& ProfSerializer::push_human_count(long long count)
+    inline Report& Report::push_human_count(long long count)
     {
         if (buff_len_ <= offset_ + 35)
         {
@@ -118,7 +118,7 @@ namespace zprof
         return push_number((unsigned long long)(count));
     }
 
-    inline ProfSerializer& ProfSerializer::push_human_time(long long ns)
+    inline Report& Report::push_human_time(long long ns)
     {
         if (buff_len_ <= offset_ + 35)
         {
@@ -164,7 +164,7 @@ namespace zprof
     }
 
 
-    inline ProfSerializer& ProfSerializer::push_human_mem(long long bytes)
+    inline Report& Report::push_human_mem(long long bytes)
     {
         if (buff_len_ <= offset_ + 35)
         {
@@ -202,7 +202,7 @@ namespace zprof
         return *this;
     }
 
-    inline ProfSerializer& ProfSerializer::push_char(char ch, int repeat)
+    inline Report& Report::push_char(char ch, int repeat)
     {
         while (repeat > 0 && offset_ < buff_len_)
         {
@@ -212,7 +212,7 @@ namespace zprof
         return *this;
     }
 
-    inline ProfSerializer& ProfSerializer::push_number(unsigned long long number, int wide)
+    inline Report& Report::push_number(unsigned long long number, int wide)
     {
         if (buff_len_ <= offset_ + 30)
         {
@@ -259,7 +259,7 @@ namespace zprof
         return *this;
     }
 
-    inline ProfSerializer& ProfSerializer::push_number(long long number, int wide)
+    inline Report& Report::push_number(long long number, int wide)
     {
         if (buff_len_ <= offset_ + 30)
         {
@@ -274,11 +274,11 @@ namespace zprof
         return push_number((unsigned long long)number, wide);
     }
 
-    inline ProfSerializer& ProfSerializer::push_string(const char* str)
+    inline Report& Report::push_string(const char* str)
     {
         return push_string(str, strlen(str));
     }
-    inline ProfSerializer& ProfSerializer::push_string(const char* str, size_t size)
+    inline Report& Report::push_string(const char* str, size_t size)
     {
         if (str == NULL)
         {
@@ -289,7 +289,7 @@ namespace zprof
         offset_ += max_size;
         return *this;
     }
-    inline ProfSerializer& ProfSerializer::push_now_date()
+    inline Report& Report::push_now_date()
     {
         time_t timestamp = 0;
         unsigned int precise = 0;
@@ -338,13 +338,13 @@ namespace zprof
     }
 
 
-    inline void ProfSerializer::closing_string()
+    inline void Report::closing_string()
     {
         size_t closed_id = offset_ >= buff_len_ ? buff_len_ - 1 : offset_;
         buff_[closed_id] = '\0';
     }
 
-    inline ProfSerializer& ProfSerializer::push_indent(int count)
+    inline Report& Report::push_indent(int count)
     {
         static const char* const pi = "                                                            ";
         constexpr int pi_size = 50;
@@ -369,7 +369,7 @@ namespace zprof
 
 
 
-    inline ProfSerializer& ProfSerializer::push_blank(int count)
+    inline Report& Report::push_blank(int count)
     {
         static const char* const pi = "------------------------------------------------------------";
         constexpr int pi_size = 50;
@@ -391,16 +391,16 @@ namespace zprof
         return *this;
     }
 
-    class ProfStackSerializer : public ProfSerializer
+    class StaticReport : public Report
     {
     public:
         static const int BUFF_SIZE = 350;
         static_assert(BUFF_SIZE > PROF_LINE_MIN_SIZE, "");
-        ProfStackSerializer() :ProfSerializer(buff_, BUFF_SIZE)
+        StaticReport() :Report(buff_, BUFF_SIZE)
         {
             buff_[0] = '\0';
         }
-        ~ProfStackSerializer()
+        ~StaticReport()
         {
 
         }
