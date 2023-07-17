@@ -639,13 +639,13 @@ namespace zprof
 
         Clock& stop_and_save() { return save(); }
 
-        long long start_val() { return start_tick_; }
-        long long stop_val() { return start_tick_ + ticks_; }
+        long long start_val() const { return start_tick_; }
+        long long stop_val() const { return start_tick_ + ticks_; }
         
-
-        long long duration_ticks() { return ticks_; }
-        PROF_ALWAYS_INLINE long long duration_ns() { return (long long)(ticks_ * get_inverse_frequency<T>()); }
-        double duration_second() { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
+        long long cycles() const { return ticks_; }
+        long long duration_ticks() const { return ticks_; }
+        long long duration_ns() const { return (long long)(ticks_ * get_inverse_frequency<T>()); }
+        double duration_second() const { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
 
         void set_start_val(long long val) { start_tick_ = val; }
         void set_ticks_val(long long cycles) { ticks_ = cycles; }
@@ -2734,10 +2734,11 @@ private:
 #endif
 
 
+//¡Ÿ ±ºÊ»›¥˙¬Î  
 template<zprof::ClockType T = zprof::CLOCK_DEFAULT>
 using ProfCounter = zprof::Clock<T>;
 
-
+using ProfSerializer = zprof::Report;
 
 
 
