@@ -364,10 +364,11 @@ private:
 #endif
 
 
+//ÁÙÊ±¼æÈİ´úÂë  
 template<zprof::ClockType T = zprof::CLOCK_DEFAULT>
 using ProfCounter = zprof::Clock<T>;
 
-
+using ProfSerializer = zprof::Report;
 
 
 
