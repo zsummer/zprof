@@ -1497,6 +1497,8 @@ namespace zprof
     protected:
         void output_and_clean(Report& s) { s.closing_string(); output_(s); s.reset_offset(); }
         static void default_output(const Report& rp) { printf("%s\n", rp.buff()); }
+    public:
+        ReportProc output()const { return output_; }
     private:
         ReportProc output_;
 
