@@ -1267,7 +1267,8 @@ namespace zprof
 
     public:
         long long init_timestamp_;
-        long long last_timestamp_;
+        long long reset_timestamp_;
+        long long output_timestamp_;
     public:
         static inline Record& instance()
         {
@@ -1340,13 +1341,13 @@ namespace zprof
         void reset_reserve_node(bool keep_resident = true)
         {
             reset_range_node(reserve_begin_id(), reserve_end_id(), keep_resident);
-            last_timestamp_ = time(NULL);
+            reset_timestamp_ = time(NULL);
         }
 
         void reset_declare_node(bool keep_resident = true)
         {
             reset_range_node(declare_begin_id(), declare_end_id(), keep_resident);
-            last_timestamp_ = time(NULL);
+            reset_timestamp_ = time(NULL);
         }
 
 
@@ -1535,7 +1536,8 @@ namespace zprof
         output_ = &Record::default_output;  //set default log;
 
         init_timestamp_ = 0;
-        last_timestamp_ = 0;
+        reset_timestamp_ = 0;
+        output_timestamp_ = 0;
         static_assert(compact_data_size() > 150, "");
         unknown_desc_ = 0;
         compact_writer_.push_string("unknown");
@@ -1570,8 +1572,10 @@ namespace zprof
         zprof::Clock<> counter;
         counter.start();
 
-        last_timestamp_ = time(NULL);
+        
         init_timestamp_ = time(NULL);
+        reset_timestamp_ = time(NULL);
+        output_timestamp_ = time(NULL);
 
         particle_for_ns_[CLOCK_NULL] = 0;
         particle_for_ns_[CLOCK_SYS] = get_inverse_frequency<CLOCK_SYS>();
@@ -2294,6 +2298,7 @@ namespace zprof
         {
             return -1;
         }
+        output_timestamp_ = time(NULL);
         zprof::Clock<> cost;
         cost.start();
         StaticReport rp;
