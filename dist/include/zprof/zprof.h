@@ -113,6 +113,7 @@ namespace zprof
         CLOCK_CHRONO,
         CLOCK_CHRONO_STEADY,
         CLOCK_CHRONO_SYS,
+        CLOCK_CHRONO_SYS_MS, //降低到ms精度 用于record时自由输入来自其他计时来源的数据  
 
         CLOCK_RDTSC_PURE,
         CLOCK_RDTSC_NOFENCE,
@@ -322,6 +323,11 @@ namespace zprof
         return std::chrono::system_clock().now().time_since_epoch().count();
     }
 
+    template<>
+    PROF_ALWAYS_INLINE long long get_tick<CLOCK_CHRONO_SYS_MS>()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
 
     inline ProfVM get_self_mem()
     {
@@ -593,7 +599,12 @@ namespace zprof
         static double chrono_frequency = std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
         return chrono_frequency;
     }
-
+    template<>
+    PROF_ALWAYS_INLINE double get_frequency<CLOCK_CHRONO_SYS_MS>()
+    {
+        static double chrono_frequency = 1.0 / 1000.0 / 1000.0;
+        return chrono_frequency;
+    }
     template<ClockType T>
     PROF_ALWAYS_INLINE double get_inverse_frequency()
     {
@@ -1585,6 +1596,7 @@ namespace zprof
         particle_for_ns_[CLOCK_CHRONO] = get_inverse_frequency<CLOCK_CHRONO>();
         particle_for_ns_[CLOCK_CHRONO_STEADY] = get_inverse_frequency<CLOCK_CHRONO_STEADY>();
         particle_for_ns_[CLOCK_CHRONO_SYS] = get_inverse_frequency<CLOCK_CHRONO_SYS>();
+        particle_for_ns_[CLOCK_CHRONO_SYS_MS] = get_inverse_frequency<CLOCK_CHRONO_SYS_MS>();
         particle_for_ns_[CLOCK_RDTSC] = get_inverse_frequency<CLOCK_RDTSC>();
         particle_for_ns_[CLOCK_RDTSC_BTB] = particle_for_ns_[CLOCK_RDTSC];
         particle_for_ns_[CLOCK_RDTSCP] = particle_for_ns_[CLOCK_RDTSC];
