@@ -1,6 +1,6 @@
 version:
-last_sha1(./src)=c2dc353be990dfce15d56a1a056f30ab12ca7737
-last_date(./src)=2023-07-20 13:47:25 +0800
+last_sha1(./src)=709333b8068eb70c1f4a078e7ef2f3a85fb7f924
+last_date(./src)=2023-07-20 16:05:25 +0800
 
 git log -1 --stat ./src:
-commit c2dc353be990dfce15d56a1a056f30ab12ca7737 Author: zsummer <yawei.zhang@foxmail.com> Date: Thu Jul 20 13:47:01 2023 +0800 sys clock src/zprof_clock.h | 13 ++++++++++++- src/zprof_record.h | 1 + 2 files changed, 13 insertions(+), 1 deletion(-)
+commit 709333b8068eb70c1f4a078e7ef2f3a85fb7f924 Author: zsummer <yawei.zhang@foxmail.com> Date: Thu Jul 20 16:05:25 2023 +0800 clock utils src/zprof_clock.h | 3 +++ 1 file changed, 3 insertions(+)
