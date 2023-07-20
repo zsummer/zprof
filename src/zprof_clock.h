@@ -656,6 +656,9 @@ namespace zprof
 
         void set_start_val(long long val) { start_tick_ = val; }
         void set_ticks_val(long long cycles) { ticks_ = cycles; }
+        //utils  
+    public:
+        static long long now() { return get_tick<T>(); }
     private:
         long long start_tick_;
         long long ticks_;
