@@ -499,6 +499,7 @@ namespace zprof
         particle_for_ns_[CLOCK_CHRONO] = get_inverse_frequency<CLOCK_CHRONO>();
         particle_for_ns_[CLOCK_CHRONO_STEADY] = get_inverse_frequency<CLOCK_CHRONO_STEADY>();
         particle_for_ns_[CLOCK_CHRONO_SYS] = get_inverse_frequency<CLOCK_CHRONO_SYS>();
+        particle_for_ns_[CLOCK_CHRONO_SYS_MS] = get_inverse_frequency<CLOCK_CHRONO_SYS_MS>();
         particle_for_ns_[CLOCK_RDTSC] = get_inverse_frequency<CLOCK_RDTSC>();
         particle_for_ns_[CLOCK_RDTSC_BTB] = particle_for_ns_[CLOCK_RDTSC];
         particle_for_ns_[CLOCK_RDTSCP] = particle_for_ns_[CLOCK_RDTSC];

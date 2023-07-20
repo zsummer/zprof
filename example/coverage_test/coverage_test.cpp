@@ -817,10 +817,12 @@ int main(int argc, char *argv[])
         zprof::Clock<zprof::CLOCK_SYS> sys;
         zprof::Clock<zprof::CLOCK_CLOCK> linux_clock;
         zprof::Clock<zprof::CLOCK_CHRONO> chrono_clock;
+        zprof::Clock<zprof::CLOCK_CHRONO_SYS_MS> ms_clock;
         rdtsc.start();
         sys.start();
         linux_clock.start();
         chrono_clock.start();
+        ms_clock.start();
         clock_t c_clock = clock();
         long long steady_clock = std::chrono::steady_clock().now().time_since_epoch().count();
         long long sys_clock = std::chrono::system_clock().now().time_since_epoch().count();
@@ -833,6 +835,7 @@ int main(int argc, char *argv[])
         sys.save();
         linux_clock.save();
         chrono_clock.save();
+        ms_clock.save();
         c_clock = clock() - c_clock;
         steady_clock = std::chrono::steady_clock().now().time_since_epoch().count() - steady_clock;
         sys_clock = std::chrono::system_clock().now().time_since_epoch().count() - sys_clock;
@@ -844,6 +847,7 @@ int main(int argc, char *argv[])
         LogDebug() << "c clock stamp use:" << (c_clock * 1.0 / CLOCKS_PER_SEC * 1000) << "ms" << ", inner count:" << human_count_format(c_clock);
         LogDebug() << "steady_clock stamp use:" << steady_clock * 1.0 << "c" << ", inner count:" << human_count_format(steady_clock);
         LogDebug() << "sys_clock stamp use:" << sys_clock * 1.0 << "c" << ", inner count:" << human_count_format(sys_clock);
+        LogDebug() << "ms_clock stamp use:" << ms_clock.cycles() << "c" << ", inner count:" << human_count_format(ms_clock.cycles());
 
     }
     for (size_t i = 0; i < 1; i++)
