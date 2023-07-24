@@ -542,16 +542,16 @@ namespace zprof
         particle_for_ns_[T_CLOCK_STEADY_CHRONO] = get_inverse_frequency<T_CLOCK_STEADY_CHRONO>();
         particle_for_ns_[T_CLOCK_SYS_CHRONO] = get_inverse_frequency<T_CLOCK_SYS_CHRONO>();
         particle_for_ns_[T_CLOCK_SYS_MS] = get_inverse_frequency<T_CLOCK_SYS_MS>();
-        particle_for_ns_[T_CLOCK_PURE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
-        particle_for_ns_[T_CLOCK_VOLATILE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
-        particle_for_ns_[T_CLOCK_FENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
-        particle_for_ns_[T_CLOCK_MFENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
-        particle_for_ns_[T_CLOCK_LOCK_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
-        particle_for_ns_[T_CLOCK_RDTSCP] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
-        particle_for_ns_[T_CLOCK_BTB_FENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
-        particle_for_ns_[T_CLOCK_BTB_MFENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
+        particle_for_ns_[T_CLOCK_PURE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
+        particle_for_ns_[T_CLOCK_VOLATILE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
+        particle_for_ns_[T_CLOCK_FENCE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
+        particle_for_ns_[T_CLOCK_MFENCE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
+        particle_for_ns_[T_CLOCK_LOCK_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
+        particle_for_ns_[T_CLOCK_RDTSCP] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
+        particle_for_ns_[T_CLOCK_BTB_FENCE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
+        particle_for_ns_[T_CLOCK_BTB_MFENCE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
 
-        particle_for_ns_[T_CLOCK_NULL] = particle_for_ns_[zprof::CLOCK_DEFAULT ];
+        particle_for_ns_[T_CLOCK_NULL] = get_inverse_frequency<zprof::CLOCK_DEFAULT >();
 
         for (int i = begin_id(); i < reserve_end_id(); i++)
         {
