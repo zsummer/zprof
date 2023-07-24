@@ -140,6 +140,7 @@ namespace zprof
         enum InnerType
         {
             INNER_NULL,
+            INNER_INIT_TS,
             INNER_INIT_COST,
             INNER_MERGE_COST,
             INNER_REPORT_COST,
@@ -516,6 +517,7 @@ namespace zprof
         }
 
         regist(INNER_NULL, "INNER_NULL", CLOCK_DEFAULT, true, true);
+        regist(INNER_INIT_TS, "INIT_COST", CLOCK_CHRONO_SYS_MS, true, true);
         regist(INNER_INIT_COST, "INIT_COST", CLOCK_DEFAULT, true, true);
         regist(INNER_MERGE_COST, "MERGE_COST", CLOCK_DEFAULT, true, true);
 
@@ -537,7 +539,10 @@ namespace zprof
         regist(INNER_ATOM_SEQ_COST, "ATOM_SEQ_COST", CLOCK_DEFAULT, true, true);
 
 
-
+        if (true)
+        {
+            record_user(INNER_INIT_TS, 1, zprof::Clock<zprof::CLOCK_CHRONO_SYS_MS>::now());
+        }
 
         if (true)
         {
@@ -1225,11 +1230,14 @@ namespace zprof
 
 
         rp.push_char('=', 30);
-        rp.push_char('\t');
+        rp.push_char(' ');
         rp.push_string(title());
-        rp.push_string(STRLEN(" begin output: "));
+        rp.push_string(STRLEN(" output report at: "));
         rp.push_now_date();
-        rp.push_char('\t');
+        rp.push_string(STRLEN(" dist start time "));
+        rp.push_human_time((Clock<CLOCK_CHRONO_SYS_MS>::now() - nodes_[INNER_INIT_TS].user.sum)*1000*1000);
+        rp.push_char(' ');
+
         rp.push_char('=', 30);
         output_and_clean(rp);
 
