@@ -1477,7 +1477,49 @@ namespace zprof
         }
 
 
-    
+        PROF_ALWAYS_INLINE RecordNode& at(int idx) const
+        {
+            return nodes_[idx];
+        }
+
+        PROF_ALWAYS_INLINE RecordCPU& at_cpu(int idx) const
+        {
+            return nodes_[idx].cpu;
+        }
+        PROF_ALWAYS_INLINE RecordTimer& at_timer(int idx) const
+        {
+            return nodes_[idx].timer;
+        }
+        PROF_ALWAYS_INLINE RecordMem& at_mem(int idx) const
+        {
+            return nodes_[idx].mem;
+        }
+        PROF_ALWAYS_INLINE RecordUser& at_user(int idx) const
+        {
+            return nodes_[idx].user;
+        }
+        PROF_ALWAYS_INLINE RecordMerge& at_merge(int idx) const
+        {
+            return nodes_[idx].merge;
+        }
+        PROF_ALWAYS_INLINE RecordShow& at_show(int idx) const
+        {
+            return nodes_[idx].show;
+        }
+        PROF_ALWAYS_INLINE VMData& at_vmdata(int idx) const
+        {
+            return nodes_[idx].vm;
+        }
+        PROF_ALWAYS_INLINE RecordTraits& at_traits(int idx) const
+        {
+            return nodes_[idx].traits;
+        }
+        PROF_ALWAYS_INLINE const char* at_name(int idx) const
+        {
+            return name(idx);
+        }
+
+
 
         //µÝ¹éÕ¹¿ª  
         int recursive_output(int entry_idx, int depth, const char* opt_name, size_t opt_name_len, Report& rp);

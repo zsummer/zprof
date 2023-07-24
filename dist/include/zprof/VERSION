@@ -1,6 +1,6 @@
 version:
-last_sha1(./src)=1edb9bcdec0769fa6a916c911854bff3d848b0a8
-last_date(./src)=2023-07-24 16:19:16 +0800
+last_sha1(./src)=b74f0a93f28d672a4648e0512e4ec1e18f1663ac
+last_date(./src)=2023-07-24 16:39:18 +0800
 
 git log -1 --stat ./src:
-commit 1edb9bcdec0769fa6a916c911854bff3d848b0a8 Author: zsummer <yawei.zhang@foxmail.com> Date: Mon Jul 24 16:19:16 2023 +0800 clock default src/zprof.h | 8 ++++---- src/zprof_clock.h | 6 ++---- src/zprof_record.h | 40 ++++++++++++++++++++-------------------- 3 files changed, 26 insertions(+), 28 deletions(-)
+commit b74f0a93f28d672a4648e0512e4ec1e18f1663ac Author: zsummer <yawei.zhang@foxmail.com> Date: Mon Jul 24 16:39:18 2023 +0800 add read interface src/zprof_record.h | 44 +++++++++++++++++++++++++++++++++++++++++++- 1 file changed, 43 insertions(+), 1 deletion(-)
