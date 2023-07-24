@@ -1,6 +1,6 @@
 version:
-last_sha1(./src)=301b07025a8aaf34e27a00498e7a58d95a850bec
-last_date(./src)=2023-07-24 17:30:34 +0800
+last_sha1(./src)=374a9124fb1044beb98189489722130e127d99cb
+last_date(./src)=2023-07-24 19:51:04 +0800
 
 git log -1 --stat ./src:
-commit 301b07025a8aaf34e27a00498e7a58d95a850bec Author: zsummer <yawei.zhang@foxmail.com> Date: Mon Jul 24 17:30:34 2023 +0800 compatible interface for zclock src/zprof_clock.h | 3 ++- src/zprof_record.h | 20 ++++++++++---------- 2 files changed, 12 insertions(+), 11 deletions(-)
+commit 374a9124fb1044beb98189489722130e127d99cb Author: zsummer <yawei.zhang@foxmail.com> Date: Mon Jul 24 19:51:04 2023 +0800 fix typo src/zprof_record.h | 20 ++++++++++---------- 1 file changed, 10 insertions(+), 10 deletions(-)
