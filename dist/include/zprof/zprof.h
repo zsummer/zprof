@@ -653,7 +653,8 @@ namespace zprof
 
         zclock_base& stop_and_save() { return save(); }
 
-
+        long long ticks()const { return ticks_; }
+        long long cycles()const { return ticks_; }
         long long cost()const { return ticks_; }
         long long cost_ns()const { return (long long)(ticks_ * get_inverse_frequency<_C>()); }
         long long cost_ms()const { return cost_ns() / 1000 / 1000; }
@@ -1295,7 +1296,7 @@ namespace zprof
         int bind_merge(int to, int child);
         void do_merge();
 
-        PROF_ALWAYS_INLINE void reset_cpu(int idx)
+        PROF_ALWAYS_INLINE  void reset_cpu(int idx)
         {
             RecordNode& node = nodes_[idx];
             memset(&node.cpu, 0, sizeof(node.cpu));
@@ -1477,40 +1478,40 @@ namespace zprof
         }
 
 
-        PROF_ALWAYS_INLINE RecordNode& at(int idx) const
+        PROF_ALWAYS_INLINE const RecordNode& at(int idx) const
         {
             return nodes_[idx];
         }
 
-        PROF_ALWAYS_INLINE RecordCPU& at_cpu(int idx) const
+        PROF_ALWAYS_INLINE const RecordCPU& at_cpu(int idx) const
         {
             return nodes_[idx].cpu;
         }
-        PROF_ALWAYS_INLINE RecordTimer& at_timer(int idx) const
+        PROF_ALWAYS_INLINE const RecordTimer& at_timer(int idx) const
         {
             return nodes_[idx].timer;
         }
-        PROF_ALWAYS_INLINE RecordMem& at_mem(int idx) const
+        PROF_ALWAYS_INLINE const RecordMem& at_mem(int idx) const
         {
             return nodes_[idx].mem;
         }
-        PROF_ALWAYS_INLINE RecordUser& at_user(int idx) const
+        PROF_ALWAYS_INLINE const RecordUser& at_user(int idx) const
         {
             return nodes_[idx].user;
         }
-        PROF_ALWAYS_INLINE RecordMerge& at_merge(int idx) const
+        PROF_ALWAYS_INLINE const RecordMerge& at_merge(int idx) const
         {
             return nodes_[idx].merge;
         }
-        PROF_ALWAYS_INLINE RecordShow& at_show(int idx) const
+        PROF_ALWAYS_INLINE const RecordShow& at_show(int idx) const
         {
             return nodes_[idx].show;
         }
-        PROF_ALWAYS_INLINE VMData& at_vmdata(int idx) const
+        PROF_ALWAYS_INLINE const VMData& at_vmdata(int idx) const
         {
             return nodes_[idx].vm;
         }
-        PROF_ALWAYS_INLINE RecordTraits& at_traits(int idx) const
+        PROF_ALWAYS_INLINE const RecordTraits& at_traits(int idx) const
         {
             return nodes_[idx].traits;
         }
