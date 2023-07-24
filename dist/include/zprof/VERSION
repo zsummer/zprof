@@ -1,6 +1,6 @@
 version:
-last_sha1(./src)=1a16989d5268ab99d10dba0b50732094aaed5a22
-last_date(./src)=2023-07-24 15:20:04 +0800
+last_sha1(./src)=ab87a2070b4394ec8d0bb85a94590ebc81430c9f
+last_date(./src)=2023-07-24 15:34:26 +0800
 
 git log -1 --stat ./src:
-commit 1a16989d5268ab99d10dba0b50732094aaed5a22 Author: zsummer <yawei.zhang@foxmail.com> Date: Mon Jul 24 15:19:11 2023 +0800 统一zbase::zclock src/zprof.h | 76 +++++++-------- src/zprof_clock.h | 256 ++++++++++++++++++++++++------------------------ src/zprof_record.h | 279 +++++++++++++++++++++++++++-------------------------- 3 files changed, 310 insertions(+), 301 deletions(-)
+commit ab87a2070b4394ec8d0bb85a94590ebc81430c9f Author: zsummer <yawei.zhang@foxmail.com> Date: Mon Jul 24 15:34:08 2023 +0800 clean naming src/zprof_record.h | 49 ++++++++++++++++++++++++++----------------------- src/zprof_report.h | 43 +++++++++++++++---------------------------- 2 files changed, 41 insertions(+), 51 deletions(-)
