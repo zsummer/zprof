@@ -105,55 +105,45 @@
 namespace zprof
 {
 
-    enum ClockType
+    enum clock_type
     {
-        CLOCK_NULL,
-        CLOCK_SYS,
-        CLOCK_CLOCK,
-        CLOCK_CHRONO,
-        CLOCK_CHRONO_STEADY,
-        CLOCK_CHRONO_SYS,
-        CLOCK_CHRONO_SYS_MS, //降低到ms精度 用于record时自由输入来自其他计时来源的数据  
+        T_CLOCK_NULL,
+        T_CLOCK_SYS,
+        T_CLOCK_CLOCK,
+        T_CLOCK_CHRONO,
+        T_CLOCK_STEADY_CHRONO,
+        T_CLOCK_SYS_CHRONO,
+        T_CLOCK_SYS_MS, //wall clock 
 
-        CLOCK_RDTSC_PURE,
-        CLOCK_RDTSC_NOFENCE,
-        CLOCK_RDTSC,
-        CLOCK_RDTSC_BTB,
-        CLOCK_RDTSCP,
-        CLOCK_RDTSC_MFENCE,
-        CLOCK_RDTSC_MFENCE_BTB,
+        T_CLOCK_PURE_RDTSC,
+        T_CLOCK_VOLATILE_RDTSC,
+        T_CLOCK_FENCE_RDTSC,
+        T_CLOCK_MFENCE_RDTSC,
+        T_CLOCK_LOCK_RDTSC,
+        T_CLOCK_RDTSCP,
+        T_CLOCK_BTB_FENCE_RDTSC,
+        T_CLOCK_BTB_MFENCE_RDTSC,
 
-        CLOCK_RDTSC_LOCK,
-        CLOCK_MAX,
+        T_CLOCK_MAX,
     };
-#ifndef CLOCK_DEFAULT
-#define CLOCK_DEFAULT CLOCK_RDTSC_NOFENCE
-#endif 
 
 
-    struct ProfVM
+    struct vmdata
     {
+        //don't use u64 or long long; uint64_t maybe is long ;
         unsigned long long vm_size;
         unsigned long long rss_size;
         unsigned long long shr_size;
     };
 
-
-
-
-
-
-
-
-
-    template<ClockType T>
-    PROF_ALWAYS_INLINE long long get_tick()
+    template<clock_type _C>
+    inline long long get_tick()
     {
         return 0;
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_RDTSC>()
+    inline long long get_tick<T_CLOCK_FENCE_RDTSC>()
     {
 #ifdef WIN32
         _mm_lfence();
@@ -161,13 +151,13 @@ namespace zprof
 #else
         unsigned int lo, hi;
         __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) ::);
-        uint64_t val = ((uint64_t)hi << 32) | lo;
+        unsigned long long val = ((unsigned long long)hi << 32) | lo;
         return (long long)val;
 #endif
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_RDTSC_BTB>()
+    inline long long get_tick<T_CLOCK_BTB_FENCE_RDTSC>()
     {
 #ifdef WIN32
         long long ret;
@@ -178,40 +168,40 @@ namespace zprof
 #else
         unsigned int lo, hi;
         __asm__ __volatile__("lfence;rdtsc;lfence" : "=a" (lo), "=d" (hi) ::);
-        uint64_t val = ((uint64_t)hi << 32) | lo;
+        unsigned long long val = ((unsigned long long)hi << 32) | lo;
         return (long long)val;
 #endif
     }
 
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_RDTSC_NOFENCE>()
+    inline long long get_tick<T_CLOCK_VOLATILE_RDTSC>()
     {
 #ifdef WIN32
         return (long long)__rdtsc();
 #else
         unsigned long hi, lo;
         __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) ::);
-        uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+        unsigned long long val = (((unsigned long long)hi) << 32 | ((unsigned long long)lo));
         return (long long)val;
 #endif
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_RDTSC_PURE>()
+    inline long long get_tick<T_CLOCK_PURE_RDTSC>()
     {
 #ifdef WIN32
         return (long long)__rdtsc();
 #else
         unsigned long hi, lo;
         __asm__("rdtsc" : "=a"(lo), "=d"(hi));
-        uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+        unsigned long long val = (((unsigned long long)hi) << 32 | ((unsigned long long)lo));
         return (long long)val;
 #endif
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_RDTSC_LOCK>()
+    inline long long get_tick<T_CLOCK_LOCK_RDTSC>()
     {
 #ifdef WIN32
         _mm_mfence();
@@ -219,14 +209,14 @@ namespace zprof
 #else
         unsigned long hi, lo;
         __asm__("lock addq $0, 0(%%rsp); rdtsc" : "=a"(lo), "=d"(hi)::"memory");
-        uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+        unsigned long long val = (((unsigned long long)hi) << 32 | ((unsigned long long)lo));
         return (long long)val;
 #endif
     }
 
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_RDTSC_MFENCE>()
+    inline long long get_tick<T_CLOCK_MFENCE_RDTSC>()
     {
 #ifdef WIN32
         long long ret = 0;
@@ -235,29 +225,29 @@ namespace zprof
         _mm_mfence();
         return ret;
 #else
-        unsigned int lo, hi;
+        unsigned long lo, hi;
         __asm__ __volatile__("mfence;rdtsc;mfence" : "=a" (lo), "=d" (hi) ::);
-        uint64_t val = ((uint64_t)hi << 32) | lo;
+        unsigned long long val = ((unsigned long long)hi << 32) | lo;
         return (long long)val;
 #endif
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_RDTSC_MFENCE_BTB>()
+    inline long long get_tick<T_CLOCK_BTB_MFENCE_RDTSC>()
     {
 #ifdef WIN32
         _mm_mfence();
         return (long long)__rdtsc();
 #else
-        unsigned int lo, hi;
+        unsigned long lo, hi;
         __asm__ __volatile__("mfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
-        uint64_t val = ((uint64_t)hi << 32) | lo;
+        unsigned long long val = ((unsigned long long)hi << 32) | lo;
         return (long long)val;
 #endif
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_RDTSCP>()
+    inline long long get_tick<T_CLOCK_RDTSCP>()
     {
 #ifdef WIN32
         unsigned int ui;
@@ -265,14 +255,14 @@ namespace zprof
 #else
         unsigned long hi, lo;
         __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi)::"memory");
-        uint64_t val = (((uint64_t)hi) << 32 | ((uint64_t)lo));
+        unsigned long long val = (((unsigned long long)hi) << 32 | ((unsigned long long)lo));
         return (long long)val;
 #endif
     }
 
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_CLOCK>()
+    inline long long get_tick<T_CLOCK_CLOCK>()
     {
 #if (defined WIN32)
         LARGE_INTEGER win_freq;
@@ -287,7 +277,7 @@ namespace zprof
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_SYS>()
+    inline long long get_tick<T_CLOCK_SYS>()
     {
 #if (defined WIN32)
         FILETIME ft;
@@ -306,32 +296,34 @@ namespace zprof
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_CHRONO>()
+    inline long long get_tick<T_CLOCK_CHRONO>()
     {
         return std::chrono::high_resolution_clock().now().time_since_epoch().count();
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_CHRONO_STEADY>()
+    inline long long get_tick<T_CLOCK_STEADY_CHRONO>()
     {
         return std::chrono::steady_clock().now().time_since_epoch().count();
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_CHRONO_SYS>()
+    inline long long get_tick<T_CLOCK_SYS_CHRONO>()
     {
         return std::chrono::system_clock().now().time_since_epoch().count();
     }
 
     template<>
-    PROF_ALWAYS_INLINE long long get_tick<CLOCK_CHRONO_SYS_MS>()
+    inline long long get_tick<T_CLOCK_SYS_MS>()
     {
         return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }
 
-    inline ProfVM get_self_mem()
+
+
+    inline vmdata get_self_mem()
     {
-        ProfVM vm = { 0ULL, 0ULL, 0ULL };
+        vmdata vm = { 0ULL, 0ULL, 0ULL };
 #ifdef WIN32
         HANDLE hproc = GetCurrentProcess();
         PROCESS_MEMORY_COUNTERS pmc;
@@ -366,10 +358,9 @@ namespace zprof
         return vm;
     }
 
-
-    inline ProfVM get_sys_mem()
+    inline vmdata get_sys_mem()
     {
-        ProfVM vm = { 0ULL, 0ULL, 0ULL };
+        vmdata vm = { 0ULL, 0ULL, 0ULL };
 #ifdef WIN32
         MEMORYSTATUS state = { 0 };
         GlobalMemoryStatus(&state);
@@ -426,7 +417,6 @@ namespace zprof
         return vm;
     }
 
-
 #ifdef WIN32
     struct PROF_PROCESSOR_POWER_INFORMATION
     {
@@ -438,7 +428,7 @@ namespace zprof
         ULONG  CurrentIdleState;
     };
 #endif
-    inline double get_cpu_mhz()
+    inline double get_cpu_freq()
     {
         double mhz = 1;
 #ifdef __APPLE__
@@ -504,62 +494,62 @@ namespace zprof
 
 
 
-    template<ClockType T>
-    PROF_ALWAYS_INLINE double get_frequency()
+    template<clock_type _C>
+    inline double get_frequency()
     {
         return 1.0;
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_RDTSC>()
+    inline double get_frequency<T_CLOCK_FENCE_RDTSC>()
     {
-        static double frequency_per_ns = get_cpu_mhz() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
+        const static double frequency_per_ns = get_cpu_freq() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
         return frequency_per_ns;
     }
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_RDTSC_BTB>()
+    inline double get_frequency<T_CLOCK_BTB_FENCE_RDTSC>()
     {
-        return get_frequency<CLOCK_RDTSC>();
+        return get_frequency<T_CLOCK_FENCE_RDTSC>();
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_RDTSC_NOFENCE>()
+    inline double get_frequency<T_CLOCK_VOLATILE_RDTSC>()
     {
-        return get_frequency<CLOCK_RDTSC>();
+        return get_frequency<T_CLOCK_FENCE_RDTSC>();
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_RDTSC_PURE>()
+    inline double get_frequency<T_CLOCK_PURE_RDTSC>()
     {
-        return get_frequency<CLOCK_RDTSC>();
+        return get_frequency<T_CLOCK_FENCE_RDTSC>();
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_RDTSC_LOCK>()
+    inline double get_frequency<T_CLOCK_LOCK_RDTSC>()
     {
-        return get_frequency<CLOCK_RDTSC>();
+        return get_frequency<T_CLOCK_FENCE_RDTSC>();
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_RDTSC_MFENCE>()
+    inline double get_frequency<T_CLOCK_MFENCE_RDTSC>()
     {
-        return get_frequency<CLOCK_RDTSC>();
+        return get_frequency<T_CLOCK_FENCE_RDTSC>();
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_RDTSC_MFENCE_BTB>()
+    inline double get_frequency<T_CLOCK_BTB_MFENCE_RDTSC>()
     {
-        return get_frequency<CLOCK_RDTSC>();
+        return get_frequency<T_CLOCK_FENCE_RDTSC>();
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_RDTSCP>()
+    inline double get_frequency<T_CLOCK_RDTSCP>()
     {
-        return get_frequency<CLOCK_RDTSC>();
+        return get_frequency<T_CLOCK_FENCE_RDTSC>();
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_CLOCK>()
+    inline double get_frequency<T_CLOCK_CLOCK>()
     {
 #ifdef WIN32
         double frequency_per_ns = 0;
@@ -574,102 +564,116 @@ namespace zprof
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_SYS>()
+    inline double get_frequency<T_CLOCK_SYS>()
     {
         return 1.0;
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_CHRONO>()
+    inline double get_frequency<T_CLOCK_CHRONO>()
     {
-        static double chrono_frequency = std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
+        const static double chrono_frequency = std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
         return chrono_frequency;
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_CHRONO_STEADY>()
+    inline double get_frequency<T_CLOCK_STEADY_CHRONO>()
     {
-        static double chrono_frequency = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
+        const static double chrono_frequency = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
         return chrono_frequency;
     }
 
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_CHRONO_SYS>()
+    inline double get_frequency<T_CLOCK_SYS_CHRONO>()
     {
-        static double chrono_frequency = std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
+        const static double chrono_frequency = std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
         return chrono_frequency;
     }
+
     template<>
-    PROF_ALWAYS_INLINE double get_frequency<CLOCK_CHRONO_SYS_MS>()
+    inline double get_frequency<T_CLOCK_SYS_MS>()
     {
         static double chrono_frequency = 1.0 / 1000.0 / 1000.0;
         return chrono_frequency;
     }
-    template<ClockType T>
-    PROF_ALWAYS_INLINE double get_inverse_frequency()
+
+    template<clock_type _C>
+    inline double get_inverse_frequency()
     {
-        static double inverse_frequency_per_ns = 1.0 / (get_frequency<T>() <= 0.0 ? 1.0 : get_frequency<T>());
+        const static double inverse_frequency_per_ns = 1.0 / (get_frequency<_C>() <= 0.0 ? 1.0 : get_frequency<_C>());
         return inverse_frequency_per_ns;
     }
 
 
 
 
-
-
-
-
-
-
-
-    template<ClockType T = CLOCK_DEFAULT>
-    class Clock
+    template<clock_type _C = T_CLOCK_VOLATILE_RDTSC>
+    class zclock_base
     {
     public:
-        Clock()
+        static constexpr clock_type C = _C;
+
+    private:
+        long long begin_;
+        long long ticks_;
+    public:
+        long long get_begin() const { return begin_; }
+        long long get_ticks() const { return ticks_; }
+        long long get_end() const { return begin_ + ticks_; }
+
+        void set_begin(long long val) { begin_ = val; }
+        void set_ticks(long long ticks) { ticks_ = ticks; }
+    public:
+        zclock_base()
         {
-            start_tick_ = 0;
+            begin_ = 0;
             ticks_ = 0;
         }
-        Clock(long long val)
+        zclock_base(long long start_clock)
         {
-            start_tick_ = val;
+            begin_ = start_clock;
             ticks_ = 0;
+        }
+        zclock_base(const zclock_base& c)
+        {
+            begin_ = c.begin_;
+            ticks_ = c.ticks_;
         }
         void start()
         {
-            start_tick_ = get_tick<T>();
+            begin_ = get_tick<_C>();
             ticks_ = 0;
         }
 
-        Clock& save()
+        zclock_base& save()
         {
-            ticks_ = get_tick<T>() - start_tick_;
+            ticks_ = get_tick<_C>() - begin_;
             return *this;
         }
 
-        Clock& stop_and_save() { return save(); }
+        zclock_base& stop_and_save() { return save(); }
 
-        long long start_val() const { return start_tick_; }
-        long long stop_val() const { return start_tick_ + ticks_; }
-        
-        long long cycles() const { return ticks_; }
-        long long duration_ticks() const { return ticks_; }
-        long long duration_ns() const { return (long long)(ticks_ * get_inverse_frequency<T>()); }
-        double duration_second() const { return (double)duration_ns() / (1000.0 * 1000.0 * 1000.0); }
 
-        void set_start_val(long long val) { start_tick_ = val; }
-        void set_ticks_val(long long cycles) { ticks_ = cycles; }
+        long long cost()const { return ticks_; }
+        long long cost_ns()const { return (long long)(ticks_ * get_inverse_frequency<_C>()); }
+        long long cost_ms()const { return cost_ns() / 1000 / 1000; }
+        double cost_s() const { return (double)cost_ns() / (1000.0 * 1000.0 * 1000.0); }
+
         //utils  
     public:
-        static long long now() { return get_tick<T>(); }
-    private:
-        long long start_tick_;
-        long long ticks_;
+        static long long now() { return get_tick<_C>(); }
+        static long long sys_now_ns() { return get_tick<T_CLOCK_SYS>(); }
+        static long long sys_now_us() { return get_tick<T_CLOCK_SYS>() / 1000; }
+        static long long sys_now_ms() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
+        static double sys_now_s() { return std::chrono::duration<double>(std::chrono::system_clock().now().time_since_epoch()).count(); }
+        static vmdata get_self_mem() { return get_self_mem(); }
+        static vmdata get_sys_mem() { return get_sys_mem(); }
     };
 
-
-
+    template<clock_type _C = T_CLOCK_VOLATILE_RDTSC>
+    using Clock = zclock_base<_C>;
+    using VMData = vmdata;
+    
 
 
 
@@ -1131,8 +1135,8 @@ namespace zprof
 namespace zprof
 {
 
-    #define SMOOTH_CYCLES(s_cost, cost) (   (s_cost * 12 + cost * 4) >> 4   ) 
-    #define SMOOTH_CYCLES_WITH_INIT(s_cost, cost) ( (s_cost) == 0 ? (cost) : SMOOTH_CYCLES(s_cost, cost) )
+    #define SMOOTH_CYCLES(s_ticks, ticks) (   (s_ticks * 12 + ticks * 4) >> 4   ) 
+    #define SMOOTH_CYCLES_WITH_INIT(s_ticks, ticks) ( (s_ticks) == 0 ? (ticks) : SMOOTH_CYCLES(s_ticks, ticks) )
 
     enum RecordLevel
     {
@@ -1146,7 +1150,7 @@ namespace zprof
     {
         int name;
         int name_len;
-        int counter_type;
+        int clk;
         bool resident;
     };
 
@@ -1211,7 +1215,7 @@ namespace zprof
         RecordMem mem; 
         RecordTimer timer;
         RecordUser user;
-        ProfVM vm;
+        VMData vm;
     };  
 
     enum OutFlags : unsigned int
@@ -1240,6 +1244,9 @@ namespace zprof
         enum InnerType
         {
             INNER_NULL,
+            INNER_INIT_TS,
+            INNER_RESET_TS,
+            INNER_OUTPUT_TS,
             INNER_INIT_COST,
             INNER_MERGE_COST,
             INNER_REPORT_COST,
@@ -1279,10 +1286,7 @@ namespace zprof
         static constexpr int compact_data_size() { return 30 * (1+end_id()); } //reserve node no name 
         static_assert(end_id() == INNER_MAX + reserve_count() + declare_count(), "");
 
-    public:
-        long long init_timestamp_;
-        long long reset_timestamp_;
-        long long output_timestamp_;
+
     public:
         static inline Record& instance()
         {
@@ -1293,7 +1297,7 @@ namespace zprof
     public:
         Record();
         int init(const char* title);
-        int regist(int idx, const char* name, unsigned int counter, bool resident, bool re_reg);
+        int regist(int idx, const char* name, unsigned int clk, bool resident, bool re_reg);
         const char* title() const { return &compact_data_[title_]; }
 
         const char* name(int idx);
@@ -1355,91 +1359,91 @@ namespace zprof
         void reset_reserve_node(bool keep_resident = true)
         {
             reset_range_node(reserve_begin_id(), reserve_end_id(), keep_resident);
-            reset_timestamp_ = time(NULL);
+            overwrite_user(INNER_RESET_TS, 1, zprof::Clock<>::sys_now_ms());        
         }
 
         void reset_declare_node(bool keep_resident = true)
         {
             reset_range_node(declare_begin_id(), declare_end_id(), keep_resident);
-            reset_timestamp_ = time(NULL);
+            overwrite_user(INNER_RESET_TS, 1, zprof::Clock<>::sys_now_ms());
         }
 
 
 
         inline void reset_childs(int idx, int depth = 0);
 
-        PROF_ALWAYS_INLINE void record_cpu(int idx, long long c, long long cost)
+        PROF_ALWAYS_INLINE void record_cpu(int idx, long long c, long long ticks)
         {
-            long long dis = cost / c;
+            long long dis = ticks / c;
             RecordNode& node = nodes_[idx];
             node.cpu.c += c;
-            node.cpu.sum += cost;
-            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+            node.cpu.sum += ticks;
+            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);
             node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
             node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
             node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
-            node.cpu.t_u += cost;
+            node.cpu.t_u += ticks;
         }
-        PROF_ALWAYS_INLINE void record_cpu(int idx, long long cost)
+        PROF_ALWAYS_INLINE void record_cpu(int idx, long long ticks)
         {
             RecordNode& node = nodes_[idx];
             node.cpu.c += 1;
-            node.cpu.sum += cost;
-            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
-            node.cpu.max_u = (node.cpu.max_u < cost ? cost : node.cpu.max_u);
-            node.cpu.min_u = (node.cpu.min_u < cost ? node.cpu.min_u : cost);
-            node.cpu.dv += abs(cost - node.cpu.sm);
-            node.cpu.t_u += cost;
+            node.cpu.sum += ticks;
+            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);
+            node.cpu.max_u = (node.cpu.max_u < ticks ? ticks : node.cpu.max_u);
+            node.cpu.min_u = (node.cpu.min_u < ticks ? node.cpu.min_u : ticks);
+            node.cpu.dv += abs(ticks - node.cpu.sm);
+            node.cpu.t_u += ticks;
         }
-        PROF_ALWAYS_INLINE void record_cpu_no_sm(int idx, long long cost)
+        PROF_ALWAYS_INLINE void record_cpu_no_sm(int idx, long long ticks)
         {
             RecordNode& node = nodes_[idx];
             node.cpu.c += 1;
-            node.cpu.sum += cost;
-            node.cpu.sm = cost;
-            node.cpu.t_u += cost;
+            node.cpu.sum += ticks;
+            node.cpu.sm = ticks;
+            node.cpu.t_u += ticks;
         }
-        PROF_ALWAYS_INLINE void record_cpu_no_sm(int idx, long long count, long long cost)
+        PROF_ALWAYS_INLINE void record_cpu_no_sm(int idx, long long count, long long ticks)
         {
-            long long dis = cost / count;
+            long long dis = ticks / count;
             RecordNode& node = nodes_[idx];
             node.cpu.c += count;
-            node.cpu.sum += cost;
+            node.cpu.sum += ticks;
             node.cpu.sm = dis;
-            node.cpu.t_u += cost;
+            node.cpu.t_u += ticks;
         }
 
-        PROF_ALWAYS_INLINE void record_cpu_full(int idx, long long cost)
+        PROF_ALWAYS_INLINE void record_cpu_full(int idx, long long ticks)
         {
             RecordNode& node = nodes_[idx];
             node.cpu.c += 1;
-            node.cpu.sum += cost;
-            long long dis = cost;
+            node.cpu.sum += ticks;
+            long long dis = ticks;
             long long avg = node.cpu.sum / node.cpu.c;
 
-            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);
             node.cpu.h_sm = (dis >= avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
             node.cpu.l_sm = (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
             node.cpu.dv += abs(dis - node.cpu.sm);
-            node.cpu.t_u += cost;
+            node.cpu.t_u += ticks;
             node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
             node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
         }
 
-        PROF_ALWAYS_INLINE void record_cpu_full(int idx, long long c, long long cost)
+        PROF_ALWAYS_INLINE void record_cpu_full(int idx, long long c, long long ticks)
         {
         
             RecordNode& node = nodes_[idx];
             node.cpu.c += c;
-            node.cpu.sum += cost;
-            long long dis = cost / c;
+            node.cpu.sum += ticks;
+            long long dis = ticks / c;
             long long avg = node.cpu.sum / node.cpu.c;
 
-            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, cost);
+            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);
             node.cpu.h_sm =  (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
             node.cpu.l_sm =  (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
             node.cpu.dv += abs(dis - node.cpu.sm);
-            node.cpu.t_u += cost;
+            node.cpu.t_u += ticks;
             node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
             node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
         }
@@ -1464,7 +1468,7 @@ namespace zprof
             node.mem.sum += add;
             node.mem.t_u += add;
         }
-        PROF_ALWAYS_INLINE void record_vm(int idx, const ProfVM& vm)
+        PROF_ALWAYS_INLINE void record_vm(int idx, const VMData& vm)
         {
             nodes_[idx].vm = vm;
         }
@@ -1474,6 +1478,11 @@ namespace zprof
             node.user.c += c;
             node.user.sum += add;
             node.user.t_u += add;
+        }
+        PROF_ALWAYS_INLINE void overwrite_user(int idx, long long c, long long add)
+        {
+            reset_user(idx);
+            record_user(idx, c, add);
         }
 
         PROF_ALWAYS_INLINE void overwrite_mem(int idx, long long c, long long add)
@@ -1500,7 +1509,7 @@ namespace zprof
         Report& compact_writer() { return compact_writer_; }
         RecordNode& node(int idx) { return nodes_[idx]; }
     
-        double particle_for_ns(int t) { return  particle_for_ns_[t == CLOCK_NULL ? CLOCK_DEFAULT : t]; }
+        double particle_for_ns(int t) { return  particle_for_ns_[t]; }
 
 
 
@@ -1538,7 +1547,7 @@ namespace zprof
     private:
         RecordNode nodes_[end_id()];
         int declare_window_;
-        double particle_for_ns_[CLOCK_MAX];
+        double particle_for_ns_[T_CLOCK_MAX];
     };
 
     template<int INST, int RESERVE, int DECLARE>
@@ -1551,9 +1560,6 @@ namespace zprof
 
         output_ = &Record::default_output;  //set default log;
 
-        init_timestamp_ = 0;
-        reset_timestamp_ = 0;
-        output_timestamp_ = 0;
         static_assert(compact_data_size() > 150, "");
         unknown_desc_ = 0;
         compact_writer_.push_string("unknown");
@@ -1585,147 +1591,152 @@ namespace zprof
             compact_writer_.push_char('\0');
             compact_writer_.closing_string();
         }
-        zprof::Clock<> counter;
-        counter.start();
+        zprof::Clock<> clk;
+        clk.start();
 
         
-        init_timestamp_ = time(NULL);
-        reset_timestamp_ = time(NULL);
-        output_timestamp_ = time(NULL);
 
-        particle_for_ns_[CLOCK_NULL] = 0;
-        particle_for_ns_[CLOCK_SYS] = get_inverse_frequency<CLOCK_SYS>();
-        particle_for_ns_[CLOCK_CLOCK] = get_inverse_frequency<CLOCK_CLOCK>();
-        particle_for_ns_[CLOCK_CHRONO] = get_inverse_frequency<CLOCK_CHRONO>();
-        particle_for_ns_[CLOCK_CHRONO_STEADY] = get_inverse_frequency<CLOCK_CHRONO_STEADY>();
-        particle_for_ns_[CLOCK_CHRONO_SYS] = get_inverse_frequency<CLOCK_CHRONO_SYS>();
-        particle_for_ns_[CLOCK_CHRONO_SYS_MS] = get_inverse_frequency<CLOCK_CHRONO_SYS_MS>();
-        particle_for_ns_[CLOCK_RDTSC] = get_inverse_frequency<CLOCK_RDTSC>();
-        particle_for_ns_[CLOCK_RDTSC_BTB] = particle_for_ns_[CLOCK_RDTSC];
-        particle_for_ns_[CLOCK_RDTSCP] = particle_for_ns_[CLOCK_RDTSC];
-        particle_for_ns_[CLOCK_RDTSC_MFENCE] = particle_for_ns_[CLOCK_RDTSC];
-        particle_for_ns_[CLOCK_RDTSC_MFENCE_BTB] = particle_for_ns_[CLOCK_RDTSC];
-        particle_for_ns_[CLOCK_RDTSC_NOFENCE] = particle_for_ns_[CLOCK_RDTSC];
-        particle_for_ns_[CLOCK_RDTSC_PURE] = particle_for_ns_[CLOCK_RDTSC];
-        particle_for_ns_[CLOCK_RDTSC_LOCK] = particle_for_ns_[CLOCK_RDTSC];
-        particle_for_ns_[CLOCK_NULL] = particle_for_ns_[CLOCK_DEFAULT];
+
+        particle_for_ns_[T_CLOCK_NULL] = 0;
+        particle_for_ns_[T_CLOCK_SYS] = get_inverse_frequency<T_CLOCK_SYS>();
+        particle_for_ns_[T_CLOCK_CLOCK] = get_inverse_frequency<T_CLOCK_CLOCK>();
+        particle_for_ns_[T_CLOCK_CHRONO] = get_inverse_frequency<T_CLOCK_CHRONO>();
+        particle_for_ns_[T_CLOCK_STEADY_CHRONO] = get_inverse_frequency<T_CLOCK_STEADY_CHRONO>();
+        particle_for_ns_[T_CLOCK_SYS_CHRONO] = get_inverse_frequency<T_CLOCK_SYS_CHRONO>();
+        particle_for_ns_[T_CLOCK_SYS_MS] = get_inverse_frequency<T_CLOCK_SYS_MS>();
+        particle_for_ns_[T_CLOCK_PURE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
+        particle_for_ns_[T_CLOCK_VOLATILE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
+        particle_for_ns_[T_CLOCK_FENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
+        particle_for_ns_[T_CLOCK_MFENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
+        particle_for_ns_[T_CLOCK_LOCK_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
+        particle_for_ns_[T_CLOCK_RDTSCP] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
+        particle_for_ns_[T_CLOCK_BTB_FENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
+        particle_for_ns_[T_CLOCK_BTB_MFENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
+
+        particle_for_ns_[T_CLOCK_NULL] = particle_for_ns_[zprof::Clock<>::C ];
 
         for (int i = begin_id(); i < reserve_end_id(); i++)
         {
-            regist(i, "reserve", CLOCK_DEFAULT, false, false);
+            regist(i, "reserve", zprof::Clock<>::C, false, false);
         }
 
-        regist(INNER_NULL, "INNER_NULL", CLOCK_DEFAULT, true, true);
-        regist(INNER_INIT_COST, "INIT_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_MERGE_COST, "MERGE_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_NULL, "INNER_NULL", zprof::Clock<>::C, true, true);
+        regist(INNER_INIT_TS, "INNER_INIT_TS", T_CLOCK_SYS_MS, true, true);
+        regist(INNER_RESET_TS, "INNER_RESET_TS", T_CLOCK_SYS_MS, true, true);
+        regist(INNER_OUTPUT_TS, "INNER_OUTPUT_TS", T_CLOCK_SYS_MS, true, true);
+        regist(INNER_INIT_COST, "INIT_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_MERGE_COST, "MERGE_COST", zprof::Clock<>::C, true, true);
 
-        regist(INNER_REPORT_COST, "REPORT_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_SERIALIZE_COST, "SERIALIZE_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_OUTPUT_COST, "OUTPUT_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_REPORT_COST, "REPORT_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_SERIALIZE_COST, "SERIALIZE_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_OUTPUT_COST, "OUTPUT_COST", zprof::Clock<>::C, true, true);
     
-        regist(INNER_MEM_INFO_COST, "MEM_INFO_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_MEM_INFO_COST, "MEM_INFO_COST", zprof::Clock<>::C, true, true);
 
-        regist(INNER_CLOCK_COST, "COUNTER_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_RECORD_COST, "RECORD_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_RECORD_SM_COST, "RECORD_SM_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_RECORD_FULL_COST, "RECORD_FULL_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_CLOCK_RECORD_COST, "COUNTER_RECORD_COST", CLOCK_DEFAULT, true, true);
+        regist(INNER_CLOCK_COST, "COUNTER_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_RECORD_COST, "RECORD_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_RECORD_SM_COST, "RECORD_SM_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_RECORD_FULL_COST, "RECORD_FULL_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_CLOCK_RECORD_COST, "COUNTER_RECORD_COST", zprof::Clock<>::C, true, true);
 
-        regist(INNER_ORIGIN_INC, "ORIGIN_INC", CLOCK_DEFAULT, true, true);
-        regist(INNER_ATOM_RELEAX, "ATOM_RELEAX", CLOCK_DEFAULT, true, true);
-        regist(INNER_ATOM_COST, "ATOM_COST", CLOCK_DEFAULT, true, true);
-        regist(INNER_ATOM_SEQ_COST, "ATOM_SEQ_COST", CLOCK_DEFAULT, true, true);
-
-
+        regist(INNER_ORIGIN_INC, "ORIGIN_INC", zprof::Clock<>::C, true, true);
+        regist(INNER_ATOM_RELEAX, "ATOM_RELEAX", zprof::Clock<>::C, true, true);
+        regist(INNER_ATOM_COST, "ATOM_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_ATOM_SEQ_COST, "ATOM_SEQ_COST", zprof::Clock<>::C, true, true);
 
 
         if (true)
         {
-            zprof::Clock<> self_mem_cost;
-            self_mem_cost.start();
+            record_user(INNER_INIT_TS, 1, zprof::Clock<>::sys_now_ms());
+        }
+
+        if (true)
+        {
+            zprof::Clock<> self_mem_clk;
+            self_mem_clk.start();
             record_vm(INNER_MEM_INFO_COST, get_self_mem());
-            record_cpu(INNER_MEM_INFO_COST, self_mem_cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_MEM_INFO_COST, self_mem_clk.stop_and_save().cost());
             record_mem(INNER_MEM_INFO_COST, 1, sizeof(*this));
             record_user(INNER_MEM_INFO_COST, 1, max_count());
         }
 
         if (true)
         {
-            zprof::Clock<> cost;
-            cost.start();
+            zprof::Clock<> clk;
+            clk.start();
             for (int i = 0; i < 1000; i++)
             {
                 zprof::Clock<> test_cost;
                 test_cost.start();
                 test_cost.stop_and_save();
-                record_cpu(INNER_NULL, test_cost.duration_ticks());
+                record_cpu(INNER_NULL, test_cost.cost());
             }
-            record_cpu(INNER_CLOCK_RECORD_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_CLOCK_RECORD_COST, 1000, clk.stop_and_save().cost());
 
-            cost.start();
+            clk.start();
             for (int i = 0; i < 1000; i++)
             {
-                cost.save();
+                clk.save();
             }
-            record_cpu(INNER_CLOCK_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_CLOCK_COST, 1000, clk.stop_and_save().cost());
 
-            cost.start();
+            clk.start();
             for (int i = 0; i < 1000; i++)
             {
-                record_cpu_no_sm(INNER_NULL, cost.stop_and_save().duration_ticks());
+                record_cpu_no_sm(INNER_NULL, clk.stop_and_save().cost());
             }
-            record_cpu(INNER_RECORD_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_RECORD_COST, 1000, clk.stop_and_save().cost());
 
-            cost.start();
+            clk.start();
             for (int i = 0; i < 1000; i++)
             {
-                record_cpu(INNER_NULL, 1, cost.stop_and_save().duration_ticks());
+                record_cpu(INNER_NULL, 1, clk.stop_and_save().cost());
             }
-            record_cpu(INNER_RECORD_SM_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_RECORD_SM_COST, 1000, clk.stop_and_save().cost());
 
-            cost.start();
+            clk.start();
             for (int i = 0; i < 1000; i++)
             {
-                record_cpu_full(INNER_NULL, 1, cost.stop_and_save().duration_ticks());
+                record_cpu_full(INNER_NULL, 1, clk.stop_and_save().cost());
             }
-            record_cpu(INNER_RECORD_FULL_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_RECORD_FULL_COST, 1000, clk.stop_and_save().cost());
 
 
             std::atomic<long long> atomll_test(0);
             volatile long long origin_feetch_add_test = 0;
-            cost.start();
+            clk.start();
             for (int i = 0; i < 1000; i++)
             {
                 origin_feetch_add_test++;
             }
-            record_cpu(INNER_ORIGIN_INC, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_ORIGIN_INC, 1000, clk.stop_and_save().cost());
 
-            cost.start();
+            clk.start();
             for (int i = 0; i < 1000; i++)
             {
                 atomll_test.fetch_add(1, std::memory_order_relaxed);
             }
-            record_cpu(INNER_ATOM_RELEAX, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_ATOM_RELEAX, 1000, clk.stop_and_save().cost());
 
-            cost.start();
+            clk.start();
             for (int i = 0; i < 1000; i++)
             {
                 atomll_test++;
             }
-            record_cpu(INNER_ATOM_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_ATOM_COST, 1000, clk.stop_and_save().cost());
 
         
-            cost.start();
+            clk.start();
             for (int i = 0; i < 1000; i++)
             {
                 atomll_test.fetch_add(1, std::memory_order_seq_cst);
             }
-            record_cpu(INNER_ATOM_SEQ_COST, 1000, cost.stop_and_save().duration_ticks());
+            record_cpu(INNER_ATOM_SEQ_COST, 1000, clk.stop_and_save().cost());
 
             reset_node(INNER_NULL);
         }
 
-        record_cpu(INNER_INIT_COST, counter.stop_and_save().duration_ticks());
+        record_cpu(INNER_INIT_COST, clk.stop_and_save().cost());
 
         return 0;
     }
@@ -1755,7 +1766,7 @@ namespace zprof
     }
 
     template<int INST, int RESERVE, int DECLARE>
-    int Record<INST, RESERVE, DECLARE>::regist(int idx, const char* name, unsigned int counter_type, bool resident, bool re_reg)
+    int Record<INST, RESERVE, DECLARE>::regist(int idx, const char* name, unsigned int clk, bool resident, bool re_reg)
     {
         if (idx >= end_id() )
         {
@@ -1777,7 +1788,7 @@ namespace zprof
 
         memset(&node, 0, sizeof(node));
         rename(idx, name);
-        nodes_[idx].traits.counter_type = counter_type;
+        nodes_[idx].traits.clk = clk;
         nodes_[idx].traits.resident = resident;
         node.active = true;
         node.cpu.min_u = LLONG_MAX;
@@ -1968,8 +1979,8 @@ namespace zprof
     template<int INST, int RESERVE, int DECLARE>
     void Record<INST, RESERVE, DECLARE>::do_merge()
     {
-        Clock<CLOCK_DEFAULT> cost;
-        cost.start();
+        Clock<> clk;
+        clk.start();
         for (int i = 0; i < merge_leafs_size_; i++)
         {
             int leaf_id = merge_leafs_[i];
@@ -2025,7 +2036,7 @@ namespace zprof
                 break;
             } while (true);
         }
-        record_cpu(INNER_MERGE_COST, cost.stop_and_save().duration_ticks());
+        record_cpu(INNER_MERGE_COST, clk.stop_and_save().cost());
     }
 
 
@@ -2063,7 +2074,7 @@ namespace zprof
         {
             return 0;
         }
-        if (node.traits.counter_type >= CLOCK_MAX)
+        if (node.traits.clk >= T_CLOCK_MAX)
         {
             return 0;
         }
@@ -2074,7 +2085,7 @@ namespace zprof
 
         const char* name = &compact_data_[node.traits.name];
         size_t name_len = node.traits.name_len;
-        double cpu_rate = particle_for_ns(node.traits.counter_type);
+        double cpu_rate = particle_for_ns(node.traits.clk);
         if (opt_name != NULL)
         {
             name = opt_name;
@@ -2141,12 +2152,12 @@ namespace zprof
             }
             rp.push_string(STRLEN(" --|"));
             single_line_cost.stop_and_save();
-            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.duration_ticks());
+            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.cost());
 
             single_line_cost.start();
             output_and_clean(rp);
             single_line_cost.stop_and_save();
-            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.duration_ticks());
+            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.cost());
 
         }
 
@@ -2180,13 +2191,13 @@ namespace zprof
             }
             rp.push_string(STRLEN(" --|"));
             single_line_cost.stop_and_save();
-            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.duration_ticks());
+            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.cost());
 
 
             single_line_cost.start();
             output_and_clean(rp);
             single_line_cost.stop_and_save();
-            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.duration_ticks());
+            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.cost());
         }
 
         if (node.vm.rss_size + node.vm.vm_size > 0)
@@ -2216,12 +2227,12 @@ namespace zprof
 
             rp.push_string(STRLEN(" --|"));
             single_line_cost.stop_and_save();
-            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.duration_ticks());
+            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.cost());
 
             single_line_cost.start();
             output_and_clean(rp);
             single_line_cost.stop_and_save();
-            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.duration_ticks());
+            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.cost());
         }
 
         if (node.user.c > 0)
@@ -2248,12 +2259,12 @@ namespace zprof
 
             rp.push_string(STRLEN(" --|"));
             single_line_cost.stop_and_save();
-            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.duration_ticks());
+            record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.cost());
 
             single_line_cost.start();
             output_and_clean(rp);
             single_line_cost.stop_and_save();
-            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.duration_ticks());
+            record_cpu_full(INNER_OUTPUT_COST, single_line_cost.cost());
         }
 
         if (depth > PROF_MAX_DEPTH)
@@ -2315,9 +2326,10 @@ namespace zprof
         {
             return -1;
         }
-        output_timestamp_ = time(NULL);
-        zprof::Clock<> cost;
-        cost.start();
+        overwrite_user(INNER_OUTPUT_TS, 1, zprof::Clock<>::sys_now_ms());
+
+        zprof::Clock<> clk;
+        clk.start();
         StaticReport rp;
 
         rp.reset_offset();
@@ -2325,11 +2337,16 @@ namespace zprof
 
 
         rp.push_char('=', 30);
-        rp.push_char('\t');
+        rp.push_char(' ');
         rp.push_string(title());
-        rp.push_string(STRLEN(" begin output: "));
+        rp.push_string(STRLEN(" output report at: "));
         rp.push_now_date();
-        rp.push_char('\t');
+        rp.push_string(STRLEN(" dist start time:"));
+        rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_INIT_TS].user.sum)*1000*1000);
+        rp.push_string(STRLEN(" dist reset time:"));
+        rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_RESET_TS].user.sum) * 1000 * 1000);
+        rp.push_char(' ');
+
         rp.push_char('=', 30);
         output_and_clean(rp);
 
@@ -2384,7 +2401,7 @@ namespace zprof
         output_and_clean(rp);
         output_and_clean(rp);
 
-        record_cpu(INNER_REPORT_COST, cost.stop_and_save().duration_ticks());
+        record_cpu(INNER_REPORT_COST, clk.stop_and_save().cost());
         return 0;
     }
 
@@ -2439,45 +2456,45 @@ namespace zprof
 
 //包装函数 根据模版参数在编译阶段直接使用不同的入口  从而减少常见使用场景下的运行时判断消耗.  
 template<bool IS_BAT, zprof::RecordLevel PROF_LEVEL>
-inline void ProfRecordWrap(int idx, long long count, long long cost)
+inline void ProfRecordWrap(int idx, long long count, long long ticks)
 {
 
 }
 
 template<>
-inline void ProfRecordWrap<true, zprof::RECORD_LEVEL_NORMAL>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<true, zprof::RECORD_LEVEL_NORMAL>(int idx, long long count, long long ticks)
 {
-    ProfInst.record_cpu(idx, count, cost);
+    ProfInst.record_cpu(idx, count, ticks);
 }
 
 template<>
-inline void ProfRecordWrap<false, zprof::RECORD_LEVEL_NORMAL>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<false, zprof::RECORD_LEVEL_NORMAL>(int idx, long long count, long long ticks)
 {
     (void)count;
-    ProfInst.record_cpu(idx, cost);
+    ProfInst.record_cpu(idx, ticks);
 }
 template<>
-inline void ProfRecordWrap<true, zprof::RECORD_LEVEL_FAST>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<true, zprof::RECORD_LEVEL_FAST>(int idx, long long count, long long ticks)
 {
-    ProfInst.record_cpu_no_sm(idx, count, cost);
+    ProfInst.record_cpu_no_sm(idx, count, ticks);
 }
 template<>
-inline void ProfRecordWrap<false, zprof::RECORD_LEVEL_FAST>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<false, zprof::RECORD_LEVEL_FAST>(int idx, long long count, long long ticks)
 {
     (void)count;
-    ProfInst.record_cpu_no_sm(idx, cost);
+    ProfInst.record_cpu_no_sm(idx, ticks);
 }
 
 template<>
-inline void ProfRecordWrap<true, zprof::RECORD_LEVEL_FULL>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<true, zprof::RECORD_LEVEL_FULL>(int idx, long long count, long long ticks)
 {
-    ProfInst.record_cpu_full(idx, count, cost);
+    ProfInst.record_cpu_full(idx, count, ticks);
 }
 template<>
-inline void ProfRecordWrap<false, zprof::RECORD_LEVEL_FULL>(int idx, long long count, long long cost)
+inline void ProfRecordWrap<false, zprof::RECORD_LEVEL_FULL>(int idx, long long count, long long ticks)
 {
     (void)count;
-    ProfInst.record_cpu_full(idx, cost);
+    ProfInst.record_cpu_full(idx, ticks);
 }
 
 template<long long COUNT>
@@ -2490,7 +2507,7 @@ struct ProfCountIsGreatOne
 //RAII小函数  
 //用于快速记录<注册条目>的性能信息  
 template <long long COUNT = 1, zprof::RecordLevel PROF_LEVEL = zprof::RECORD_LEVEL_NORMAL,
-    zprof::ClockType C = zprof::CLOCK_DEFAULT>
+    zprof::clock_type C = zprof::Clock<>::C>
 class ProfAutoRecord
 {
 public:
@@ -2498,15 +2515,15 @@ public:
     ProfAutoRecord(int idx)
     {
         idx_ = idx;
-        counter_.start();
+        clock_.start();
     }
     ~ProfAutoRecord()
     {
-        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(idx_, COUNT, counter_.save().duration_ticks());
+        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(idx_, COUNT, clock_.save().cost());
     }
-    zprof::Clock<C>& counter() { return counter_; }
+    zprof::Clock<C>& clock() { return clock_; }
 private:
-    zprof::Clock<C> counter_;
+    zprof::Clock<C> clock_;
     int idx_;
 };
 
@@ -2516,7 +2533,7 @@ private:
 //一次性记录并直接输出到日志 不需要提前注册任何条目  
 //整体性能影响要稍微高于<注册条目>  但消耗部分并不影响记录本身. 使用在常见的一次性流程或者demo场景中.    
 template <long long COUNT = 1LL, zprof::RecordLevel PROF_LEVEL = zprof::RECORD_LEVEL_NORMAL,
-    zprof::ClockType C = zprof::CLOCK_DEFAULT>
+    zprof::clock_type C = zprof::Clock<>::C>
 class ProfAutoAnonRecord
 {
 public:
@@ -2524,17 +2541,17 @@ public:
     {
         strncpy(desc_, desc, PROF_NAME_MAX_SIZE);
         desc_[PROF_NAME_MAX_SIZE - 1] = '\0';
-        counter_.start();
+        clock_.start();
     }
     ~ProfAutoAnonRecord()
     {
-        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(ProfInstType::INNER_NULL, COUNT, counter_.save().duration_ticks());
+        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(ProfInstType::INNER_NULL, COUNT, clock_.save().cost());
         ProfInst.output_temp_record(desc_);
     }
 
-    zprof::Clock<C>& counter() { return counter_; }
+    zprof::Clock<C>& clock() { return clock_; }
 private:
-    zprof::Clock<C> counter_;
+    zprof::Clock<C> clock_;
     char desc_[PROF_NAME_MAX_SIZE];
 };
 
@@ -2553,13 +2570,13 @@ private:
 #define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist(id, name, ct, resident, re_reg)  
 
 //快速注册条目: 提供默认计时方式, 默认该条目不开启常驻模式, 一旦调用clear相关接口该条目记录的信息会被清零.  默认该条目未被注册过 当前为新注册  
-#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, zprof::CLOCK_DEFAULT,  false, false)
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, zprof::Clock<>::C,  false, false)
 
 //快速注册条目: 同上, 名字也默认提供 即ID自身    
 #define PROF_FAST_REGIST_NODE(id)  PROF_FAST_REGIST_NODE_ALIAS(id, #id)
 
 //快速注册条目: 同上 但是为常驻条目 
-#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, zprof::CLOCK_DEFAULT,  true, false)  
+#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, zprof::Clock<>::C,  true, false)  
 
 //绑定展示层级(父子)关系  
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid) 
@@ -2611,18 +2628,18 @@ private:
 // -------
 
 //记录性能消耗信息 平均耗时约为4ns    
-#define PROF_RECORD_CPU_SAMPLE(idx, cost) ProfInst.record_cpu(idx, cost)   
+#define PROF_RECORD_CPU_SAMPLE(idx, ticks) ProfInst.record_cpu(idx, ticks)   
 
 //记录性能消耗信息(携带总耗时和执行次数) 平均耗时约为6ns      
-//COUNT为常数 cost为总耗时, 根据记录等级选择性存储 平滑数据, 抖动偏差 等     RecordLevel:RECORD_LEVEL_NORMAL  
-#define PROF_RECORD_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL)  \
-        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>((int)(idx), (long long)(COUNT), (long long)cost)  
+//COUNT为常数 ticks为总耗时, 根据记录等级选择性存储 平滑数据, 抖动偏差 等     RecordLevel:RECORD_LEVEL_NORMAL  
+#define PROF_RECORD_CPU_WRAP(idx, COUNT, ticks, PROF_LEVEL)  \
+        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>((int)(idx), (long long)(COUNT), (long long)ticks)  
 //记录性能消耗信息: 同上, 但count非常数  
-#define PROF_RECORD_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)  \
-        ProfRecordWrap<true, PROF_LEVEL>((int)(idx), (long long)(count), (long long)cost)
+#define PROF_RECORD_CPU_DYN_WRAP(idx, count, ticks, PROF_LEVEL)  \
+        ProfRecordWrap<true, PROF_LEVEL>((int)(idx), (long long)(count), (long long)ticks)
 
 //同PROF_RECORD_CPU_SAMPLE  
-#define PROF_RECORD_CPU(idx, cost) PROF_RECORD_CPU_WRAP((idx), 1, (cost), zprof::RECORD_LEVEL_NORMAL)
+#define PROF_RECORD_CPU(idx, ticks) PROF_RECORD_CPU_WRAP((idx), 1, (ticks), zprof::RECORD_LEVEL_NORMAL)
 
 //记录内存字节数    
 //输出日志时 进行可读性处理 带k,m,g等单位  
@@ -2656,7 +2673,7 @@ private:
 #define PROF_STOP_AND_SAVE_COUNTER(var) var.stop_and_save()  
 
 //设置当前时间为定时器结束时间 并写入idx对应的条目中  
-#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL)
+#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).stop_and_save().cost(), zprof::RECORD_LEVEL_NORMAL)
 
 
 
@@ -2720,10 +2737,10 @@ private:
 #define PROF_DO_MERGE() 
 
 
-#define PROF_RECORD_CPU_SAMPLE(idx, cost) 
-#define PROF_RECORD_CPU(idx, cost) 
-#define PROF_RECORD_CPU_WRAP(idx, COUNT, cost, PROF_LEVEL) 
-#define PROF_RECORD_CPU_DYN_WRAP(idx, count, cost, PROF_LEVEL)
+#define PROF_RECORD_CPU_SAMPLE(idx, ticks) 
+#define PROF_RECORD_CPU(idx, ticks) 
+#define PROF_RECORD_CPU_WRAP(idx, COUNT, ticks, PROF_LEVEL) 
+#define PROF_RECORD_CPU_DYN_WRAP(idx, count, ticks, PROF_LEVEL)
 #define PROF_RECORD_MEM(idx, count, mem) 
 #define PROF_RECORD_VM(idx, vm) 
 #define PROF_OVERWRITE_MEM(idx, count, mem) 
@@ -2757,7 +2774,7 @@ private:
 
 
 //临时兼容代码  
-template<zprof::ClockType T = zprof::CLOCK_DEFAULT>
+template<zprof::clock_type T = zprof::Clock<>::C>
 using ProfCounter = zprof::Clock<T>;
 
 using ProfSerializer = zprof::Report;
