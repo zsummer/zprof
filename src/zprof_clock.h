@@ -666,12 +666,10 @@ namespace zprof
         static vmdata get_sys_mem() { return get_sys_mem(); }
     };
 
-    template<clock_type _C = T_CLOCK_VOLATILE_RDTSC>
+    template<clock_type _C = zclock_base<>::C>
     using Clock = zclock_base<_C>;
     using VMData = vmdata;
-    
-
-
+    constexpr static zprof::clock_type CLOCK_DEFAULT = Clock<>::C;
 
 
 

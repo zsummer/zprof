@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         }
         buf[test_len -1] = '\0';
         
-        ProfInst.regist(ProfInst.reserve_begin_id(), buf, zprof::Clock<>::C, false, true);
+        ProfInst.regist(ProfInst.reserve_begin_id(), buf, zprof::CLOCK_DEFAULT, false, true);
         PROF_RECORD_CPU(ProfInst.reserve_begin_id(), 0);
         delete[]buf;
         //PROF_RECORD_CPU()

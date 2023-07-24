@@ -509,36 +509,36 @@ namespace zprof
         particle_for_ns_[T_CLOCK_BTB_FENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
         particle_for_ns_[T_CLOCK_BTB_MFENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
 
-        particle_for_ns_[T_CLOCK_NULL] = particle_for_ns_[zprof::Clock<>::C ];
+        particle_for_ns_[T_CLOCK_NULL] = particle_for_ns_[zprof::CLOCK_DEFAULT ];
 
         for (int i = begin_id(); i < reserve_end_id(); i++)
         {
-            regist(i, "reserve", zprof::Clock<>::C, false, false);
+            regist(i, "reserve", zprof::CLOCK_DEFAULT, false, false);
         }
 
-        regist(INNER_NULL, "PROF_NULL", zprof::Clock<>::C, true, true);
+        regist(INNER_NULL, "PROF_NULL", zprof::CLOCK_DEFAULT, true, true);
         regist(INNER_INIT_TS, "PROF_INIT_TS", T_CLOCK_SYS_MS, true, true);
         regist(INNER_RESET_TS, "PROF_RESET_TS", T_CLOCK_SYS_MS, true, true);
         regist(INNER_OUTPUT_TS, "PROF_OUTPUT_TS", T_CLOCK_SYS_MS, true, true);
-        regist(INNER_INIT_COST, "PROF_INIT_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_MERGE_COST, "PROF_MERGE_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_INIT_COST, "PROF_INIT_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_MERGE_COST, "PROF_MERGE_COST", zprof::CLOCK_DEFAULT, true, true);
 
-        regist(INNER_REPORT_COST, "PROF_REPORT_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_SERIALIZE_COST, "PROF_SERIALIZE_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_OUTPUT_COST, "PROF_OUTPUT_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_REPORT_COST, "PROF_REPORT_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_SERIALIZE_COST, "PROF_SERIALIZE_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_OUTPUT_COST, "PROF_OUTPUT_COST", zprof::CLOCK_DEFAULT, true, true);
     
-        regist(INNER_MEM_INFO_COST, "PROF_MEM_INFO_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_MEM_INFO_COST, "PROF_MEM_INFO_COST", zprof::CLOCK_DEFAULT, true, true);
 
-        regist(INNER_CLOCK_COST, "PROF_CLOCK_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_RECORD_COST, "PROF_RECORD_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_RECORD_SM_COST, "PROF_RECORD_SM_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_RECORD_FULL_COST, "PROF_RECORD_FULL_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_CLOCK_RECORD_COST, "PROF_CLOCK_RECORD_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_CLOCK_COST, "PROF_CLOCK_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_RECORD_COST, "PROF_RECORD_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_RECORD_SM_COST, "PROF_RECORD_SM_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_RECORD_FULL_COST, "PROF_RECORD_FULL_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_CLOCK_RECORD_COST, "PROF_CLOCK_RECORD_COST", zprof::CLOCK_DEFAULT, true, true);
 
-        regist(INNER_ORIGIN_INC, "PROF_ORIGIN_INC", zprof::Clock<>::C, true, true);
-        regist(INNER_ATOM_RELEAX, "PROF_ATOM_RELEAX", zprof::Clock<>::C, true, true);
-        regist(INNER_ATOM_COST, "PROF_ATOM_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_ATOM_SEQ_COST, "PROF_ATOM_SEQ_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_ORIGIN_INC, "PROF_ORIGIN_INC", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_ATOM_RELEAX, "PROF_ATOM_RELEAX", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_ATOM_COST, "PROF_ATOM_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_ATOM_SEQ_COST, "PROF_ATOM_SEQ_COST", zprof::CLOCK_DEFAULT, true, true);
 
 
         if (true)

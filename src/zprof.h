@@ -98,7 +98,7 @@ struct ProfCountIsGreatOne
 //RAII小函数  
 //用于快速记录<注册条目>的性能信息  
 template <long long COUNT = 1, zprof::RecordLevel PROF_LEVEL = zprof::RECORD_LEVEL_NORMAL,
-    zprof::clock_type C = zprof::Clock<>::C>
+    zprof::clock_type C = zprof::CLOCK_DEFAULT>
 class ProfAutoRecord
 {
 public:
@@ -124,7 +124,7 @@ private:
 //一次性记录并直接输出到日志 不需要提前注册任何条目  
 //整体性能影响要稍微高于<注册条目>  但消耗部分并不影响记录本身. 使用在常见的一次性流程或者demo场景中.    
 template <long long COUNT = 1LL, zprof::RecordLevel PROF_LEVEL = zprof::RECORD_LEVEL_NORMAL,
-    zprof::clock_type C = zprof::Clock<>::C>
+    zprof::clock_type C = zprof::CLOCK_DEFAULT>
 class ProfAutoAnonRecord
 {
 public:
@@ -161,13 +161,13 @@ private:
 #define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist(id, name, ct, resident, re_reg)  
 
 //快速注册条目: 提供默认计时方式, 默认该条目不开启常驻模式, 一旦调用clear相关接口该条目记录的信息会被清零.  默认该条目未被注册过 当前为新注册  
-#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, zprof::Clock<>::C,  false, false)
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, zprof::CLOCK_DEFAULT,  false, false)
 
 //快速注册条目: 同上, 名字也默认提供 即ID自身    
 #define PROF_FAST_REGIST_NODE(id)  PROF_FAST_REGIST_NODE_ALIAS(id, #id)
 
 //快速注册条目: 同上 但是为常驻条目 
-#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, zprof::Clock<>::C,  true, false)  
+#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, zprof::CLOCK_DEFAULT,  true, false)  
 
 //绑定展示层级(父子)关系  
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid) 
