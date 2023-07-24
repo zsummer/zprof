@@ -649,7 +649,8 @@ namespace zprof
 
         zclock_base& stop_and_save() { return save(); }
 
-
+        long long ticks()const { return ticks_; }
+        long long cycles()const { return ticks_; }
         long long cost()const { return ticks_; }
         long long cost_ns()const { return (long long)(ticks_ * get_inverse_frequency<_C>()); }
         long long cost_ms()const { return cost_ns() / 1000 / 1000; }
