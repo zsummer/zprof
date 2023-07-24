@@ -670,12 +670,10 @@ namespace zprof
         static vmdata get_sys_mem() { return get_sys_mem(); }
     };
 
-    template<clock_type _C = T_CLOCK_VOLATILE_RDTSC>
+    template<clock_type _C = zclock_base<>::C>
     using Clock = zclock_base<_C>;
     using VMData = vmdata;
-    
-
-
+    constexpr static zprof::clock_type CLOCK_DEFAULT = Clock<>::C;
 
 
 
@@ -1600,36 +1598,36 @@ namespace zprof
         particle_for_ns_[T_CLOCK_BTB_FENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
         particle_for_ns_[T_CLOCK_BTB_MFENCE_RDTSC] = particle_for_ns_[T_CLOCK_PURE_RDTSC];
 
-        particle_for_ns_[T_CLOCK_NULL] = particle_for_ns_[zprof::Clock<>::C ];
+        particle_for_ns_[T_CLOCK_NULL] = particle_for_ns_[zprof::CLOCK_DEFAULT ];
 
         for (int i = begin_id(); i < reserve_end_id(); i++)
         {
-            regist(i, "reserve", zprof::Clock<>::C, false, false);
+            regist(i, "reserve", zprof::CLOCK_DEFAULT, false, false);
         }
 
-        regist(INNER_NULL, "PROF_NULL", zprof::Clock<>::C, true, true);
+        regist(INNER_NULL, "PROF_NULL", zprof::CLOCK_DEFAULT, true, true);
         regist(INNER_INIT_TS, "PROF_INIT_TS", T_CLOCK_SYS_MS, true, true);
         regist(INNER_RESET_TS, "PROF_RESET_TS", T_CLOCK_SYS_MS, true, true);
         regist(INNER_OUTPUT_TS, "PROF_OUTPUT_TS", T_CLOCK_SYS_MS, true, true);
-        regist(INNER_INIT_COST, "PROF_INIT_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_MERGE_COST, "PROF_MERGE_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_INIT_COST, "PROF_INIT_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_MERGE_COST, "PROF_MERGE_COST", zprof::CLOCK_DEFAULT, true, true);
 
-        regist(INNER_REPORT_COST, "PROF_REPORT_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_SERIALIZE_COST, "PROF_SERIALIZE_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_OUTPUT_COST, "PROF_OUTPUT_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_REPORT_COST, "PROF_REPORT_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_SERIALIZE_COST, "PROF_SERIALIZE_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_OUTPUT_COST, "PROF_OUTPUT_COST", zprof::CLOCK_DEFAULT, true, true);
     
-        regist(INNER_MEM_INFO_COST, "PROF_MEM_INFO_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_MEM_INFO_COST, "PROF_MEM_INFO_COST", zprof::CLOCK_DEFAULT, true, true);
 
-        regist(INNER_CLOCK_COST, "PROF_CLOCK_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_RECORD_COST, "PROF_RECORD_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_RECORD_SM_COST, "PROF_RECORD_SM_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_RECORD_FULL_COST, "PROF_RECORD_FULL_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_CLOCK_RECORD_COST, "PROF_CLOCK_RECORD_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_CLOCK_COST, "PROF_CLOCK_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_RECORD_COST, "PROF_RECORD_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_RECORD_SM_COST, "PROF_RECORD_SM_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_RECORD_FULL_COST, "PROF_RECORD_FULL_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_CLOCK_RECORD_COST, "PROF_CLOCK_RECORD_COST", zprof::CLOCK_DEFAULT, true, true);
 
-        regist(INNER_ORIGIN_INC, "PROF_ORIGIN_INC", zprof::Clock<>::C, true, true);
-        regist(INNER_ATOM_RELEAX, "PROF_ATOM_RELEAX", zprof::Clock<>::C, true, true);
-        regist(INNER_ATOM_COST, "PROF_ATOM_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_ATOM_SEQ_COST, "PROF_ATOM_SEQ_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_ORIGIN_INC, "PROF_ORIGIN_INC", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_ATOM_RELEAX, "PROF_ATOM_RELEAX", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_ATOM_COST, "PROF_ATOM_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_ATOM_SEQ_COST, "PROF_ATOM_SEQ_COST", zprof::CLOCK_DEFAULT, true, true);
 
 
         if (true)
@@ -2497,7 +2495,7 @@ struct ProfCountIsGreatOne
 //RAII小函数  
 //用于快速记录<注册条目>的性能信息  
 template <long long COUNT = 1, zprof::RecordLevel PROF_LEVEL = zprof::RECORD_LEVEL_NORMAL,
-    zprof::clock_type C = zprof::Clock<>::C>
+    zprof::clock_type C = zprof::CLOCK_DEFAULT>
 class ProfAutoRecord
 {
 public:
@@ -2523,7 +2521,7 @@ private:
 //一次性记录并直接输出到日志 不需要提前注册任何条目  
 //整体性能影响要稍微高于<注册条目>  但消耗部分并不影响记录本身. 使用在常见的一次性流程或者demo场景中.    
 template <long long COUNT = 1LL, zprof::RecordLevel PROF_LEVEL = zprof::RECORD_LEVEL_NORMAL,
-    zprof::clock_type C = zprof::Clock<>::C>
+    zprof::clock_type C = zprof::CLOCK_DEFAULT>
 class ProfAutoAnonRecord
 {
 public:
@@ -2560,13 +2558,13 @@ private:
 #define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist(id, name, ct, resident, re_reg)  
 
 //快速注册条目: 提供默认计时方式, 默认该条目不开启常驻模式, 一旦调用clear相关接口该条目记录的信息会被清零.  默认该条目未被注册过 当前为新注册  
-#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, zprof::Clock<>::C,  false, false)
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, zprof::CLOCK_DEFAULT,  false, false)
 
 //快速注册条目: 同上, 名字也默认提供 即ID自身    
 #define PROF_FAST_REGIST_NODE(id)  PROF_FAST_REGIST_NODE_ALIAS(id, #id)
 
 //快速注册条目: 同上 但是为常驻条目 
-#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, zprof::Clock<>::C,  true, false)  
+#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, zprof::CLOCK_DEFAULT,  true, false)  
 
 //绑定展示层级(父子)关系  
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid) 
