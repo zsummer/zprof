@@ -68,6 +68,7 @@ namespace zprof
         inline Report& push_string(const char* str);
         inline Report& push_string(const char* str, size_t size);
         inline Report& push_now_date();
+        inline Report& push_date(long long date_ms);
         inline Report& push_number(unsigned long long number, int wide = 0);
         inline Report& push_number(long long number, int wide = 0);
 
@@ -289,37 +290,18 @@ namespace zprof
         offset_ += max_size;
         return *this;
     }
-    inline Report& Report::push_now_date()
+
+    inline Report& Report::push_date(long long date_ms)
     {
-        time_t timestamp = 0;
-        unsigned int precise = 0;
-        do
-        {
-    #ifdef _WIN32
-            FILETIME ft;
-            GetSystemTimeAsFileTime(&ft);
-            unsigned long long now = ft.dwHighDateTime;
-            now <<= 32;
-            now |= ft.dwLowDateTime;
-            now /= 10;
-            now -= 11644473600000000ULL;
-            now /= 1000;
-            timestamp = now / 1000;
-            precise = (unsigned int)(now % 1000);
-    #else
-            struct timeval tm;
-            gettimeofday(&tm, nullptr);
-            timestamp = tm.tv_sec;
-            precise = tm.tv_usec / 1000;
-    #endif
-        } while (0);
+        time_t ts = date_ms / 1000;
+        unsigned int precise = (unsigned int)(date_ms % 1000);
 
         struct tm tt = { 0 };
-    #ifdef WIN32
-        localtime_s(&tt, &timestamp);
-    #else 
-        localtime_r(&timestamp, &tt);
-    #endif
+#ifdef WIN32
+        localtime_s(&tt, &ts);
+#else 
+        localtime_r(&ts, &tt);
+#endif
 
         push_char('[');
         push_number((unsigned long long)tt.tm_year + 1900, 4);
@@ -335,6 +317,11 @@ namespace zprof
         push_number((unsigned long long)precise, 3);
         push_char(']');
         return *this;
+    }
+
+    inline Report& Report::push_now_date()
+    {
+        return push_date(Clock<>::sys_now_ms());
     }
 
 

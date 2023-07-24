@@ -516,34 +516,36 @@ namespace zprof
             regist(i, "reserve", zprof::Clock<>::C, false, false);
         }
 
-        regist(INNER_NULL, "INNER_NULL", zprof::Clock<>::C, true, true);
-        regist(INNER_INIT_TS, "INNER_INIT_TS", T_CLOCK_SYS_MS, true, true);
-        regist(INNER_RESET_TS, "INNER_RESET_TS", T_CLOCK_SYS_MS, true, true);
-        regist(INNER_OUTPUT_TS, "INNER_OUTPUT_TS", T_CLOCK_SYS_MS, true, true);
-        regist(INNER_INIT_COST, "INIT_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_MERGE_COST, "MERGE_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_NULL, "PROF_NULL", zprof::Clock<>::C, true, true);
+        regist(INNER_INIT_TS, "PROF_INIT_TS", T_CLOCK_SYS_MS, true, true);
+        regist(INNER_RESET_TS, "PROF_RESET_TS", T_CLOCK_SYS_MS, true, true);
+        regist(INNER_OUTPUT_TS, "PROF_OUTPUT_TS", T_CLOCK_SYS_MS, true, true);
+        regist(INNER_INIT_COST, "PROF_INIT_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_MERGE_COST, "PROF_MERGE_COST", zprof::Clock<>::C, true, true);
 
-        regist(INNER_REPORT_COST, "REPORT_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_SERIALIZE_COST, "SERIALIZE_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_OUTPUT_COST, "OUTPUT_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_REPORT_COST, "PROF_REPORT_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_SERIALIZE_COST, "PROF_SERIALIZE_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_OUTPUT_COST, "PROF_OUTPUT_COST", zprof::Clock<>::C, true, true);
     
-        regist(INNER_MEM_INFO_COST, "MEM_INFO_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_MEM_INFO_COST, "PROF_MEM_INFO_COST", zprof::Clock<>::C, true, true);
 
-        regist(INNER_CLOCK_COST, "COUNTER_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_RECORD_COST, "RECORD_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_RECORD_SM_COST, "RECORD_SM_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_RECORD_FULL_COST, "RECORD_FULL_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_CLOCK_RECORD_COST, "COUNTER_RECORD_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_CLOCK_COST, "PROF_CLOCK_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_RECORD_COST, "PROF_RECORD_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_RECORD_SM_COST, "PROF_RECORD_SM_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_RECORD_FULL_COST, "PROF_RECORD_FULL_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_CLOCK_RECORD_COST, "PROF_CLOCK_RECORD_COST", zprof::Clock<>::C, true, true);
 
-        regist(INNER_ORIGIN_INC, "ORIGIN_INC", zprof::Clock<>::C, true, true);
-        regist(INNER_ATOM_RELEAX, "ATOM_RELEAX", zprof::Clock<>::C, true, true);
-        regist(INNER_ATOM_COST, "ATOM_COST", zprof::Clock<>::C, true, true);
-        regist(INNER_ATOM_SEQ_COST, "ATOM_SEQ_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_ORIGIN_INC, "PROF_ORIGIN_INC", zprof::Clock<>::C, true, true);
+        regist(INNER_ATOM_RELEAX, "PROF_ATOM_RELEAX", zprof::Clock<>::C, true, true);
+        regist(INNER_ATOM_COST, "PROF_ATOM_COST", zprof::Clock<>::C, true, true);
+        regist(INNER_ATOM_SEQ_COST, "PROF_ATOM_SEQ_COST", zprof::Clock<>::C, true, true);
 
 
         if (true)
         {
-            record_user(INNER_INIT_TS, 1, zprof::Clock<>::sys_now_ms());
+            overwrite_user(INNER_INIT_TS, 1, zprof::Clock<>::sys_now_ms());
+            overwrite_user(INNER_RESET_TS, 1, zprof::Clock<>::sys_now_ms());
+            overwrite_user(INNER_OUTPUT_TS, 1, zprof::Clock<>::sys_now_ms());
         }
 
         if (true)
@@ -1237,10 +1239,11 @@ namespace zprof
         rp.push_string(title());
         rp.push_string(STRLEN(" output report at: "));
         rp.push_now_date();
-        rp.push_string(STRLEN(" dist start time:"));
+        rp.push_string(STRLEN(" dist start time:["));
         rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_INIT_TS].user.sum)*1000*1000);
-        rp.push_string(STRLEN(" dist reset time:"));
+        rp.push_string(STRLEN("] dist reset time:["));
         rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_RESET_TS].user.sum) * 1000 * 1000);
+        rp.push_char(']');
         rp.push_char(' ');
 
         rp.push_char('=', 30);
