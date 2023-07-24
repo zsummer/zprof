@@ -43,18 +43,18 @@ int main(int argc, char* argv[])
     //手动使用计时器并直接使用标准时间单位的耗时      
     if (true)
     {
-        PROF_DEFINE_COUNTER(counter);
-        PROF_START_COUNTER(counter);
+        PROF_DEFINE_COUNTER(cost);
+        PROF_START_COUNTER(cost);
 
         for (size_t i = 0; i < 1000; i++)
         {
             volatile size_t inc = 0;
             inc++;
         }
-        PROF_STOP_AND_SAVE_COUNTER(counter);
+        PROF_STOP_AND_SAVE_COUNTER(cost);
 
-        printf("scene 1: inc * 1000 used:%lld ns \n", counter.duration_ns());
-        printf("scene 1: inc avg used:%g ns \n", counter.duration_ns() / 1000.0);
+        printf("scene 1: inc * 1000 used:%lld ns \n", cost.cost_ns());
+        printf("scene 1: inc avg used:%g ns \n", cost.cost_ns() / 1000.0);
     }
 
 
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     if (true)
     {
         //注册ID  
-        PROF_REGIST_NODE(scene_2_id, "scene 2", zprof::CLOCK_RDTSC, false, false);
+        PROF_REGIST_NODE(scene_2_id, "scene 2", zprof::T_CLOCK_FENCE_RDTSC, false, false);
 
         //计算耗时 
         PROF_DEFINE_COUNTER(cost);
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
         PROF_STOP_AND_SAVE_COUNTER(cost);
 
         //记录到条目
-        PROF_RECORD_CPU(scene_2_id, cost.duration_ticks());
+        PROF_RECORD_CPU(scene_2_id, cost.cost());
 
         //立刻输出条目 
         PROF_OUTPUT_RECORD(scene_2_id);
@@ -166,15 +166,15 @@ int main(int argc, char* argv[])
         }
         PROF_STOP_AND_SAVE_COUNTER(cost);
 
-        PROF_RECORD_CPU(scene_6_tmp_id, cost.duration_ticks());
+        PROF_RECORD_CPU(scene_6_tmp_id, cost.cost());
         PROF_OUTPUT_TEMP_RECORD("scene_6_tmp_id: total cost");
 
         //带count写入 
-        PROF_RECORD_CPU_WRAP(scene_6_tmp_id, 1000, cost.duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(scene_6_tmp_id, 1000, cost.cost(), zprof::RECORD_LEVEL_NORMAL);
         PROF_OUTPUT_TEMP_RECORD("scene_6_tmp_id: per inc");
 
         //同上 更方便  
-        PROF_OUTPUT_MULTI_COUNT_CPU("scene_6_tmp_id: per sub", 1000, cost.duration_ticks() - inc_cost.duration_ticks());
+        PROF_OUTPUT_MULTI_COUNT_CPU("scene_6_tmp_id: per sub", 1000, cost.cost() - inc_cost.cost());
 
     }
 
@@ -189,8 +189,8 @@ int main(int argc, char* argv[])
 
     if (true)
     {
-        PROF_REGIST_NODE(scene_8_resident_id, "scene_8_resident_id", zprof::CLOCK_RDTSC, true, false);
-        PROF_REGIST_NODE(scene_8_unresident_id, "scene_8_resident_id", zprof::CLOCK_RDTSC, false, false);
+        PROF_REGIST_NODE(scene_8_resident_id, "scene_8_resident_id", zprof::T_CLOCK_FENCE_RDTSC, true, false);
+        PROF_REGIST_NODE(scene_8_unresident_id, "scene_8_resident_id", zprof::T_CLOCK_FENCE_RDTSC, false, false);
 
 
 
@@ -204,8 +204,8 @@ int main(int argc, char* argv[])
         PROF_STOP_AND_SAVE_COUNTER(cost);
 
         //写入记录信息  
-        PROF_RECORD_CPU_WRAP(scene_8_resident_id, 1000, cost.duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
-        PROF_RECORD_CPU_WRAP(scene_8_unresident_id, 1000, cost.duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(scene_8_resident_id, 1000, cost.cost(), zprof::RECORD_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(scene_8_unresident_id, 1000, cost.cost(), zprof::RECORD_LEVEL_NORMAL);
 
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output report.\n");  
@@ -270,7 +270,7 @@ int main(int argc, char* argv[])
                 volatile size_t inc = 0;
                 inc++;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_INC, 1000, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_INC, 1000, cost.stop_and_save().cost(), zprof::RECORD_LEVEL_NORMAL);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
                 volatile size_t sub = 0;
                 sub--;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_SUB, 1000, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_SUB, 1000, cost.stop_and_save().cost(), zprof::RECORD_LEVEL_NORMAL);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -286,7 +286,7 @@ int main(int argc, char* argv[])
                 volatile size_t mul = i;
                 mul *= 1000;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_MUL, 1000, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_MUL, 1000, cost.stop_and_save().cost(), zprof::RECORD_LEVEL_NORMAL);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
                 volatile size_t div = i;
                 div /= 1000;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_DIV, 1000, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_DIV, 1000, cost.stop_and_save().cost(), zprof::RECORD_LEVEL_NORMAL);
         }
 
         //vm统计  
@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
             PROF_RECORD_VM(PROF_REG_VM_USE, zprof::get_self_mem());
 
             //同时可以记录record_vm这行的消耗到同一条目下的cpu消耗信息中 
-            PROF_RECORD_CPU_WRAP(PROF_REG_VM_USE, 1, cost.stop_and_save().duration_ticks(), zprof::RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(PROF_REG_VM_USE, 1, cost.stop_and_save().cost(), zprof::RECORD_LEVEL_NORMAL);
         }
 
         //记录字节数量  
@@ -318,7 +318,7 @@ int main(int argc, char* argv[])
         for (size_t i = 0; i < 5; i++)
         {
             PROF_START_COUNTER(cost);
-            PROF_RECORD_TIMER(PROF_REG_TIMMER, cost.start_val());
+            PROF_RECORD_TIMER(PROF_REG_TIMMER, cost.get_begin());
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
 

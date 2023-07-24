@@ -48,15 +48,15 @@ int main(int argc, char* argv[])
     }
     PROF_STOP_AND_SAVE_COUNTER(cost);
 
-    PROF_OUTPUT_MULTI_COUNT_CPU("default output", 1000, cost.duration_ticks());
+    PROF_OUTPUT_MULTI_COUNT_CPU("default output", 1000, cost.cost());
 
 
 
     PROF_SET_OUTPUT(&OutputPrint);
-    PROF_OUTPUT_MULTI_COUNT_CPU("print output", 1000, cost.duration_ticks());
+    PROF_OUTPUT_MULTI_COUNT_CPU("print output", 1000, cost.cost());
 
     PROF_SET_OUTPUT(&OutputLog);
-    PROF_OUTPUT_MULTI_COUNT_CPU("log output", 1000, cost.duration_ticks());
+    PROF_OUTPUT_MULTI_COUNT_CPU("log output", 1000, cost.cost());
 
     return 0;
 }

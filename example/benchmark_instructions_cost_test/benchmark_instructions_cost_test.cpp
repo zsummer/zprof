@@ -60,147 +60,147 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::CLOCK_RDTSC_NOFENCE> counter;
+        zprof::Clock<zprof::T_CLOCK_PURE_RDTSC> cost;
         //record empty cost 
-        counter.start();
-        counter.stop_and_save();
-        long long empty_cost = counter.duration_ticks();
-        long long empty_duration_ns = counter.duration_ns();
-        empty_cost = counter.duration_ticks();
-        empty_duration_ns = counter.duration_ns();
+        cost.start();
+        cost.stop_and_save();
+        long long empty_cost = cost.cost();
+        long long empty_duration_ns = cost.cost_ns();
+        empty_cost = cost.cost();
+        empty_duration_ns = cost.cost_ns();
 
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        counter.start();
+        cost.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        counter.stop_and_save();
+        cost.stop_and_save();
 
         LogInfo() << "no fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." <<"salt:" << val[2];
+            << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." <<"salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::CLOCK_RDTSC> counter;
+        zprof::Clock<zprof::T_CLOCK_FENCE_RDTSC> cost;
         //record empty cost 
-        counter.start();
-        counter.stop_and_save();
-        long long empty_cost = counter.duration_ticks();
-        long long empty_duration_ns = counter.duration_ns();
-        empty_cost = counter.duration_ticks();
-        empty_duration_ns = counter.duration_ns();
+        cost.start();
+        cost.stop_and_save();
+        long long empty_cost = cost.cost();
+        long long empty_duration_ns = cost.cost_ns();
+        empty_cost = cost.cost();
+        empty_duration_ns = cost.cost_ns();
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        counter.start();
+        cost.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        counter.stop_and_save();
+        cost.stop_and_save();
 
         LogInfo() << "load fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
+            << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::CLOCK_RDTSC_BTB> counter;
+        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
         //record empty cost 
-        counter.start();
-        counter.stop_and_save();
-        long long empty_cost = counter.duration_ticks();
-        long long empty_duration_ns = counter.duration_ns();
-        empty_cost = counter.duration_ticks();
-        empty_duration_ns = counter.duration_ns();
+        cost.start();
+        cost.stop_and_save();
+        long long empty_cost = cost.cost();
+        long long empty_duration_ns = cost.cost_ns();
+        empty_cost = cost.cost();
+        empty_duration_ns = cost.cost_ns();
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        counter.start();
+        cost.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        counter.stop_and_save();
+        cost.stop_and_save();
 
         LogInfo() << "load fence btb rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
+            << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::CLOCK_RDTSC_MFENCE> counter;
+        zprof::Clock<zprof::T_CLOCK_MFENCE_RDTSC> cost;
         //record empty cost 
-        counter.start();
-        counter.stop_and_save();
-        long long empty_cost = counter.duration_ticks();
-        long long empty_duration_ns = counter.duration_ns();
-        empty_cost = counter.duration_ticks();
-        empty_duration_ns = counter.duration_ns();
+        cost.start();
+        cost.stop_and_save();
+        long long empty_cost = cost.cost();
+        long long empty_duration_ns = cost.cost_ns();
+        empty_cost = cost.cost();
+        empty_duration_ns = cost.cost_ns();
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        counter.start();
+        cost.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        counter.stop_and_save();
+        cost.stop_and_save();
 
         LogInfo() << "load&store fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
+            << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::CLOCK_RDTSC_MFENCE_BTB> counter;
+        zprof::Clock<zprof::T_CLOCK_BTB_MFENCE_RDTSC> cost;
         //record empty cost 
-        counter.start();
-        counter.stop_and_save();
-        long long empty_cost = counter.duration_ticks();
-        long long empty_duration_ns = counter.duration_ns();
-        empty_cost = counter.duration_ticks();
-        empty_duration_ns = counter.duration_ns();
+        cost.start();
+        cost.stop_and_save();
+        long long empty_cost = cost.cost();
+        long long empty_duration_ns = cost.cost_ns();
+        empty_cost = cost.cost();
+        empty_duration_ns = cost.cost_ns();
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        counter.start();
+        cost.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        counter.stop_and_save();
+        cost.stop_and_save();
 
         LogInfo() << "load&store fence back to back rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
+            << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::CLOCK_RDTSC_LOCK> counter;
+        zprof::Clock<zprof::T_CLOCK_LOCK_RDTSC> cost;
         //record empty cost 
-        counter.start();
-        counter.stop_and_save();
-        long long empty_cost = counter.duration_ticks();
-        long long empty_duration_ns = counter.duration_ns();
-        empty_cost = counter.duration_ticks();
-        empty_duration_ns = counter.duration_ns();
+        cost.start();
+        cost.stop_and_save();
+        long long empty_cost = cost.cost();
+        long long empty_duration_ns = cost.cost_ns();
+        empty_cost = cost.cost();
+        empty_duration_ns = cost.cost_ns();
 
         //all in L1 
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        counter.start();
+        cost.start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        counter.stop_and_save();
+        cost.stop_and_save();
 
         LogInfo() << "lock rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
-            << "\t\tternary operator:" << counter.duration_ticks() - empty_cost << "cycles, " << counter.duration_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
+            << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
     }
 
 

@@ -95,9 +95,9 @@ int main(int argc, char *argv[])
                 long long count = 0;
                 for (size_t i = 0; i < 100; i++)
                 {
-                    begin_cicle = zprof::get_tick<zprof::CLOCK_RDTSC_BTB>();
+                    begin_cicle = zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>();
                     FIVE_HUNDRED;
-                    end_cicle = zprof::get_tick<zprof::CLOCK_RDTSC_BTB>();
+                    end_cicle = zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>();
                     total += end_cicle - begin_cicle;
                     count += 500;
                 }
