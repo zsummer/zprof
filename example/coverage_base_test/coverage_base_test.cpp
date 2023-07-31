@@ -153,6 +153,7 @@ int main(int argc, char *argv[])
         START_PROF_COUNTER(T_CLOCK_CHRONO);
         START_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
         START_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
+        START_PROF_COUNTER(T_CLOCK_SYS_MS);
         START_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
         START_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
         START_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
@@ -173,6 +174,7 @@ int main(int argc, char *argv[])
             RESTART_PROF_COUNTER(T_CLOCK_CHRONO);
             RESTART_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
             RESTART_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
+            RESTART_PROF_COUNTER(T_CLOCK_SYS_MS);
             RESTART_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
             RESTART_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
             RESTART_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
@@ -188,6 +190,7 @@ int main(int argc, char *argv[])
             RECORD_PROF_COUNTER(T_CLOCK_CHRONO);
             RECORD_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
             RECORD_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
+            RECORD_PROF_COUNTER(T_CLOCK_SYS_MS);
             RECORD_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
             RECORD_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
             RECORD_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
@@ -210,6 +213,7 @@ int main(int argc, char *argv[])
             RESTART_PROF_COUNTER(T_CLOCK_CHRONO);
             RESTART_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
             RESTART_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
+            RESTART_PROF_COUNTER(T_CLOCK_SYS_MS);
             RESTART_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
             RESTART_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
             RESTART_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
@@ -226,6 +230,7 @@ int main(int argc, char *argv[])
             RECORD_PROF_COUNTER(T_CLOCK_CHRONO);
             RECORD_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
             RECORD_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
+            RECORD_PROF_COUNTER(T_CLOCK_SYS_MS);
             RECORD_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
             RECORD_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
             RECORD_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
@@ -240,7 +245,7 @@ int main(int argc, char *argv[])
         {
             int decl_id = ProfInst.declare_begin_id() + i;
 
-            ASSERT_TEST(ProfInst.node(decl_id).cpu.c == sleep_count*2, "i=", i);
+            ASSERT_TEST(ProfInst.node(decl_id).cpu.c == sleep_count*2, "i=", i, " c=", ProfInst.node(decl_id).cpu.c);
 
             double sum = ProfInst.node(decl_id).cpu.sum * ProfInst.particle_for_ns(i);
             double dv = ProfInst.node(decl_id).cpu.dv * ProfInst.particle_for_ns(i);
