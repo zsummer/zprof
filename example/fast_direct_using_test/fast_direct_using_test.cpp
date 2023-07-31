@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
     //test/demo/benchmark **ÍÆ¼ö** 
     if (true)
     {
-        ProfAutoAnonRecord<1000> var("scene5 inc*1000");
+        ProfAutoAnonRecord<> var("scene5 inc*1000", 1000);
 
         for (size_t i = 0; i < 1000; i++)
         {
