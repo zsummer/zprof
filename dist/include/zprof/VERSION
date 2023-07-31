@@ -1,6 +1,6 @@
 version:
-last_sha1(./src)=47c93d9aed7993b41528964ad9d24cd750ab08b0
-last_date(./src)=2023-07-27 11:34:30 +0800
+last_sha1(./src)=1ddabea292c4e8fa1863ea0a059d941f5918fd09
+last_date(./src)=2023-07-31 13:18:18 +0800
 
 git log -1 --stat ./src:
-commit 47c93d9aed7993b41528964ad9d24cd750ab08b0 Author: zsummer <yawei.zhang@foxmail.com> Date: Thu Jul 27 11:34:30 2023 +0800 come code check warn clean. src/zprof_clock.h | 28 ++++++++++++++++++---------- 1 file changed, 18 insertions(+), 10 deletions(-)
+commit 1ddabea292c4e8fa1863ea0a059d941f5918fd09 Author: zsummer <yawei.zhang@foxmail.com> Date: Mon Jul 31 13:17:59 2023 +0800 一次性统计不使用静态分支 src/zprof.h | 22 ++++++++++++++++------ 1 file changed, 16 insertions(+), 6 deletions(-)
