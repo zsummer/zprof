@@ -248,13 +248,14 @@ private:
 
 //记录系统内存信息 包含vm, rss等  
 #define PROF_RECORD_VM(idx, vm) ProfInst.record_vm(idx, vm)
-#define PROF_OVERWRITE_MEM(idx, count, mem) ProfInst.overwrite_mem(idx, count, mem)
+#define PROF_RERECORD_MEM(idx, count, mem) ProfInst.rerecord_mem(idx, count, mem)
 
 //记录定时器 比较特殊.  根据调用的前后间隔进行累加  
 #define PROF_RECORD_TIMER(idx, stamp) ProfInst.record_timer(idx, stamp)  
 
 //记录用户自定义信息 没有额外处理   
-#define PROF_RECORD_USER(idx, count, add) ProfInst.record_user(idx, count, add)
+#define PROF_RECORD_USER(idx, a1, ...) ProfInst.record_user(idx, a1, ##__VA_ARGS__)
+#define PROF_RERECORD_USER(idx, a1, ...) ProfInst.record_user(idx, a1, ##__VA_ARGS__)
 
 
 //-------手动计时器-----------
@@ -303,7 +304,7 @@ private:
 
 //其他立即输出
 #define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, zprof::RECORD_LEVEL_FAST>((int)ProfInstType::INNER_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_USER(desc, count, num) do {PROF_RECORD_USER(ProfInstType::INNER_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_USER(desc, ...) do {PROF_RECORD_USER(ProfInstType::INNER_NULL, ##__VA_ARGS__);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_RECORD_MEM(ProfInstType::INNER_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_RECORD_CPU(ProfInstType::INNER_NULL, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_RECORD_USER(ProfInstType::INNER_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
@@ -343,8 +344,8 @@ private:
 #define PROF_RECORD_CPU_WRAP(idx, COUNT, ticks, PROF_LEVEL) 
 #define PROF_RECORD_CPU_DYN_WRAP(idx, count, ticks, PROF_LEVEL)
 #define PROF_RECORD_MEM(idx, count, mem) 
+#define PROF_RERECORD_MEM(idx, count, mem) 
 #define PROF_RECORD_VM(idx, vm) 
-#define PROF_OVERWRITE_MEM(idx, count, mem) 
 #define PROF_RECORD_TIMER(idx, stamp) 
 #define PROF_RECORD_USER(idx, count, add)
 

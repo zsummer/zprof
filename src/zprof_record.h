@@ -50,6 +50,22 @@ namespace zprof
         bool resident;
     };
 
+    struct RecordMerge
+    {
+        int to;
+        int childs;
+        int merged;
+    };
+
+    struct RecordShow
+    {
+        int upper;
+        int jumps;
+        int child;
+        int window;
+    };
+
+
     struct RecordCPU
     {
         long long c; 
@@ -79,27 +95,15 @@ namespace zprof
 
     struct RecordUser
     {
-        long long c;
-        long long sum;
-        long long t_u;
+        long long param1;
+        long long param2;
+        long long param3;
+        long long param4;
     };
 
 
 
-    struct RecordMerge
-    {
-        int to;
-        int childs;
-        int merged;
-    };
 
-    struct RecordShow
-    {
-        int upper;
-        int jumps;
-        int child;
-        int window;
-    };
 
     struct RecordNode
     {
@@ -113,6 +117,9 @@ namespace zprof
         RecordUser user;
         VMData vm;
     };  
+
+    constexpr static int g_node_size = sizeof(RecordNode);
+
 
     enum OutFlags : unsigned int
     {
@@ -148,7 +155,6 @@ namespace zprof
             INNER_REPORT_COST,
             INNER_SERIALIZE_COST,
             INNER_OUTPUT_COST,
-            INNER_MEM_INFO_COST,
             INNER_CLOCK_COST,
             INNER_RECORD_COST,
             INNER_RECORD_SM_COST,
@@ -255,13 +261,13 @@ namespace zprof
         void reset_reserve_node(bool keep_resident = true)
         {
             reset_range_node(reserve_begin_id(), reserve_end_id(), keep_resident);
-            overwrite_user(INNER_RESET_TS, 1, zprof::Clock<>::sys_now_ms());        
+            rerecord_user(INNER_RESET_TS, zprof::Clock<>::sys_now_ms());        
         }
 
         void reset_declare_node(bool keep_resident = true)
         {
             reset_range_node(declare_begin_id(), declare_end_id(), keep_resident);
-            overwrite_user(INNER_RESET_TS, 1, zprof::Clock<>::sys_now_ms());
+            rerecord_user(INNER_RESET_TS, zprof::Clock<>::sys_now_ms());
         }
 
 
@@ -368,20 +374,24 @@ namespace zprof
         {
             nodes_[idx].vm = vm;
         }
-        PROF_ALWAYS_INLINE void record_user(int idx, long long c, long long add)
+        PROF_ALWAYS_INLINE void record_user(int idx, long long param1, long long param2 = 0, long long param3 = 0, long long param4 = 0)
         {
             RecordNode& node = nodes_[idx];
-            node.user.c += c;
-            node.user.sum += add;
-            node.user.t_u += add;
+            node.user.param1 += param1;
+            node.user.param2 += param2;
+            node.user.param3 += param3;
+            node.user.param4 += param4;
         }
-        PROF_ALWAYS_INLINE void overwrite_user(int idx, long long c, long long add)
+        PROF_ALWAYS_INLINE void rerecord_user(int idx, long long param1, long long param2 = 0, long long param3 = 0, long long param4 = 0)
         {
-            reset_user(idx);
-            record_user(idx, c, add);
+            RecordNode& node = nodes_[idx];
+            node.user.param1 = param1;
+            node.user.param2 = param2;
+            node.user.param3 = param3;
+            node.user.param4 = param4;
         }
 
-        PROF_ALWAYS_INLINE void overwrite_mem(int idx, long long c, long long add)
+        PROF_ALWAYS_INLINE void rerecord_mem(int idx, long long c, long long add)
         {
             reset_mem(idx);
             record_mem(idx, c, add);
@@ -569,8 +579,6 @@ namespace zprof
         regist(INNER_SERIALIZE_COST, "PROF_SERIALIZE_COST", zprof::CLOCK_DEFAULT, true, true);
         regist(INNER_OUTPUT_COST, "PROF_OUTPUT_COST", zprof::CLOCK_DEFAULT, true, true);
     
-        regist(INNER_MEM_INFO_COST, "PROF_MEM_INFO_COST", zprof::CLOCK_DEFAULT, true, true);
-
         regist(INNER_CLOCK_COST, "PROF_CLOCK_COST", zprof::CLOCK_DEFAULT, true, true);
         regist(INNER_RECORD_COST, "PROF_RECORD_COST", zprof::CLOCK_DEFAULT, true, true);
         regist(INNER_RECORD_SM_COST, "PROF_RECORD_SM_COST", zprof::CLOCK_DEFAULT, true, true);
@@ -585,19 +593,15 @@ namespace zprof
 
         if (true)
         {
-            overwrite_user(INNER_INIT_TS, 1, zprof::Clock<>::sys_now_ms());
-            overwrite_user(INNER_RESET_TS, 1, zprof::Clock<>::sys_now_ms());
-            overwrite_user(INNER_OUTPUT_TS, 1, zprof::Clock<>::sys_now_ms());
+            rerecord_user(INNER_INIT_TS, zprof::Clock<>::sys_now_ms());
+            rerecord_user(INNER_RESET_TS, zprof::Clock<>::sys_now_ms());
+            rerecord_user(INNER_OUTPUT_TS, zprof::Clock<>::sys_now_ms());
         }
 
         if (true)
         {
-            zprof::Clock<> self_mem_clk;
-            self_mem_clk.start();
-            record_vm(INNER_MEM_INFO_COST, get_self_mem());
-            record_cpu(INNER_MEM_INFO_COST, self_mem_clk.stop_and_save().cost());
-            record_mem(INNER_MEM_INFO_COST, 1, sizeof(*this));
-            record_user(INNER_MEM_INFO_COST, 1, max_count());
+            record_vm(INNER_INIT_COST, get_self_mem());
+            record_mem(INNER_INIT_COST, max_count(), sizeof(*this));
         }
 
         if (true)
@@ -928,28 +932,23 @@ namespace zprof
             RecordNode* node = NULL;
             long long append_cpu = 0;
             long long append_mem = 0;
-            long long append_user = 0;
             int id = 0;
             node = &nodes_[leaf.merge.to];
             append_cpu = leaf.cpu.t_u;
             append_mem = leaf.mem.t_u;
-            append_user = leaf.user.t_u;
             id = leaf.merge.to;
             leaf.cpu.t_u = 0;
             leaf.mem.t_u = 0;
-            leaf.user.t_u = 0;
             do
             {
                 node->cpu.t_u += append_cpu;
                 node->mem.t_u += append_mem;
-                node->user.t_u += append_user;
                 node->merge.merged++;
                 if (node->merge.merged >= node->merge.childs)
                 {
                     node->merge.merged = 0;
                     append_cpu = node->cpu.t_u;
                     append_mem = node->mem.t_u;
-                    append_user = node->user.t_u;
                     if (append_cpu > 0)
                     {
                         record_cpu_full(id, append_cpu);
@@ -958,13 +957,8 @@ namespace zprof
                     {
                         record_mem(id, 1, append_mem);
                     }
-                    if (append_user > 0)
-                    {
-                        record_user(id, 1, append_user);
-                    }
                     node->cpu.t_u = 0;
                     node->mem.t_u = 0;
-                    node->user.t_u = 0;
                     if (node->merge.to == 0)
                     {
                         break;
@@ -1175,7 +1169,7 @@ namespace zprof
             record_cpu_full(INNER_OUTPUT_COST, single_line_cost.cost());
         }
 
-        if (node.user.c > 0)
+        if (node.user.param1 != 0 || node.user.param2 != 0 || node.user.param3 != 0 || node.user.param4 != 0)
         {
             single_line_cost.start();
             rp.push_indent(depth * 2);
@@ -1190,11 +1184,13 @@ namespace zprof
             rp.push_string(STRLEN("\tuser*|-- "));
             if (true)
             {
-                rp.push_human_count(node.user.c);
-                rp.push_string(STRLEN("c, "));
-                rp.push_human_count(node.user.sum / node.user.c);
+                rp.push_human_count(node.user.param1);
                 rp.push_string(STRLEN(", "));
-                rp.push_human_count(node.user.sum);
+                rp.push_human_count(node.user.param2);
+                rp.push_string(STRLEN(", "));
+                rp.push_human_count(node.user.param3);
+                rp.push_string(STRLEN(", "));
+                rp.push_human_count(node.user.param4);
             }
 
             rp.push_string(STRLEN(" --|"));
@@ -1266,7 +1262,7 @@ namespace zprof
         {
             return -1;
         }
-        overwrite_user(INNER_OUTPUT_TS, 1, zprof::Clock<>::sys_now_ms());
+        rerecord_user(INNER_OUTPUT_TS, zprof::Clock<>::sys_now_ms());
 
         zprof::Clock<> clk;
         clk.start();
@@ -1282,9 +1278,9 @@ namespace zprof
         rp.push_string(STRLEN(" output report at: "));
         rp.push_now_date();
         rp.push_string(STRLEN(" dist start time:["));
-        rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_INIT_TS].user.sum)*1000*1000);
+        rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_INIT_TS].user.param1)*1000*1000);
         rp.push_string(STRLEN("] dist reset time:["));
-        rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_RESET_TS].user.sum) * 1000 * 1000);
+        rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_RESET_TS].user.param1) * 1000 * 1000);
         rp.push_char(']');
         rp.push_char(' ');
 

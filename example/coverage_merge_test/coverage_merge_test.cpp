@@ -137,17 +137,17 @@ int main(int argc, char *argv[])
     PROF_BIND_CHILD_AND_MERGE(PME_PARENT_02, PME_CHILD_16);
 
 
-    PROF_RECORD_USER(PME_CHILD_CHILD_01, 1, 1);
-    PROF_RECORD_USER(PME_CHILD_CHILD_02, 1, 1);
-    PROF_RECORD_USER(PME_CHILD_CHILD_11, 1, 1);
-    PROF_RECORD_USER(PME_CHILD_CHILD_12, 1, 1);
+    PROF_RECORD_MEM(PME_CHILD_CHILD_01, 1, 1);
+    PROF_RECORD_MEM(PME_CHILD_CHILD_02, 1, 1);
+    PROF_RECORD_MEM(PME_CHILD_CHILD_11, 1, 1);
+    PROF_RECORD_MEM(PME_CHILD_CHILD_12, 1, 1);
 
 
 
-    PROF_RECORD_USER(PME_CHILD_05, 1, 1);
-    PROF_RECORD_USER(PME_CHILD_06, 1, 1);
-    PROF_RECORD_USER(PME_CHILD_15, 1, 1);
-    PROF_RECORD_USER(PME_CHILD_16, 1, 1);
+    PROF_RECORD_MEM(PME_CHILD_05, 1, 1);
+    PROF_RECORD_MEM(PME_CHILD_06, 1, 1);
+    PROF_RECORD_MEM(PME_CHILD_15, 1, 1);
+    PROF_RECORD_MEM(PME_CHILD_16, 1, 1);
 
     
     ASSERT_TEST(check_merge_to_count(PME_CHILD_01) == 2);
@@ -168,23 +168,23 @@ int main(int argc, char *argv[])
 
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.childs == 2);
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merged == 0);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_01).user.t_u == 0);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_01).user.sum == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_01).mem.t_u == 0);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_01).mem.sum == 2);
 
     ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge.childs == 2);
     ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge.merged == 0, ProfInst.node(PME_CHILD_02).merge.merged);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_02).user.t_u == 0);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_02).user.sum == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_02).mem.t_u == 0);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_02).mem.sum == 2);
 
     ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge.childs == 3);
     ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge.merged == 0, ProfInst.node(PME_PARENT_01).merge.merged);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_01).user.t_u == 0);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_01).user.sum == 4);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_01).mem.t_u == 0);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_01).mem.sum == 4);
 
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.childs == 3);
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.merged == 0);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.t_u == 0);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.sum == 4);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_02).mem.t_u == 0);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_02).mem.sum == 4);
 
 
     PROF_DO_MERGE();
@@ -192,23 +192,23 @@ int main(int argc, char *argv[])
 
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.childs == 2);
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merged == 0);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_01).user.t_u == 0);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_01).user.sum == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_01).mem.t_u == 0);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_01).mem.sum == 2);
 
     ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge.childs == 2);
     ASSERT_TEST(ProfInst.node(PME_CHILD_02).merge.merged == 0, ProfInst.node(PME_CHILD_02).merge.merged);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_02).user.t_u == 0);
-    ASSERT_TEST(ProfInst.node(PME_CHILD_02).user.sum == 2);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_02).mem.t_u == 0);
+    ASSERT_TEST(ProfInst.node(PME_CHILD_02).mem.sum == 2);
 
     ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge.childs == 3);
     ASSERT_TEST(ProfInst.node(PME_PARENT_01).merge.merged == 0, ProfInst.node(PME_PARENT_01).merge.merged);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_01).user.t_u == 0);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_01).user.sum == 4);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_01).mem.t_u == 0);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_01).mem.sum == 4);
 
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.childs == 3);
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).merge.merged == 0);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.t_u == 0);
-    ASSERT_TEST(ProfInst.node(PME_PARENT_02).user.sum == 4);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_02).mem.t_u == 0);
+    ASSERT_TEST(ProfInst.node(PME_PARENT_02).mem.sum == 4);
 
 
     PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);

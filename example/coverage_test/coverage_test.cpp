@@ -158,9 +158,9 @@ int main(int argc, char *argv[])
     }
     if (true)
     {
-        PROF_RECORD_USER(ENUM_ENTRY, 1, 100);
-        PROF_RECORD_USER(ENUM_ENTRY, 1, 102);
-        PROF_RECORD_USER(ENUM_ENTRY, 1, 103);
+        PROF_RECORD_USER(ENUM_ENTRY, 100);
+        PROF_RECORD_USER(ENUM_ENTRY, 102);
+        PROF_RECORD_USER(ENUM_ENTRY, 103);
     }
 
 
