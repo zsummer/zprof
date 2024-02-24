@@ -1,6 +1,6 @@
 version:
-last_sha1(./src)=894816ff2a87bbf958c33481e3662432290e483a
-last_date(./src)=2024-02-24 16:16:59 +0800
+last_sha1(./src)=be3f7b9afa2da3ece6f9c7b840846d9a4f98a46d
+last_date(./src)=2024-02-24 16:24:37 +0800
 
 git log -1 --stat ./src:
-commit 894816ff2a87bbf958c33481e3662432290e483a Author: zsummer <yawei.zhang@foxmail.com> Date: Sat Feb 24 16:16:59 2024 +0800 change user output format src/zprof_record.h | 6 +++--- 1 file changed, 3 insertions(+), 3 deletions(-)
+commit be3f7b9afa2da3ece6f9c7b840846d9a4f98a46d Author: zsummer <yawei.zhang@foxmail.com> Date: Sat Feb 24 16:24:16 2024 +0800 change user output format src/zprof_record.h | 6 +++--- 1 file changed, 3 insertions(+), 3 deletions(-)
