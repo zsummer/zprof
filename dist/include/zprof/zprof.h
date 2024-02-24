@@ -2283,11 +2283,11 @@ namespace zprof
             if (true)
             {
                 rp.push_human_count(node.user.param1);
-                rp.push_string(STRLEN(" / "));
+                rp.push_string(STRLEN(" \t/ "));
                 rp.push_human_count(node.user.param2);
-                rp.push_string(STRLEN(" / "));
+                rp.push_string(STRLEN(" \t/ "));
                 rp.push_human_count(node.user.param3);
-                rp.push_string(STRLEN(" / "));
+                rp.push_string(STRLEN(" \t/ "));
                 rp.push_human_count(node.user.param4);
             }
 
