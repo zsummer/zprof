@@ -2562,6 +2562,36 @@ private:
     int idx_;
 };
 
+//RAII小函数  
+//用于快速记录<注册条目>的性能信息 带诊断信息
+template<class AutoRecord>
+class ProfDiagnostic
+{
+public:
+    //idx为<注册条目>的ID  
+    ProfDiagnostic(int idx, long long watchdog, std::function<void(long long)> dog) :record_(idx)
+    {
+        watchdog_ = watchdog;
+        dog_ = dog;
+    }
+    ~ProfDiagnostic()
+    {
+        if (watchdog_ <= 0 || dog_ == nullptr)
+        {
+            return;
+        }
+        long long ns = record_.clock().save().cost_ns();
+        if (ns > watchdog_)
+        {
+            dog_(ns);
+        }
+    }
+private:
+    AutoRecord record_;
+    long long watchdog_;
+    std::function<void(long long)> dog_;
+};
+
 
 
 //RAII小函数  
