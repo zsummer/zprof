@@ -16,8 +16,8 @@
 * limitations under the License.
 */
 
-#ifndef ZPROF_REPORT_H
-#define ZPROF_REPORT_H
+#ifndef ZPROF_REPORT_H_
+#define ZPROF_REPORT_H_
 
 #include <cstddef>
 #include <cstring>

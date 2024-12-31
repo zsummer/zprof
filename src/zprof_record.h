@@ -16,8 +16,8 @@
 * limitations under the License.
 */
 
-#ifndef ZPROF_RECORD_H
-#define ZPROF_RECORD_H
+#ifndef ZPROF_RECORD_H_
+#define ZPROF_RECORD_H_
 
 #include "zprof_clock.h"
 #include "zprof_report.h"

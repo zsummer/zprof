@@ -19,8 +19,8 @@
 
 #include "zprof_record.h"
 
-#ifndef ZPROF_H
-#define ZPROF_H
+#ifndef ZPROF_H_
+#define ZPROF_H_
 
 //默认的全局实例ID   
 #ifndef PROF_DEFAULT_INST_ID 

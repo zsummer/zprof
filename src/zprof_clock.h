@@ -17,8 +17,8 @@
 */
 
 
-#ifndef ZPROF_CLOCK_H
-#define ZPROF_CLOCK_H
+#ifndef ZPROF_CLOCK_H_
+#define ZPROF_CLOCK_H_
 
 #include <cstddef>
 #include <cstring>
