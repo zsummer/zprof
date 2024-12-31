@@ -676,7 +676,7 @@ namespace zprof
         static long long SystemNowNS() { return GetTick<kClockSystem>(); }
         static long long SystemNowUS() { return GetTick<kClockSystem>() / 1000; }
         static long long SystemNowMS() { return GetTick<kClockSystem>() / 1000 / 1000; }
-        static double SystemNowS() { return return GetTick<kClockSystem>() / 1000 / 1000 / 1000;}
+        static double SystemNowS() { return GetTick<kClockSystem>() / 1000 / 1000 / 1000;}
         static VMData GetSelfMem() { return GetSelfMem(); }
         static VMData GetSysMem() { return GetSysMem(); }
     };

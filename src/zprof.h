@@ -333,7 +333,8 @@ private:
 #define PROF_OUTPUT_REPORT(...)    ProfInst.OutputReport(__VA_ARGS__)
 
 //其他立即输出
-#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, zprof::kRecordLevelFast>((int)ProfInstType::kInnerNull, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  \
+    do {ProfRecordWrap<true, zprof::kRecordLevelFast>((int)ProfInstType::kInnerNull, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_MULTI_COUNT_USER(desc, ...) do {PROF_RECORD_USER(ProfInstType::kInnerNull, ##__VA_ARGS__);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_RECORD_MEM(ProfInstType::kInnerNull, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_RECORD_CPU(ProfInstType::kInnerNull, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
