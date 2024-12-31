@@ -219,6 +219,10 @@ namespace zprof
         int BindMerge(int to, int child);
         void DoMerge();
 
+        PROF_ALWAYS_INLINE  RecordNode& Node(int idx)
+        {
+            return nodes_[idx];;
+        }
         PROF_ALWAYS_INLINE  void ResetCpu(int idx)
         {
             RecordNode& node = nodes_[idx];
