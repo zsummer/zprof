@@ -324,7 +324,7 @@ private:
 
 //使用特殊条目<0>进行一次性输出  
 //用于立刻输出性能信息而不是走报告输出  
-#define PROF_OUTPUT_TEMP_RECORD(desc)        do {ProfInst.output_temp_record(desc, strlen(desc));}while(0)  
+#define PROF_OUTPUT_TEMP_RECORD(desc)        do {ProfInst.output_temp_record(desc, (int)strlen(desc));}while(0)  
 
 //立刻输出一条信息  
 #define PROF_OUTPUT_RECORD(idx)        do {ProfInst.output_one_record(idx);}while(0)
