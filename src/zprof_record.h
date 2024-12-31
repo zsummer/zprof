@@ -33,6 +33,11 @@ namespace zprof
 
     #define SMOOTH_CYCLES(s_ticks, ticks) (   (s_ticks * 12 + ticks * 4) >> 4   ) 
     #define SMOOTH_CYCLES_WITH_INIT(s_ticks, ticks) ( (s_ticks) == 0 ? (ticks) : SMOOTH_CYCLES(s_ticks, ticks) )
+    #define COMPACT_DATA_UNIT_SIZE 30
+    #define COMPACT_DATA_BUFF_MIN_SIZE 150    
+    #define RECORD_FORMAT_ALIGN_SIZE 35
+    #define UNWIND_STR(str) str, strlen(str)
+
 
     enum RecordLevel
     {
@@ -185,7 +190,7 @@ namespace zprof
         static constexpr int end_id() { return begin_id() + count(); }
         static constexpr int max_count() { return count(); }
 
-        static constexpr int compact_data_size() { return 30 * (1+end_id()); } //reserve node no name 
+        static constexpr int compact_data_size() { return COMPACT_DATA_UNIT_SIZE * (1+end_id()); } //reserve node no name 
         static_assert(end_id() == INNER_MAX + reserve_count() + declare_count(), "");
 
 
@@ -508,7 +513,8 @@ namespace zprof
 
         output_ = &Record::default_output;  //set default log;
 
-        static_assert(compact_data_size() > 150, "");
+        static_assert(compact_data_size() > COMPACT_DATA_BUFF_MIN_SIZE, "");
+        compact_data_[0] = '\0';
         unknown_desc_ = 0;
         compact_writer_.push_string("unknown");
         compact_writer_.push_char('\0');
@@ -1027,7 +1033,7 @@ namespace zprof
         }
 
         int name_blank = (int)name_len + depth  + depth;
-        name_blank = name_blank < 35 ? 35 - name_blank : 0;
+        name_blank = name_blank < RECORD_FORMAT_ALIGN_SIZE ? RECORD_FORMAT_ALIGN_SIZE - name_blank : 0;
 
         if (name_len + name_blank > PROF_DESC_MAX_SIZE)
         {
@@ -1036,55 +1042,55 @@ namespace zprof
 
         rp.reset_offset();
 
-    #define STRLEN(str) str, strlen(str)
+
         if (node.cpu.c > 0)
         {
             single_line_cost.start();
             rp.push_indent(depth * 2);
-            rp.push_string(STRLEN("|"));
+            rp.push_string(UNWIND_STR("|"));
             rp.push_number((unsigned long long)entry_idx, 3);
-            rp.push_string(STRLEN("| "));
+            rp.push_string(UNWIND_STR("| "));
             rp.push_string(name, name_len);
             rp.push_blank(name_blank);
-            rp.push_string(STRLEN(" |"));
+            rp.push_string(UNWIND_STR(" |"));
 
-            rp.push_string(STRLEN("\tcpu*|-- "));
+            rp.push_string(UNWIND_STR("\tcpu*|-- "));
             if (true)
             {
                 rp.push_human_count(node.cpu.c);
-                rp.push_string(STRLEN("c, "));
+                rp.push_string(UNWIND_STR("c, "));
                 rp.push_human_time((long long)(node.cpu.sum * cpu_rate / node.cpu.c));
-                rp.push_string(STRLEN(", "));
+                rp.push_string(UNWIND_STR(", "));
                 rp.push_human_time((long long)(node.cpu.sum * cpu_rate));
             }
 
         
             if (node.cpu.min_u != LLONG_MAX && node.cpu.max_u > 0)
             {
-                rp.push_string(STRLEN(" --|\tmax-min:|-- "));
+                rp.push_string(UNWIND_STR(" --|\tmax-min:|-- "));
                 rp.push_human_time((long long)(node.cpu.max_u * cpu_rate));
-                rp.push_string(STRLEN(", "));
+                rp.push_string(UNWIND_STR(", "));
                 rp.push_human_time((long long)(node.cpu.min_u * cpu_rate));
             }
 
         
             if (node.cpu.dv > 0 || node.cpu.sm > 0)
             {
-                rp.push_string(STRLEN(" --|\tdv-sm:|-- "));
+                rp.push_string(UNWIND_STR(" --|\tdv-sm:|-- "));
                 rp.push_human_time((long long)(node.cpu.dv * cpu_rate / node.cpu.c));
-                rp.push_string(STRLEN(", "));
+                rp.push_string(UNWIND_STR(", "));
                 rp.push_human_time((long long)(node.cpu.sm * cpu_rate));
             }
 
         
             if (node.cpu.h_sm > 0 || node.cpu.l_sm > 0)
             {
-                rp.push_string(STRLEN(" --|\th-l:|-- "));
+                rp.push_string(UNWIND_STR(" --|\th-l:|-- "));
                 rp.push_human_time((long long)(node.cpu.h_sm * cpu_rate));
-                rp.push_string(STRLEN(", "));
+                rp.push_string(UNWIND_STR(", "));
                 rp.push_human_time((long long)(node.cpu.l_sm * cpu_rate));
             }
-            rp.push_string(STRLEN(" --|"));
+            rp.push_string(UNWIND_STR(" --|"));
             single_line_cost.stop_and_save();
             record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.cost());
 
@@ -1099,31 +1105,31 @@ namespace zprof
         {
             single_line_cost.start();
             rp.push_indent(depth * 2);
-            rp.push_string(STRLEN("|"));
+            rp.push_string(UNWIND_STR("|"));
             rp.push_number((unsigned long long)entry_idx, 3);
-            rp.push_string(STRLEN("| "));
+            rp.push_string(UNWIND_STR("| "));
             rp.push_string(name, name_len);
             rp.push_blank(name_blank);
-            rp.push_string(STRLEN(" |"));
+            rp.push_string(UNWIND_STR(" |"));
 
-            rp.push_string(STRLEN("\tmem*|-- "));
+            rp.push_string(UNWIND_STR("\tmem*|-- "));
             if (true)
             {
                 rp.push_human_count(node.mem.c);
-                rp.push_string(STRLEN("c, "));
+                rp.push_string(UNWIND_STR("c, "));
                 rp.push_human_mem(node.mem.sum / node.mem.c);
-                rp.push_string(STRLEN(", "));
+                rp.push_string(UNWIND_STR(", "));
                 rp.push_human_mem(node.mem.sum);
             }
 
-            rp.push_string(STRLEN(" --||-- "));
+            rp.push_string(UNWIND_STR(" --||-- "));
             if (node.mem.delta > 0)
             {
                 rp.push_human_mem(node.mem.sum - node.mem.delta);
-                rp.push_string(STRLEN(", "));
+                rp.push_string(UNWIND_STR(", "));
                 rp.push_human_mem(node.mem.delta);
             }
-            rp.push_string(STRLEN(" --|"));
+            rp.push_string(UNWIND_STR(" --|"));
             single_line_cost.stop_and_save();
             record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.cost());
 
@@ -1138,28 +1144,28 @@ namespace zprof
         {
             single_line_cost.start();
             rp.push_indent(depth * 2);
-            rp.push_string(STRLEN("|"));
+            rp.push_string(UNWIND_STR("|"));
             rp.push_number((unsigned long long)entry_idx, 3);
-            rp.push_string(STRLEN("| "));
+            rp.push_string(UNWIND_STR("| "));
             rp.push_string(name, name_len);
             rp.push_blank(name_blank);
-            rp.push_string(STRLEN(" |"));
+            rp.push_string(UNWIND_STR(" |"));
 
 
-            rp.push_string(STRLEN("\t vm*|-- "));
+            rp.push_string(UNWIND_STR("\t vm*|-- "));
             if (true)
             {
                 rp.push_human_mem(node.vm.vm_size);
-                rp.push_string(STRLEN("(vm), "));
+                rp.push_string(UNWIND_STR("(vm), "));
                 rp.push_human_mem(node.vm.rss_size);
-                rp.push_string(STRLEN("(rss), "));
+                rp.push_string(UNWIND_STR("(rss), "));
                 rp.push_human_mem(node.vm.shr_size);
-                rp.push_string(STRLEN("(shr), "));
+                rp.push_string(UNWIND_STR("(shr), "));
                 rp.push_human_mem(node.vm.rss_size - node.vm.shr_size);
-                rp.push_string(STRLEN("(uss)"));
+                rp.push_string(UNWIND_STR("(uss)"));
             }
 
-            rp.push_string(STRLEN(" --|"));
+            rp.push_string(UNWIND_STR(" --|"));
             single_line_cost.stop_and_save();
             record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.cost());
 
@@ -1173,27 +1179,27 @@ namespace zprof
         {
             single_line_cost.start();
             rp.push_indent(depth * 2);
-            rp.push_string(STRLEN("|"));
+            rp.push_string(UNWIND_STR("|"));
             rp.push_number((unsigned long long)entry_idx, 3);
-            rp.push_string(STRLEN("| "));
+            rp.push_string(UNWIND_STR("| "));
             rp.push_string(name, name_len);
             rp.push_blank(name_blank);
-            rp.push_string(STRLEN(" |"));
+            rp.push_string(UNWIND_STR(" |"));
 
 
-            rp.push_string(STRLEN("\tuser*|-- "));
+            rp.push_string(UNWIND_STR("\tuser*|-- "));
             if (true)
             {
                 rp.push_human_count(node.user.param1);
-                rp.push_string(STRLEN(" \t/ "));
+                rp.push_string(UNWIND_STR(" \t/ "));
                 rp.push_human_count(node.user.param2);
-                rp.push_string(STRLEN(" \t/ "));
+                rp.push_string(UNWIND_STR(" \t/ "));
                 rp.push_human_count(node.user.param3);
-                rp.push_string(STRLEN(" \t/ "));
+                rp.push_string(UNWIND_STR(" \t/ "));
                 rp.push_human_count(node.user.param4);
             }
 
-            rp.push_string(STRLEN(" --|"));
+            rp.push_string(UNWIND_STR(" --|"));
             single_line_cost.stop_and_save();
             record_cpu_full(INNER_SERIALIZE_COST, single_line_cost.cost());
 
@@ -1275,11 +1281,11 @@ namespace zprof
         rp.push_char('=', 30);
         rp.push_char(' ');
         rp.push_string(title());
-        rp.push_string(STRLEN(" output report at: "));
+        rp.push_string(UNWIND_STR(" output report at: "));
         rp.push_now_date();
-        rp.push_string(STRLEN(" dist start time:["));
+        rp.push_string(UNWIND_STR(" dist start time:["));
         rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_INIT_TS].user.param1)*1000*1000);
-        rp.push_string(STRLEN("] dist reset time:["));
+        rp.push_string(UNWIND_STR("] dist reset time:["));
         rp.push_human_time((Clock<>::sys_now_ms() - nodes_[INNER_RESET_TS].user.param1) * 1000 * 1000);
         rp.push_char(']');
         rp.push_char(' ');
@@ -1287,19 +1293,19 @@ namespace zprof
         rp.push_char('=', 30);
         output_and_clean(rp);
 
-        rp.push_string(STRLEN("| -- index -- | ---    cpu  ------------ | ----------   hits, avg, sum   ---------- | ---- max, min ---- | ------ dv, sm ------ |  --- hsm, lsm --- | "));
+        rp.push_string(UNWIND_STR("| -- index -- | ---    cpu  ------------ | ----------   hits, avg, sum   ---------- | ---- max, min ---- | ------ dv, sm ------ |  --- hsm, lsm --- | "));
         output_and_clean(rp);
-        rp.push_string(STRLEN("| -- index -- | ---    mem  ---------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | "));
+        rp.push_string(UNWIND_STR("| -- index -- | ---    mem  ---------- | ----------   hits, avg, sum   ---------- | ------ last, delta ------ | "));
         output_and_clean(rp);
-        rp.push_string(STRLEN("| -- index -- | ---    vm  ------------ | ----------   vm, rss, shr, uss   ------------------ | " ));
+        rp.push_string(UNWIND_STR("| -- index -- | ---    vm  ------------ | ----------   vm, rss, shr, uss   ------------------ | " ));
         output_and_clean(rp);
 
-        rp.push_string(STRLEN("| -- index -- | ---    user  ----------- | -----------  hits, avg, sum   ---------- | "));
+        rp.push_string(UNWIND_STR("| -- index -- | ---    user  ----------- | -----------  hits, avg, sum   ---------- | "));
         output_and_clean(rp);
 
         if (flags & OUT_FLAG_INNER)
         {
-            rp.push_string(STRLEN(PROF_LINE_FEED));
+            rp.push_string(UNWIND_STR(PROF_LINE_FEED));
             for (int i = INNER_NULL + 1; i < INNER_MAX; i++)
             {
                 int ret = recursive_output(i, 0, NULL, 0, rp);
@@ -1309,7 +1315,7 @@ namespace zprof
 
         if (flags & OUT_FLAG_RESERVE)
         {
-            rp.push_string(STRLEN(PROF_LINE_FEED));
+            rp.push_string(UNWIND_STR(PROF_LINE_FEED));
             for (int i = reserve_begin_id(); i < reserve_end_id(); i++)
             {
                 int ret = recursive_output(i, 0, NULL, 0, rp);
@@ -1319,7 +1325,7 @@ namespace zprof
     
         if (flags & OUT_FLAG_DELCARE)
         {
-            rp.push_string(STRLEN(PROF_LINE_FEED));
+            rp.push_string(UNWIND_STR(PROF_LINE_FEED));
             for (int i = declare_begin_id(); i < declare_window(); )
             {
                 int ret = recursive_output(i, 0, NULL, 0, rp);
