@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 
 
     PROF_DO_MERGE();
-    PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
+    PROF_OUTPUT_REPORT(zprof::kOutFlagDelcare);
 
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.childs == 2);
     ASSERT_TEST(ProfInst.node(PME_CHILD_01).merge.merged == 0);
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
     ASSERT_TEST(ProfInst.node(PME_PARENT_02).mem.sum == 4);
 
 
-    PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
+    PROF_OUTPUT_REPORT(zprof::kOutFlagDelcare);
 
     LogInfo() << "test success.";
 

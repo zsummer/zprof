@@ -36,7 +36,7 @@ enum ProfEnumType
 int main(int argc, char *argv[])
 {
     //初始化   
-    ProfInst.init("fast_direct_using");
+    ProfInst.Init("fast_direct_using");
     
     //scene 1  
     //手动使用计时器并直接使用标准时间单位的耗时      
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         //注册ID  
-        ProfInst.regist(scene_2_id, "scene 2", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(scene_2_id, "scene 2", zprof::kClockFenceRDTSC, false, false);
 
         //计算耗时 
         zprof::Clock<> cost;
@@ -79,10 +79,10 @@ int main(int argc, char *argv[])
         cost.stop_and_save();
 
         //记录到条目
-        ProfInst.record_cpu(scene_2_id, 1, cost.cost());
+        ProfInst.RecordCpu(scene_2_id, 1, cost.cost());
 
         //立刻输出条目 
-        ProfInst.output_one_record(scene_2_id);
+        ProfInst.OutputOneRecord(scene_2_id);
     }
 
 
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         //注册ID 
-        ProfInst.regist(scene_3_id, "scene 3", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(scene_3_id, "scene 3", zprof::kClockFenceRDTSC, false, false);
 
         //计算耗时并记录到scene_3_id 
         if (true)
@@ -106,14 +106,14 @@ int main(int argc, char *argv[])
         }
 
         //立刻输出条目 
-        ProfInst.output_one_record(scene_3_id);
+        ProfInst.OutputOneRecord(scene_3_id);
     }
 
 
     //scene 4: 使用<临时条目>输出性能信息 而不新增注册条目    
     if (true)
     {
-        static const int scene_4_tmp_id = ProfInstType::INNER_NULL;
+        static const int scene_4_tmp_id = ProfInstType::kInnerNull;
         if (true)
         {
             ProfAutoRecord<> record(scene_4_tmp_id);
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
         }
 
         //<临时条目>输出 调用该接口用于输出带<条目信息>的性能信息, 并且随后自动清理性能信息防止污染下次使用    
-        ProfInst.output_temp_record("scene_4_tmp_id: inc*1000 cost");
+        ProfInst.OutputTempRecord("scene_4_tmp_id: inc*1000 cost");
     }
 
     //scene 5: scene4的简化版    
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
     //scene 6:  存在多个有交集的性能统计中, 可以先记录性能信息, 然后顺序执行写入<临时条目>性能信息并使用标准<临时条目>输出     
     if (true)
     {
-        static const int scene_6_tmp_id = ProfInstType::INNER_NULL;
+        static const int scene_6_tmp_id = ProfInstType::kInnerNull;
 
         zprof::Clock<> cost;
         cost.start();
@@ -167,20 +167,20 @@ int main(int argc, char *argv[])
         }
         cost.stop_and_save();
         
-        ProfInst.record_cpu(scene_6_tmp_id, 1, cost.cost());
-        ProfInst.output_temp_record("scene_6_tmp_id: total cost");
+        ProfInst.RecordCpu(scene_6_tmp_id, 1, cost.cost());
+        ProfInst.OutputTempRecord("scene_6_tmp_id: total cost");
 
-        ProfInst.record_cpu(scene_6_tmp_id, 1000, inc_cost.cost());
-        ProfInst.output_temp_record("scene_6_tmp_id: per inc");
+        ProfInst.RecordCpu(scene_6_tmp_id, 1000, inc_cost.cost());
+        ProfInst.OutputTempRecord("scene_6_tmp_id: per inc");
 
-        ProfInst.record_cpu(scene_6_tmp_id, 1000, cost.cost() - inc_cost.cost());
-        ProfInst.output_temp_record("scene_6_tmp_id: per sub");
+        ProfInst.RecordCpu(scene_6_tmp_id, 1000, cost.cost() - inc_cost.cost());
+        ProfInst.OutputTempRecord("scene_6_tmp_id: per sub");
     }
 
 
     //scene 7:  以报告形式输出所有当前存在的性能信息  
     printf("%s", "scene 7: output report.\n");
-    ProfInst.output_report();
+    ProfInst.OutputReport();
 
     //scene 8: resident 
     static const int scene_8_resident_id = scene_3_id + 1;
@@ -188,8 +188,8 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        ProfInst.regist(scene_8_resident_id, "scene_8_resident_id", zprof::kClockFenceRDTSC, true, false);
-        ProfInst.regist(scene_8_unresident_id, "scene_8_resident_id", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(scene_8_resident_id, "scene_8_resident_id", zprof::kClockFenceRDTSC, true, false);
+        ProfInst.Regist(scene_8_unresident_id, "scene_8_resident_id", zprof::kClockFenceRDTSC, false, false);
 
         zprof::Clock<> cost;
         cost.start();
@@ -200,55 +200,55 @@ int main(int argc, char *argv[])
         }
         cost.stop_and_save();
         //写入记录信息  
-        ProfInst.record_cpu(scene_8_resident_id, 1000, cost.cost());
-        ProfInst.record_cpu(scene_8_unresident_id, 1000, cost.cost());
+        ProfInst.RecordCpu(scene_8_resident_id, 1000, cost.cost());
+        ProfInst.RecordCpu(scene_8_unresident_id, 1000, cost.cost());
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output report.\n");
-        ProfInst.output_report(zprof::OUT_FLAG_DELCARE);
+        ProfInst.OutputReport(zprof::kOutFlagDelcare);
         //清除unresident记录  
-        ProfInst.reset_declare_node(true);
+        ProfInst.ResetDeclareNode(true);
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output cleaned(unresident)  report.\n");
-        ProfInst.output_report(zprof::OUT_FLAG_DELCARE);
+        ProfInst.OutputReport(zprof::kOutFlagDelcare);
     }
 
 
 
 
     //scene 10: pre 清除所有声明条目 
-    ProfInst.reset_declare_node(false);
+    ProfInst.ResetDeclareNode(false);
 
 
     //scene 10: 注册条目(适合嵌入到实际项目中而非demo/benchmark/test) 
     if (true)
     {
         //定义条目   
-        ProfInst.regist(PROF_REG_ALL_MATH, "all math", zprof::kClockFenceRDTSC, false, false);
-        ProfInst.regist(PROF_REG_INC, "inc", zprof::kClockFenceRDTSC, false, false);
-        ProfInst.regist(PROF_REG_SUB, "sub", zprof::kClockFenceRDTSC, false, false);
-        ProfInst.regist(PROF_REG_MUL, "mul", zprof::kClockFenceRDTSC, false, false);
-        ProfInst.regist(PROF_REG_DIV, "div", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(PROF_REG_ALL_MATH, "all math", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(PROF_REG_INC, "inc", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(PROF_REG_SUB, "sub", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(PROF_REG_MUL, "mul", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(PROF_REG_DIV, "div", zprof::kClockFenceRDTSC, false, false);
 
-        ProfInst.regist(PROF_REG_VM_USE, "self vm use:", zprof::kClockFenceRDTSC, false, false);
-        ProfInst.regist(PROF_REG_TIMMER, "timer 50ms", zprof::kClockFenceRDTSC, false, false);
-        ProfInst.regist(PROF_REG_SELF_SIZE, "self memory size", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(PROF_REG_VM_USE, "self vm use:", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(PROF_REG_TIMMER, "timer 50ms", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.Regist(PROF_REG_SELF_SIZE, "self memory size", zprof::kClockFenceRDTSC, false, false);
 
 
 
         //(可选) 绑定展示层级 all math为父级, inc/sub为子级;  输出报告时自动归并在一起并以缩进方式展示层级关系.  
-        ProfInst.bind_childs(PROF_REG_ALL_MATH, PROF_REG_INC);
-        ProfInst.bind_childs(PROF_REG_ALL_MATH, PROF_REG_SUB);
-        ProfInst.bind_childs(PROF_REG_ALL_MATH, PROF_REG_MUL);
-        ProfInst.bind_childs(PROF_REG_ALL_MATH, PROF_REG_DIV);
+        ProfInst.BindChilds(PROF_REG_ALL_MATH, PROF_REG_INC);
+        ProfInst.BindChilds(PROF_REG_ALL_MATH, PROF_REG_SUB);
+        ProfInst.BindChilds(PROF_REG_ALL_MATH, PROF_REG_MUL);
+        ProfInst.BindChilds(PROF_REG_ALL_MATH, PROF_REG_DIV);
 
         //(可选) 绑定性能信息的合并层级  
-        ProfInst.bind_merge(PROF_REG_ALL_MATH, PROF_REG_INC);
-        ProfInst.bind_merge(PROF_REG_ALL_MATH, PROF_REG_SUB);
-        ProfInst.bind_merge(PROF_REG_ALL_MATH, PROF_REG_MUL);
-        ProfInst.bind_merge(PROF_REG_ALL_MATH, PROF_REG_DIV);
+        ProfInst.BindMerge(PROF_REG_ALL_MATH, PROF_REG_INC);
+        ProfInst.BindMerge(PROF_REG_ALL_MATH, PROF_REG_SUB);
+        ProfInst.BindMerge(PROF_REG_ALL_MATH, PROF_REG_MUL);
+        ProfInst.BindMerge(PROF_REG_ALL_MATH, PROF_REG_DIV);
 
         // (可选)构建跳点优化     
-        ProfInst.build_jump_path();
+        ProfInst.BuildJumpPath();
 
         // 记录条目性能数据 
     
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
                 volatile size_t inc = 0;
                 inc++;
             }
-            ProfInst.record_cpu(PROF_REG_INC, 1000, cost.stop_and_save().cost());
+            ProfInst.RecordCpu(PROF_REG_INC, 1000, cost.stop_and_save().cost());
 
             cost.start();
             for (size_t i = 0; i < 1000; i++)
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
                 volatile size_t sub = 0;
                 sub--;
             }
-            ProfInst.record_cpu(PROF_REG_SUB, 1000, cost.stop_and_save().cost());
+            ProfInst.RecordCpu(PROF_REG_SUB, 1000, cost.stop_and_save().cost());
 
             cost.start();
             for (size_t i = 0; i < 1000; i++)
@@ -278,7 +278,7 @@ int main(int argc, char *argv[])
                 volatile size_t mul = i;
                 mul*=1000;
             }
-            ProfInst.record_cpu(PROF_REG_MUL, 1000, cost.stop_and_save().cost());
+            ProfInst.RecordCpu(PROF_REG_MUL, 1000, cost.stop_and_save().cost());
 
             cost.start();
             for (size_t i = 0; i < 1000; i++)
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
                 volatile size_t div = i;
                 div /= 1000;
             }
-            ProfInst.record_cpu(PROF_REG_DIV, 1000, cost.stop_and_save().cost());
+            ProfInst.RecordCpu(PROF_REG_DIV, 1000, cost.stop_and_save().cost());
         }
 
         //vm统计  
@@ -294,23 +294,23 @@ int main(int argc, char *argv[])
         {
             cost.start();
             //记录当前进程的vm使用情况  
-            ProfInst.record_vm(PROF_REG_VM_USE, zprof::get_self_mem());
+            ProfInst.RecordVm(PROF_REG_VM_USE, zprof::GetSelfMem());
 
-            //同时可以记录record_vm这行的消耗到同一条目下的cpu消耗信息中 
-            ProfInst.record_cpu(PROF_REG_VM_USE, cost.stop_and_save().cost());
+            //同时可以记录RecordVm这行的消耗到同一条目下的cpu消耗信息中 
+            ProfInst.RecordCpu(PROF_REG_VM_USE, cost.stop_and_save().cost());
         }
 
         //记录字节数量  
         if (true)
         {
-            ProfInst.record_mem(PROF_REG_SELF_SIZE, 1, sizeof(ProfInstType));
+            ProfInst.RecordMem(PROF_REG_SELF_SIZE, 1, sizeof(ProfInstType));
         }
 
         //定时器稳定性
         for (size_t i = 0; i < 5; i++)
         {
             cost.start();
-            ProfInst.record_timer(PROF_REG_TIMMER, cost.get_begin());
+            ProfInst.RecordTimer(PROF_REG_TIMMER, cost.get_begin());
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
 
@@ -319,11 +319,11 @@ int main(int argc, char *argv[])
 
 
         // 合并条目数据     
-        ProfInst.do_merge();
+        ProfInst.DoMerge();
         // 
         // 输出报告(只输出<声明条目>)  
         printf("%s", "scene 10 report\n");
-        ProfInst.output_report(zprof::OUT_FLAG_DELCARE);
+        ProfInst.OutputReport(zprof::kOutFlagDelcare);
     }
 
     return 0;

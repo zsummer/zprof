@@ -82,16 +82,16 @@ inline std::string human_time_format(long long cycles)
 {
     char buff[50];
     zprof::Report rp(buff, sizeof(buff));
-    rp.push_human_time(cycles);
-    rp.closing_string();
+    rp.PushHumanTime(cycles);
+    rp.ClosingString();
     return buff;
 }
 inline std::string human_count_format(long long cycles)
 {
     char buff[50];
     zprof::Report rp(buff, sizeof(buff));
-    rp.push_human_count(cycles);
-    rp.closing_string();
+    rp.PushHumanCount(cycles);
+    rp.ClosingString();
     return buff;
 }
 

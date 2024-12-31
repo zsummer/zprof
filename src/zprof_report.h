@@ -32,9 +32,6 @@
 
 namespace zprof
 {
-
-
-
     #ifdef WIN32
     #define PROF_LINE_FEED "\r\n"
     #elif (defined __APPLE__)
@@ -61,23 +58,24 @@ namespace zprof
         }
 
 
-        inline Report& push_human_count(long long count);
-        inline Report& push_human_time(long long ns);
-        inline Report& push_human_mem(long long bytes);
-        inline Report& push_char(char ch, int repeat = 1);
-        inline Report& push_string(const char* str);
-        inline Report& push_string(const char* str, size_t size);
-        inline Report& push_now_date();
-        inline Report& push_date(long long date_ms);
-        inline Report& push_number(unsigned long long number, int wide = 0);
-        inline Report& push_number(long long number, int wide = 0);
+        inline Report& PushHumanCount(long long count);
+        inline Report& PushHumanTime(long long ns);
+        inline Report& PushHumanMem(long long bytes);
+        inline Report& PushChar(char ch, int repeat = 1);
+        inline Report& PushString(const char* str);
+        inline Report& PushString(const char* str, size_t size);
+        inline Report& PushNowDate();
+        inline Report& PushDate(long long date_ms);
+        inline Report& PushNumber(unsigned long long number, int wide = 0);
+        inline Report& PushNumber(long long number, int wide = 0);
 
-        inline Report& push_indent(int count);
-        inline Report& push_blank(int count);
+        inline Report& PushIndent(int count);
+        inline Report& PushBlank(int count);
 
+        inline void ClosingString();
+        bool IsFull() { return offset_ + 1 >= buff_len_; } //saved one char  
 
-        inline void closing_string();
-        bool is_full() { return offset_ + 1 >= buff_len_; } //saved one char  
+    public:
         char* buff() { return buff_; }
         const char* buff() const { return buff_; }
         size_t offset() { return offset_; }
@@ -94,7 +92,7 @@ namespace zprof
 
 
 
-    inline Report& Report::push_human_count(long long count)
+    inline Report& Report::PushHumanCount(long long count)
     {
         if (buff_len_ <= offset_ + 35)
         {
@@ -102,24 +100,24 @@ namespace zprof
         }
         if (count > 1000 * 1000)
         {
-            push_number((unsigned long long)(count / 1000 / 1000));
-            push_char(',');
-            push_number((unsigned long long)((count / 1000) % 1000), 3);
-            push_char(',');
-            push_number((unsigned long long)(count % 1000), 3);
+            PushNumber((unsigned long long)(count / 1000 / 1000));
+            PushChar(',');
+            PushNumber((unsigned long long)((count / 1000) % 1000), 3);
+            PushChar(',');
+            PushNumber((unsigned long long)(count % 1000), 3);
             return *this;
         }
         else if (count > 1000)
         {
-            push_number((unsigned long long)(count / 1000));
-            push_char(',');
-            push_number((unsigned long long)(count % 1000), 3);
+            PushNumber((unsigned long long)(count / 1000));
+            PushChar(',');
+            PushNumber((unsigned long long)(count % 1000), 3);
             return *this;
         }
-        return push_number((unsigned long long)(count));
+        return PushNumber((unsigned long long)(count));
     }
 
-    inline Report& Report::push_human_time(long long ns)
+    inline Report& Report::PushHumanTime(long long ns)
     {
         if (buff_len_ <= offset_ + 35)
         {
@@ -153,19 +151,19 @@ namespace zprof
         else if (ns < 0) //cost may be over  when long long time  elapse . 
         {
             //ns = 0;
-            push_string("invalid");
+            PushString("invalid");
             return *this;
         }
-        push_number((long long)(ns/ fr));
+        PushNumber((long long)(ns/ fr));
         buff_[offset_++] = '.';
-        push_number((unsigned long long)((ns/ mr) % 1000), 3);
+        PushNumber((unsigned long long)((ns/ mr) % 1000), 3);
         buff_[offset_++] = fc;
         buff_[offset_++] = lc;
         return *this;
     }
 
 
-    inline Report& Report::push_human_mem(long long bytes)
+    inline Report& Report::PushHumanMem(long long bytes)
     {
         if (buff_len_ <= offset_ + 35)
         {
@@ -173,37 +171,37 @@ namespace zprof
         }
         if (bytes > 1024 * 1024 * 1024)
         {
-            push_number((unsigned long long)(bytes / 1024 / 1024 / 1024));
-            push_char('.');
-            push_number((unsigned long long)((bytes / 1024 / 1024) % 1024), 3);
-            push_char('G');
+            PushNumber((unsigned long long)(bytes / 1024 / 1024 / 1024));
+            PushChar('.');
+            PushNumber((unsigned long long)((bytes / 1024 / 1024) % 1024), 3);
+            PushChar('G');
             return *this;
         }
         else if (bytes > 1024 * 1024)
         {
-            push_number((unsigned long long)(bytes / 1024 / 1024));
-            push_char('.');
-            push_number((unsigned long long)((bytes / 1024) % 1024), 3);
-            push_char('M');
+            PushNumber((unsigned long long)(bytes / 1024 / 1024));
+            PushChar('.');
+            PushNumber((unsigned long long)((bytes / 1024) % 1024), 3);
+            PushChar('M');
             return *this;
         }
         else if (bytes > 1024)
         {
-            push_number((unsigned long long)(bytes / 1024));
-            push_char('.');
-            push_number((unsigned long long)(bytes % 1024), 3);
-            push_char('K');
+            PushNumber((unsigned long long)(bytes / 1024));
+            PushChar('.');
+            PushNumber((unsigned long long)(bytes % 1024), 3);
+            PushChar('K');
             return *this;
         }
         else
         {
-            push_number((unsigned long long)bytes);
-            push_char('B');
+            PushNumber((unsigned long long)bytes);
+            PushChar('B');
         }
         return *this;
     }
 
-    inline Report& Report::push_char(char ch, int repeat)
+    inline Report& Report::PushChar(char ch, int repeat)
     {
         while (repeat > 0 && offset_ < buff_len_)
         {
@@ -213,7 +211,7 @@ namespace zprof
         return *this;
     }
 
-    inline Report& Report::push_number(unsigned long long number, int wide)
+    inline Report& Report::PushNumber(unsigned long long number, int wide)
     {
         if (buff_len_ <= offset_ + 30)
         {
@@ -260,7 +258,7 @@ namespace zprof
         return *this;
     }
 
-    inline Report& Report::push_number(long long number, int wide)
+    inline Report& Report::PushNumber(long long number, int wide)
     {
         if (buff_len_ <= offset_ + 30)
         {
@@ -272,14 +270,14 @@ namespace zprof
             number *= -1;
             wide = wide > 1 ? wide - 1 : 0;
         }
-        return push_number((unsigned long long)number, wide);
+        return PushNumber((unsigned long long)number, wide);
     }
 
-    inline Report& Report::push_string(const char* str)
+    inline Report& Report::PushString(const char* str)
     {
-        return push_string(str, strlen(str));
+        return PushString(str, strlen(str));
     }
-    inline Report& Report::push_string(const char* str, size_t size)
+    inline Report& Report::PushString(const char* str, size_t size)
     {
         if (str == NULL)
         {
@@ -291,7 +289,7 @@ namespace zprof
         return *this;
     }
 
-    inline Report& Report::push_date(long long date_ms)
+    inline Report& Report::PushDate(long long date_ms)
     {
         time_t ts = date_ms / 1000;
         unsigned int precise = (unsigned int)(date_ms % 1000);
@@ -303,35 +301,35 @@ namespace zprof
         localtime_r(&ts, &tt);
 #endif
 
-        push_char('[');
-        push_number((unsigned long long)tt.tm_year + 1900, 4);
-        push_number((unsigned long long)tt.tm_mon + 1, 2);
-        push_number((unsigned long long)tt.tm_mday, 2);
-        push_char(' ');
-        push_number((unsigned long long)tt.tm_hour, 2);
-        push_char(':');
-        push_number((unsigned long long)tt.tm_min, 2);
-        push_char(':');
-        push_number((unsigned long long)tt.tm_sec, 2);
-        push_char('.');
-        push_number((unsigned long long)precise, 3);
-        push_char(']');
+        PushChar('[');
+        PushNumber((unsigned long long)tt.tm_year + 1900, 4);
+        PushNumber((unsigned long long)tt.tm_mon + 1, 2);
+        PushNumber((unsigned long long)tt.tm_mday, 2);
+        PushChar(' ');
+        PushNumber((unsigned long long)tt.tm_hour, 2);
+        PushChar(':');
+        PushNumber((unsigned long long)tt.tm_min, 2);
+        PushChar(':');
+        PushNumber((unsigned long long)tt.tm_sec, 2);
+        PushChar('.');
+        PushNumber((unsigned long long)precise, 3);
+        PushChar(']');
         return *this;
     }
 
-    inline Report& Report::push_now_date()
+    inline Report& Report::PushNowDate()
     {
-        return push_date(Clock<>::sys_now_ms());
+        return PushDate(Clock<>::SystemNowMS());
     }
 
 
-    inline void Report::closing_string()
+    inline void Report::ClosingString()
     {
         size_t closed_id = offset_ >= buff_len_ ? buff_len_ - 1 : offset_;
         buff_[closed_id] = '\0';
     }
 
-    inline Report& Report::push_indent(int count)
+    inline Report& Report::PushIndent(int count)
     {
         static const char* const pi = "                                                            ";
         constexpr int pi_size = 50;
@@ -356,7 +354,7 @@ namespace zprof
 
 
 
-    inline Report& Report::push_blank(int count)
+    inline Report& Report::PushBlank(int count)
     {
         static const char* const pi = "------------------------------------------------------------";
         constexpr int pi_size = 50;

@@ -64,7 +64,7 @@ while(0)
 
 #define START_PROF_COUNTER(T) zprof::Clock<zprof::T> var_##T;  var_##T.start();
 #define RESTART_PROF_COUNTER(T) var_##T.start();
-#define RECORD_PROF_COUNTER(T) ProfInst.record_cpu_full(ProfInst.declare_begin_id() + zprof::T, var_##T.stop_and_save().cost());;
+#define RECORD_PROF_COUNTER(T) ProfInst.RecordCpuFull(ProfInst.declare_begin_id() + zprof::T, var_##T.stop_and_save().cost());;
 
 
 static inline void OutputLog(const zprof::Report& rp)
@@ -82,9 +82,9 @@ int main(int argc, char *argv[])
 
     PROF_SET_OUTPUT(&OutputLog);
 
-    ASSERT_TEST(zprof::get_self_mem().vm_size > 0);
-    ASSERT_TEST(zprof::get_self_mem().rss_size > 0);
-    ASSERT_TEST(zprof::get_self_mem().rss_size <= zprof::get_self_mem().vm_size);
+    ASSERT_TEST(zprof::GetSelfMem().vm_size > 0);
+    ASSERT_TEST(zprof::GetSelfMem().rss_size > 0);
+    ASSERT_TEST(zprof::GetSelfMem().rss_size <= zprof::GetSelfMem().vm_size);
 
     for (int i = zprof::kClockNULL; i < zprof::kClockMAX; i++)
     {
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     {
         int decl_id = ProfInst.declare_begin_id() + i;
         ASSERT_TEST(!ProfInst.node(decl_id).active);
-        int ret = ProfInst.regist(decl_id, "reserve", i, true, false);
+        int ret = ProfInst.Regist(decl_id, "reserve", i, true, false);
         ASSERT_TEST(ret == 0);
         ASSERT_TEST(ProfInst.node(decl_id).active);
         ASSERT_TEST(ProfInst.compact_writer().offset()== (size_t)compact_len);
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
         sprintf(buf, "counter_%d", i);
         int buf_len = (int)strlen(buf);
         int compact_len = (int)ProfInst.compact_writer().offset();
-        int ret = ProfInst.regist(decl_id, buf, i, false, true);
+        int ret = ProfInst.Regist(decl_id, buf, i, false, true);
         ASSERT_TEST(ret == 0);
         ASSERT_TEST(ProfInst.node(decl_id).active);
         ASSERT_TEST(ProfInst.compact_writer().offset() == (size_t)compact_len + (size_t)buf_len + 1);

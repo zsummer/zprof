@@ -56,13 +56,13 @@ int main(int argc, char *argv[])
     //≥ı ºªØ   
     PROF_INIT("inner prof");
     volatile long long cost = 123;
-    ProfInst.record_cpu_no_sm(1, 0x11223344);
-    ProfInst.record_cpu_no_sm(1, cost);
+    ProfInst.RecordCpuNoSM(1, 0x11223344);
+    ProfInst.RecordCpuNoSM(1, cost);
 
-    ProfInst.record_cpu(1, 0x11223333);
-    ProfInst.record_cpu(1, cost);
-    ProfInst.record_cpu_full(1, 0x11223322);
-    ProfInst.record_cpu_full(1, cost);
+    ProfInst.RecordCpu(1, 0x11223333);
+    ProfInst.RecordCpu(1, cost);
+    ProfInst.RecordCpuFull(1, 0x11223322);
+    ProfInst.RecordCpuFull(1, cost);
     (void)cost;
 
     return 0;

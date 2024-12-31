@@ -40,9 +40,9 @@
 
 
 
-//默认的全局实例定义 如需扩展可更换INST ID使用额外的全局实例      
+//默认的全局实例定义 如需扩展可更换kInst ID使用额外的全局实例      
 using ProfInstType = zprof::Record<PROF_DEFAULT_INST_ID, PROF_RESERVE_COUNT, PROF_DECLARE_COUNT>;
-#define ProfInst ProfInstType::instance()
+#define ProfInst ProfInstType::Instance()
 
 
 //包装函数 根据模版参数在编译阶段直接使用不同的入口  从而减少常见使用场景下的运行时判断消耗.  
@@ -55,37 +55,37 @@ inline void ProfRecordWrap(int idx, long long count, long long ticks)
 template<>
 inline void ProfRecordWrap<true, zprof::kRecordLevelNormal>(int idx, long long count, long long ticks)
 {
-    ProfInst.record_cpu(idx, count, ticks);
+    ProfInst.RecordCpu(idx, count, ticks);
 }
 
 template<>
 inline void ProfRecordWrap<false, zprof::kRecordLevelNormal>(int idx, long long count, long long ticks)
 {
     (void)count;
-    ProfInst.record_cpu(idx, ticks);
+    ProfInst.RecordCpu(idx, ticks);
 }
 template<>
 inline void ProfRecordWrap<true, zprof::kRecordLevelFast>(int idx, long long count, long long ticks)
 {
-    ProfInst.record_cpu_no_sm(idx, count, ticks);
+    ProfInst.RecordCpuNoSM(idx, count, ticks);
 }
 template<>
 inline void ProfRecordWrap<false, zprof::kRecordLevelFast>(int idx, long long count, long long ticks)
 {
     (void)count;
-    ProfInst.record_cpu_no_sm(idx, ticks);
+    ProfInst.RecordCpuNoSM(idx, ticks);
 }
 
 template<>
 inline void ProfRecordWrap<true, zprof::kRecordLevelFull>(int idx, long long count, long long ticks)
 {
-    ProfInst.record_cpu_full(idx, count, ticks);
+    ProfInst.RecordCpuFull(idx, count, ticks);
 }
 template<>
 inline void ProfRecordWrap<false, zprof::kRecordLevelFull>(int idx, long long count, long long ticks)
 {
     (void)count;
-    ProfInst.record_cpu_full(idx, ticks);
+    ProfInst.RecordCpuFull(idx, ticks);
 }
 
 template<long long kCount>
@@ -170,13 +170,13 @@ public:
         //ProfCountIsGreatOne
         if (cnt_ == 1)
         {
-            ProfRecordWrap<false, kLevel>(ProfInstType::INNER_NULL, cnt_, clock_.save().cost());
+            ProfRecordWrap<false, kLevel>(ProfInstType::kInnerNull, cnt_, clock_.save().cost());
         }
         else
         {
-            ProfRecordWrap<true, kLevel>(ProfInstType::INNER_NULL, cnt_, clock_.save().cost());
+            ProfRecordWrap<true, kLevel>(ProfInstType::kInnerNull, cnt_, clock_.save().cost());
         }
-        ProfInst.output_temp_record(desc_);
+        ProfInst.OutputTempRecord(desc_);
     }
 
     zprof::Clock<C>& clock() { return clock_; }
@@ -198,22 +198,22 @@ private:
 // 条目注册和关系绑定   
 // -------
 //注册条目  
-#define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist(id, name, ct, resident, re_reg)  
+#define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.Regist(id, name, ct, resident, re_reg)  
 
 //快速注册条目: 提供默认计时方式, 默认该条目不开启常驻模式, 一旦调用clear相关接口该条目记录的信息会被清零.  默认该条目未被注册过 当前为新注册  
-#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, zprof::kClockDefatultLevel,  false, false)
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.Regist(id, name, zprof::kClockDefatultLevel,  false, false)
 
 //快速注册条目: 同上, 名字也默认提供 即ID自身    
 #define PROF_FAST_REGIST_NODE(id)  PROF_FAST_REGIST_NODE_ALIAS(id, #id)
 
 //快速注册条目: 同上 但是为常驻条目 
-#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, zprof::kClockDefatultLevel,  true, false)  
+#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.Regist(id, #id, zprof::kClockDefatultLevel,  true, false)  
 
 //绑定展示层级(父子)关系  
-#define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid) 
+#define PROF_BIND_CHILD(id, cid)  ProfInst.BindChilds(id, cid) 
 
 //绑定合并层级(cid->id)关系  合并关系中按照合并方向 合并的目标在前, 要搜集的在后并保持连续 可以获得性能上的跳点优化(也符合线性思维)    
-#define PROF_BIND_MERGE(id, cid) ProfInst.bind_merge(id, cid)   
+#define PROF_BIND_MERGE(id, cid) ProfInst.BindMerge(id, cid)   
 
 //通常合并关系和展示层级关系一致 这里同时绑定两者  
 #define PROF_BIND_CHILD_AND_MERGE(id, cid) do {PROF_BIND_CHILD(id, cid); PROF_BIND_MERGE(id, cid); }while(0)
@@ -221,7 +221,7 @@ private:
 //注册子条目并绑定展示层级关系    
 #define PROF_REG_AND_BIND_CHILD(id, cid)  do { PROF_FAST_REGIST_NODE(cid); PROF_BIND_CHILD(id, cid); } while(0)   
 //注册子条目并绑定合并层级关系  
-#define PROF_REG_AND_BIND_MERGE(id, cid) do { PROF_FAST_REGIST_NODE(cid); PROF_BIND_MERGE(id, cid); } while(0)  
+#define PROF_REG_AND_BindMerge(id, cid) do { PROF_FAST_REGIST_NODE(cid); PROF_BIND_MERGE(id, cid); } while(0)  
 //注册子条目并同时绑定展示层级和合并层级  
 #define PROF_REG_AND_BIND_CHILD_AND_MERGE(id, cid) do {PROF_FAST_REGIST_NODE(cid);  PROF_BIND_CHILD_AND_MERGE(id, cid); }while(0)
 
@@ -231,26 +231,26 @@ private:
 // -------
 
 //初始化全局实例并启动该实例  
-#define PROF_INIT(title) ProfInst.init(title)   
+#define PROF_INIT(Title) ProfInst.Init(Title)   
 
 //[option] 对注册好的条目进行跳点优化; 不执行则不获得优化  
 //放在注册完所有条目后执行, 否则优化只能覆盖执行时已经注册的条目(全量覆写型构建跳点, 无副作用)  
-#define PROF_BUILD_JUMP_PATH() ProfInst.build_jump_path()  
+#define PROF_BUILD_JUMP_PATH() ProfInst.BuildJumpPath()  
 
 //注册输出 默认使用printf  
-#define PROF_SET_OUTPUT(out_func) ProfInst.set_output(out_func)
+#define PROF_SET_OUTPUT(out_func) ProfInst.SetOutputFunc(out_func)
 
 //重置(清零)idx条目以及递归重置其所有子条目  
-#define PROF_RESET_CHILD(idx) ProfInst.reset_childs(idx)  
+#define PROF_RESET_CHILD(idx) ProfInst.ResetChilds(idx)  
 
 //执行性能数据的层级合并 
 //合并层级进行了扁平压缩 
-#define PROF_DO_MERGE() ProfInst.do_merge()  
+#define PROF_DO_MERGE() ProfInst.DoMerge()  
 
 //清零<保留条目>信息(常驻条目除外)  
-#define PROF_RESET_RESERVE(...) ProfInst.reset_reserve_node(__VA_ARGS__)  
+#define PROF_RESET_RESERVE(...) ProfInst.ResetReserveNode(__VA_ARGS__)  
 //清零<注册条目>信息(常驻条目除外)  
-#define PROF_RESET_DECLARE(...) ProfInst.reset_declare_node(__VA_ARGS__)  
+#define PROF_RESET_DECLARE(...) ProfInst.ResetDeclareNode(__VA_ARGS__)  
 
 
 //--------
@@ -259,7 +259,7 @@ private:
 // -------
 
 //记录性能消耗信息 平均耗时约为4ns    
-#define PROF_RECORD_CPU_SAMPLE(idx, ticks) ProfInst.record_cpu(idx, ticks)   
+#define PROF_RECORD_CPU_SAMPLE(idx, ticks) ProfInst.RecordCpu(idx, ticks)   
 
 //记录性能消耗信息(携带总耗时和执行次数) 平均耗时约为6ns      
 //kCount为常数 ticks为总耗时, 根据记录等级选择性存储 平滑数据, 抖动偏差 等     RecordLevel:kRecordLevelNormal  
@@ -274,18 +274,18 @@ private:
 
 //记录内存字节数    
 //输出日志时 进行可读性处理 带k,m,g等单位  
-#define PROF_RECORD_MEM(idx, count, mem) ProfInst.record_mem(idx, count, mem)  
+#define PROF_RECORD_MEM(idx, count, mem) ProfInst.RecordMem(idx, count, mem)  
 
 //记录系统内存信息 包含vm, rss等  
-#define PROF_RECORD_VM(idx, vm) ProfInst.record_vm(idx, vm)
-#define PROF_RERECORD_MEM(idx, count, mem) ProfInst.rerecord_mem(idx, count, mem)
+#define PROF_RECORD_VM(idx, vm) ProfInst.RecordVm(idx, vm)
+#define PROF_RERECORD_MEM(idx, count, mem) ProfInst.RerecordMem(idx, count, mem)
 
 //记录定时器 比较特殊.  根据调用的前后间隔进行累加  
-#define PROF_RECORD_TIMER(idx, stamp) ProfInst.record_timer(idx, stamp)  
+#define PROF_RECORD_TIMER(idx, stamp) ProfInst.RecordTimer(idx, stamp)  
 
 //记录用户自定义信息 没有额外处理   
-#define PROF_RECORD_USER(idx, a1, ...) ProfInst.record_user(idx, a1, ##__VA_ARGS__)
-#define PROF_RERECORD_USER(idx, a1, ...) ProfInst.record_user(idx, a1, ##__VA_ARGS__)
+#define PROF_RECORD_USER(idx, a1, ...) ProfInst.RecordUser(idx, a1, ##__VA_ARGS__)
+#define PROF_RERECORD_USER(idx, a1, ...) ProfInst.RecordUser(idx, a1, ##__VA_ARGS__)
 
 
 //-------手动计时器-----------
@@ -324,25 +324,25 @@ private:
 
 //使用特殊条目<0>进行一次性输出  
 //用于立刻输出性能信息而不是走报告输出  
-#define PROF_OUTPUT_TEMP_RECORD(desc)        do {ProfInst.output_temp_record(desc, (int)strlen(desc));}while(0)  
+#define PROF_OUTPUT_TEMP_RECORD(desc)        do {ProfInst.OutputTempRecord(desc, (int)strlen(desc));}while(0)  
 
 //立刻输出一条信息  
-#define PROF_OUTPUT_RECORD(idx)        do {ProfInst.output_one_record(idx);}while(0)
+#define PROF_OUTPUT_RECORD(idx)        do {ProfInst.OutputOneRecord(idx);}while(0)
 
-//输出完整报告 (OUT_FLAG_ALL)   
-#define PROF_OUTPUT_REPORT(...)    ProfInst.output_report(__VA_ARGS__)
+//输出完整报告 (kOutFlagAll)   
+#define PROF_OUTPUT_REPORT(...)    ProfInst.OutputReport(__VA_ARGS__)
 
 //其他立即输出
-#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, zprof::kRecordLevelFast>((int)ProfInstType::INNER_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_USER(desc, ...) do {PROF_RECORD_USER(ProfInstType::INNER_NULL, ##__VA_ARGS__);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_RECORD_MEM(ProfInstType::INNER_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_RECORD_CPU(ProfInstType::INNER_NULL, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_RECORD_USER(ProfInstType::INNER_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
-#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_RECORD_MEM(ProfInstType::INNER_NULL, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, zprof::kRecordLevelFast>((int)ProfInstType::kInnerNull, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_USER(desc, ...) do {PROF_RECORD_USER(ProfInstType::kInnerNull, ##__VA_ARGS__);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_RECORD_MEM(ProfInstType::kInnerNull, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_RECORD_CPU(ProfInstType::kInnerNull, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_USER(desc, num) do {PROF_RECORD_USER(ProfInstType::kInnerNull, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_SINGLE_MEM(desc, num) do {PROF_RECORD_MEM(ProfInstType::kInnerNull, 1, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 
 //输出当前进程的vm/rss信息 
-#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_NULL, zprof::get_self_mem()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
-#define PROF_OUTPUT_SYS_MEM(desc) do{PROF_RECORD_VM(ProfInstType::INNER_NULL, zprof::get_sys_mem()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
+#define PROF_OUTPUT_SELF_MEM(desc) do{PROF_RECORD_VM(ProfInstType::kInnerNull, zprof::GetSelfMem()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
+#define PROF_OUTPUT_SYS_MEM(desc) do{PROF_RECORD_VM(ProfInstType::kInnerNull, zprof::GetSysMem()); PROF_OUTPUT_TEMP_RECORD(desc);}while(0)
 
 
 #else
@@ -355,10 +355,10 @@ private:
 #define PROF_BIND_MERGE(id, cid) 
 #define PROF_BIND_CHILD_AND_MERGE(id, cid) 
 #define PROF_REG_AND_BIND_CHILD(id, cid)  
-#define PROF_REG_AND_BIND_MERGE(id, cid) 
+#define PROF_REG_AND_BindMerge(id, cid) 
 #define PROF_REG_AND_BIND_CHILD_AND_MERGE(id, cid) 
 
-#define PROF_INIT(title) 
+#define PROF_INIT(Title) 
 #define PROF_BUILD_JUMP_PATH()
 #define PROF_SET_OUTPUT(log_fun) 
 

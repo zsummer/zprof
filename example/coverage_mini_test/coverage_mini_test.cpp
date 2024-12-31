@@ -42,11 +42,11 @@ int main(int argc, char *argv[])
 
     PROF_OUTPUT_SELF_MEM("default fn log out  test(debug)");
 
-    ProfInst.set_output(&OutputLog);
+    ProfInst.SetOutputFunc(&OutputLog);
     PROF_OUTPUT_SELF_MEM("specify fn log out  test(info)");
-    ProfInst.set_output(NULL);
+    ProfInst.SetOutputFunc(NULL);
     PROF_OUTPUT_SELF_MEM("specify None log out  test(no log)");
-    ProfInst.set_output(&OutputLog);
+    ProfInst.SetOutputFunc(&OutputLog);
 
     //序列化打印所有记录  
     PROF_OUTPUT_REPORT();
@@ -59,15 +59,15 @@ int main(int argc, char *argv[])
     PROF_FAST_REGIST_NODE(RENAME_ID);
     for (int i = 0; i < ProfInst.compact_data_size(); i++)
     {
-        int ret = ProfInst.rename(RENAME_ID, "RENAME_ID");
+        int ret = ProfInst.Rename(RENAME_ID, "RENAME_ID");
         if (ret != 0)
         {
             LogInfo() << "rename full. rename count:" << i;
-            PROF_RECORD_VM(RENAME_ID, zprof::get_self_mem());
+            PROF_RECORD_VM(RENAME_ID, zprof::GetSelfMem());
             PROF_OUTPUT_RECORD(RENAME_ID);
         }
     }
-    PROF_RECORD_VM(RENAME_ID, zprof::get_self_mem());
+    PROF_RECORD_VM(RENAME_ID, zprof::GetSelfMem());
     PROF_OUTPUT_RECORD(RENAME_ID);
 
     for (unsigned int i = 0; i < 64; i++)

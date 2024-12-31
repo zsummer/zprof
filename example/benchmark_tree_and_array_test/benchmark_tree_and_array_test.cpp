@@ -58,7 +58,7 @@ public:
 int main(int argc, char *argv[])
 {
     PROF_INIT("inner prof");
-    //ProfInst.init("inner prof");
+    //ProfInst.Init("inner prof");
     PROF_DEFINE_AUTO_ANON_RECORD(delta, "self use mem in main func begin and exit");
     PROF_OUTPUT_SELF_MEM("self use mem in main func begin");
     if (true)

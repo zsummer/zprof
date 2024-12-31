@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     //scene 4: 使用<临时条目>输出性能信息 而不新增注册条目    
     if (true)
     {
-        static const int scene_4_tmp_id = ProfInstType::INNER_NULL;
+        static const int scene_4_tmp_id = ProfInstType::kInnerNull;
         if (true)
         {
             PROF_DEFINE_AUTO_RECORD(cost, scene_4_tmp_id);
@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
     //scene 6:  存在多个有交集的性能统计中, 可以先记录性能信息, 然后顺序执行写入<临时条目>性能信息并使用标准<临时条目>输出     
     if (true)
     {
-        static const int scene_6_tmp_id = ProfInstType::INNER_NULL;
+        static const int scene_6_tmp_id = ProfInstType::kInnerNull;
 
         PROF_DEFINE_COUNTER(cost);
         PROF_START_COUNTER(cost);
@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
 
     //scene 7:  以报告形式输出所有当前存在的性能信息  
     printf("%s", "scene 7: output report.\n");
-    ProfInst.output_report();
+    ProfInst.OutputReport();
 
     //scene 8: resident 
     static const int scene_8_resident_id = scene_3_id + 1;
@@ -209,14 +209,14 @@ int main(int argc, char* argv[])
 
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output report.\n");  
-        PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
+        PROF_OUTPUT_REPORT(zprof::kOutFlagDelcare);
 
         //清除unresident记录  
         PROF_RESET_DECLARE();
 
         //输出报告(只输出<注册条目> )   
         printf("%s", "scene 8: output cleaned(unresident)  report.\n");
-        PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
+        PROF_OUTPUT_REPORT(zprof::kOutFlagDelcare);
     }
 
 
@@ -302,9 +302,9 @@ int main(int argc, char* argv[])
         {
             PROF_RESTART_COUNTER(cost);
             //记录当前进程的vm使用情况  
-            PROF_RECORD_VM(PROF_REG_VM_USE, zprof::get_self_mem());
+            PROF_RECORD_VM(PROF_REG_VM_USE, zprof::GetSelfMem());
 
-            //同时可以记录record_vm这行的消耗到同一条目下的cpu消耗信息中 
+            //同时可以记录RecordVm这行的消耗到同一条目下的cpu消耗信息中 
             PROF_RECORD_CPU_WRAP(PROF_REG_VM_USE, 1, cost.stop_and_save().cost(), zprof::kRecordLevelNormal);
         }
 
@@ -331,7 +331,7 @@ int main(int argc, char* argv[])
 
         // 输出报告(只输出<声明条目>)  
         printf("%s", "scene 10 report\n");
-        PROF_OUTPUT_REPORT(zprof::OUT_FLAG_DELCARE);
+        PROF_OUTPUT_REPORT(zprof::kOutFlagDelcare);
     }
 
     return 0;
