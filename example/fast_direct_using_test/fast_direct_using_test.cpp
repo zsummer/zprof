@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         //注册ID  
-        ProfInst.regist(scene_2_id, "scene 2", zprof::T_CLOCK_FENCE_RDTSC, false, false);
+        ProfInst.regist(scene_2_id, "scene 2", zprof::kClockFenceRDTSC, false, false);
 
         //计算耗时 
         zprof::Clock<> cost;
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
     if (true)
     {
         //注册ID 
-        ProfInst.regist(scene_3_id, "scene 3", zprof::T_CLOCK_FENCE_RDTSC, false, false);
+        ProfInst.regist(scene_3_id, "scene 3", zprof::kClockFenceRDTSC, false, false);
 
         //计算耗时并记录到scene_3_id 
         if (true)
@@ -188,8 +188,8 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        ProfInst.regist(scene_8_resident_id, "scene_8_resident_id", zprof::T_CLOCK_FENCE_RDTSC, true, false);
-        ProfInst.regist(scene_8_unresident_id, "scene_8_resident_id", zprof::T_CLOCK_FENCE_RDTSC, false, false);
+        ProfInst.regist(scene_8_resident_id, "scene_8_resident_id", zprof::kClockFenceRDTSC, true, false);
+        ProfInst.regist(scene_8_unresident_id, "scene_8_resident_id", zprof::kClockFenceRDTSC, false, false);
 
         zprof::Clock<> cost;
         cost.start();
@@ -223,15 +223,15 @@ int main(int argc, char *argv[])
     if (true)
     {
         //定义条目   
-        ProfInst.regist(PROF_REG_ALL_MATH, "all math", zprof::T_CLOCK_FENCE_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_INC, "inc", zprof::T_CLOCK_FENCE_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_SUB, "sub", zprof::T_CLOCK_FENCE_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_MUL, "mul", zprof::T_CLOCK_FENCE_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_DIV, "div", zprof::T_CLOCK_FENCE_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_ALL_MATH, "all math", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.regist(PROF_REG_INC, "inc", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.regist(PROF_REG_SUB, "sub", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.regist(PROF_REG_MUL, "mul", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.regist(PROF_REG_DIV, "div", zprof::kClockFenceRDTSC, false, false);
 
-        ProfInst.regist(PROF_REG_VM_USE, "self vm use:", zprof::T_CLOCK_FENCE_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_TIMMER, "timer 50ms", zprof::T_CLOCK_FENCE_RDTSC, false, false);
-        ProfInst.regist(PROF_REG_SELF_SIZE, "self memory size", zprof::T_CLOCK_FENCE_RDTSC, false, false);
+        ProfInst.regist(PROF_REG_VM_USE, "self vm use:", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.regist(PROF_REG_TIMMER, "timer 50ms", zprof::kClockFenceRDTSC, false, false);
+        ProfInst.regist(PROF_REG_SELF_SIZE, "self memory size", zprof::kClockFenceRDTSC, false, false);
 
 
 

@@ -101,30 +101,30 @@
 namespace zprof
 {
 
-    enum clock_type
+    enum ClockType
     {
-        T_CLOCK_NULL,
-        T_CLOCK_SYS,
-        T_CLOCK_CLOCK,
-        T_CLOCK_CHRONO,
-        T_CLOCK_STEADY_CHRONO,
-        T_CLOCK_SYS_CHRONO,
-        T_CLOCK_SYS_MS, //wall clock 
+        kClockNULL,
+        kClockSystem,
+        kClockClock,
+        kClockChrono,
+        kClockSteadyChrono,
+        kClockSystemChrono,
+        kClockSystemMS, //wall clock 
 
-        T_CLOCK_PURE_RDTSC,
-        T_CLOCK_VOLATILE_RDTSC,
-        T_CLOCK_FENCE_RDTSC,
-        T_CLOCK_MFENCE_RDTSC,
-        T_CLOCK_LOCK_RDTSC,
-        T_CLOCK_RDTSCP,
-        T_CLOCK_BTB_FENCE_RDTSC,
-        T_CLOCK_BTB_MFENCE_RDTSC,
+        kClockPureRDTSC,
+        kClockVolatileRDTSC,
+        kClockFenceRDTSC,
+        kClockMFenceRDTSC,
+        kClockLockRDTSC,
+        kClockRDTSCP,
+        kClockBTBFenceRDTSC,
+        kClockBTBMFenceRDTSC,
 
-        T_CLOCK_MAX,
+        kClockMAX,
     };
 
 
-    struct vmdata
+    struct VMData
     {
         //don't use u64 or long long; uint64_t maybe is long ;
         unsigned long long vm_size;
@@ -132,14 +132,14 @@ namespace zprof
         unsigned long long shr_size;
     };
 
-    template<clock_type _C>
+    template<ClockType _C>
     inline long long get_tick()
     {
         return 0;
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_FENCE_RDTSC>()
+    inline long long get_tick<kClockFenceRDTSC>()
     {
 #ifdef WIN32
         _mm_lfence();
@@ -154,7 +154,7 @@ namespace zprof
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_BTB_FENCE_RDTSC>()
+    inline long long get_tick<kClockBTBFenceRDTSC>()
     {
 #ifdef WIN32
         long long ret = 0;
@@ -173,7 +173,7 @@ namespace zprof
 
 
     template<>
-    inline long long get_tick<T_CLOCK_VOLATILE_RDTSC>()
+    inline long long get_tick<kClockVolatileRDTSC>()
     {
 #ifdef WIN32
         return (long long)__rdtsc();
@@ -187,7 +187,7 @@ namespace zprof
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_PURE_RDTSC>()
+    inline long long get_tick<kClockPureRDTSC>()
     {
 #ifdef WIN32
         return (long long)__rdtsc();
@@ -201,7 +201,7 @@ namespace zprof
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_LOCK_RDTSC>()
+    inline long long get_tick<kClockLockRDTSC>()
     {
 #ifdef WIN32
         _mm_mfence();
@@ -217,7 +217,7 @@ namespace zprof
 
 
     template<>
-    inline long long get_tick<T_CLOCK_MFENCE_RDTSC>()
+    inline long long get_tick<kClockMFenceRDTSC>()
     {
 #ifdef WIN32
         long long ret = 0;
@@ -235,7 +235,7 @@ namespace zprof
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_BTB_MFENCE_RDTSC>()
+    inline long long get_tick<kClockBTBMFenceRDTSC>()
     {
 #ifdef WIN32
         _mm_mfence();
@@ -250,7 +250,7 @@ namespace zprof
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_RDTSCP>()
+    inline long long get_tick<kClockRDTSCP>()
     {
 #ifdef WIN32
         unsigned int ui = 0;
@@ -266,7 +266,7 @@ namespace zprof
 
 
     template<>
-    inline long long get_tick<T_CLOCK_CLOCK>()
+    inline long long get_tick<kClockClock>()
     {
 #if (defined WIN32)
         LARGE_INTEGER win_freq;
@@ -281,7 +281,7 @@ namespace zprof
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_SYS>()
+    inline long long get_tick<kClockSystem>()
     {
 #if (defined WIN32)
         FILETIME ft;
@@ -300,34 +300,34 @@ namespace zprof
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_CHRONO>()
+    inline long long get_tick<kClockChrono>()
     {
         return std::chrono::high_resolution_clock().now().time_since_epoch().count();
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_STEADY_CHRONO>()
+    inline long long get_tick<kClockSteadyChrono>()
     {
         return std::chrono::steady_clock().now().time_since_epoch().count();
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_SYS_CHRONO>()
+    inline long long get_tick<kClockSystemChrono>()
     {
         return std::chrono::system_clock().now().time_since_epoch().count();
     }
 
     template<>
-    inline long long get_tick<T_CLOCK_SYS_MS>()
+    inline long long get_tick<kClockSystemMS>()
     {
         return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }
 
 
 
-    inline vmdata get_self_mem()
+    inline VMData get_self_mem()
     {
-        vmdata vm = { 0ULL, 0ULL, 0ULL };
+        VMData vm = { 0ULL, 0ULL, 0ULL };
 #ifdef WIN32
         HANDLE hproc = GetCurrentProcess();
         PROCESS_MEMORY_COUNTERS pmc;
@@ -362,9 +362,9 @@ namespace zprof
         return vm;
     }
 
-    inline vmdata get_sys_mem()
+    inline VMData get_sys_mem()
     {
-        vmdata vm = { 0ULL, 0ULL, 0ULL };
+        VMData vm = { 0ULL, 0ULL, 0ULL };
 #ifdef WIN32
         MEMORYSTATUS state = { 0 };
         GlobalMemoryStatus(&state);
@@ -498,62 +498,62 @@ namespace zprof
 
 
 
-    template<clock_type _C>
+    template<ClockType _C>
     inline double get_frequency()
     {
         return 1.0;
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_FENCE_RDTSC>()
+    inline double get_frequency<kClockFenceRDTSC>()
     {
         const static double frequency_per_ns = get_cpu_freq() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
         return frequency_per_ns;
     }
     template<>
-    inline double get_frequency<T_CLOCK_BTB_FENCE_RDTSC>()
+    inline double get_frequency<kClockBTBFenceRDTSC>()
     {
-        return get_frequency<T_CLOCK_FENCE_RDTSC>();
+        return get_frequency<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_VOLATILE_RDTSC>()
+    inline double get_frequency<kClockVolatileRDTSC>()
     {
-        return get_frequency<T_CLOCK_FENCE_RDTSC>();
+        return get_frequency<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_PURE_RDTSC>()
+    inline double get_frequency<kClockPureRDTSC>()
     {
-        return get_frequency<T_CLOCK_FENCE_RDTSC>();
+        return get_frequency<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_LOCK_RDTSC>()
+    inline double get_frequency<kClockLockRDTSC>()
     {
-        return get_frequency<T_CLOCK_FENCE_RDTSC>();
+        return get_frequency<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_MFENCE_RDTSC>()
+    inline double get_frequency<kClockMFenceRDTSC>()
     {
-        return get_frequency<T_CLOCK_FENCE_RDTSC>();
+        return get_frequency<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_BTB_MFENCE_RDTSC>()
+    inline double get_frequency<kClockBTBMFenceRDTSC>()
     {
-        return get_frequency<T_CLOCK_FENCE_RDTSC>();
+        return get_frequency<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_RDTSCP>()
+    inline double get_frequency<kClockRDTSCP>()
     {
-        return get_frequency<T_CLOCK_FENCE_RDTSC>();
+        return get_frequency<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_CLOCK>()
+    inline double get_frequency<kClockClock>()
     {
 #ifdef WIN32
         double frequency_per_ns = 0;
@@ -568,40 +568,40 @@ namespace zprof
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_SYS>()
+    inline double get_frequency<kClockSystem>()
     {
         return 1.0;
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_CHRONO>()
+    inline double get_frequency<kClockChrono>()
     {
         const static double chrono_frequency = std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
         return chrono_frequency;
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_STEADY_CHRONO>()
+    inline double get_frequency<kClockSteadyChrono>()
     {
         const static double chrono_frequency = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
         return chrono_frequency;
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_SYS_CHRONO>()
+    inline double get_frequency<kClockSystemChrono>()
     {
         const static double chrono_frequency = std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1)).count() / 1000.0 / 1000.0 / 1000.0;
         return chrono_frequency;
     }
 
     template<>
-    inline double get_frequency<T_CLOCK_SYS_MS>()
+    inline double get_frequency<kClockSystemMS>()
     {
         static double chrono_frequency = 1.0 / 1000.0 / 1000.0;
         return chrono_frequency;
     }
 
-    template<clock_type _C>
+    template<ClockType _C>
     inline double get_inverse_frequency()
     {
         const static double inverse_frequency_per_ns = 1.0 / (get_frequency<_C>() <= 0.0 ? 1.0 : get_frequency<_C>());
@@ -611,11 +611,11 @@ namespace zprof
 
 
 
-    template<clock_type _C = T_CLOCK_VOLATILE_RDTSC>
-    class zclock_base
+    template<ClockType _C = kClockVolatileRDTSC>
+    class ClockBase
     {
     public:
-        static constexpr clock_type C = _C;
+        static constexpr ClockType C = _C;
 
     private:
         long long begin_;
@@ -628,17 +628,17 @@ namespace zprof
         void set_begin(long long val) { begin_ = val; }
         void set_ticks(long long ticks) { ticks_ = ticks; }
     public:
-        zclock_base()
+        ClockBase()
         {
             begin_ = 0;
             ticks_ = 0;
         }
-        zclock_base(long long start_clock)
+        ClockBase(long long start_clock)
         {
             begin_ = start_clock;
             ticks_ = 0;
         }
-        zclock_base(const zclock_base& c)
+        ClockBase(const ClockBase& c)
         {
             begin_ = c.begin_;
             ticks_ = c.ticks_;
@@ -649,13 +649,13 @@ namespace zprof
             ticks_ = 0;
         }
 
-        zclock_base& save()
+        ClockBase& save()
         {
             ticks_ = get_tick<_C>() - begin_;
             return *this;
         }
 
-        zclock_base& stop_and_save() { return save(); }
+        ClockBase& stop_and_save() { return save(); }
 
         long long ticks()const { return ticks_; }
         long long cycles()const { return ticks_; }
@@ -667,18 +667,18 @@ namespace zprof
         //utils  
     public:
         static long long now() { return get_tick<_C>(); }
-        static long long sys_now_ns() { return get_tick<T_CLOCK_SYS>(); }
-        static long long sys_now_us() { return get_tick<T_CLOCK_SYS>() / 1000; }
+        static long long sys_now_ns() { return get_tick<kClockSystem>(); }
+        static long long sys_now_us() { return get_tick<kClockSystem>() / 1000; }
         static long long sys_now_ms() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
         static double sys_now_s() { return std::chrono::duration<double>(std::chrono::system_clock().now().time_since_epoch()).count(); }
-        static vmdata get_self_mem() { return get_self_mem(); }
-        static vmdata get_sys_mem() { return get_sys_mem(); }
+        static VMData get_self_mem() { return get_self_mem(); }
+        static VMData get_sys_mem() { return get_sys_mem(); }
     };
 
-    template<clock_type _C = zclock_base<>::C>
-    using Clock = zclock_base<_C>;
-    using VMData = vmdata;
-    constexpr static zprof::clock_type CLOCK_DEFAULT = Clock<>::C;
+    template<ClockType _C = ClockBase<>::C>
+    using Clock = ClockBase<_C>;
+    using VMData = VMData;
+    constexpr static zprof::ClockType kClockDefatultLevel = Clock<>::C;
 
 
 

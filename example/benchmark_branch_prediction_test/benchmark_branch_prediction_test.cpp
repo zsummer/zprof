@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
         check_array[i] = rand()% THRESHLOD;
     }
 
-    zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+    zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
     volatile int val = 0;
     val++;
     volatile int loops = ARRAY_SIZE;

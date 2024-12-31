@@ -43,7 +43,7 @@ void entry_mem_test()
         char* ptr = new char[100];
         delete[] ptr;
     }
-    PROF_RECORD_CPU_WRAP(ENUM_BAT_ALLOC_FREE, 10000, cost.save().cost(), zprof::RECORD_LEVEL_NORMAL);
+    PROF_RECORD_CPU_WRAP(ENUM_BAT_ALLOC_FREE, 10000, cost.save().cost(), zprof::kRecordLevelNormal);
 
     PROF_DEFINE_AUTO_RECORD(guard, ENUM_ENTRY);
 
@@ -51,11 +51,11 @@ void entry_mem_test()
     {
         PROF_START_COUNTER(cost);
         char* ptr = new char[10];
-        PROF_RECORD_CPU_WRAP(ENUM_ALLOC, 1, cost.save().cost(), zprof::RECORD_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(ENUM_ALLOC, 1, cost.save().cost(), zprof::kRecordLevelNormal);
         PROF_RECORD_MEM(ENUM_ALLOC, 1, 10);
         PROF_START_COUNTER(cost);
         delete[] ptr;
-        PROF_RECORD_CPU_WRAP(ENUM_FREE, 1, cost.save().cost(), zprof::RECORD_LEVEL_NORMAL);
+        PROF_RECORD_CPU_WRAP(ENUM_FREE, 1, cost.save().cost(), zprof::kRecordLevelNormal);
         PROF_RECORD_MEM(ENUM_FREE, 1, 10);
     }
     test_record_cpu();

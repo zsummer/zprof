@@ -86,14 +86,14 @@ int main(int argc, char *argv[])
     ASSERT_TEST(zprof::get_self_mem().rss_size > 0);
     ASSERT_TEST(zprof::get_self_mem().rss_size <= zprof::get_self_mem().vm_size);
 
-    for (int i = zprof::T_CLOCK_NULL; i < zprof::T_CLOCK_MAX; i++)
+    for (int i = zprof::kClockNULL; i < zprof::kClockMAX; i++)
     {
         ASSERT_TEST(ProfInst.particle_for_ns(i) > 0.1, "i=", i); //CPU 10Ghz; 0.1ns  
         ASSERT_TEST(ProfInst.particle_for_ns(i) < 1000*1000*1000, "i=", i); //the clock particle is second ?  
     }
     
     int compact_len = (int)ProfInst.compact_writer().offset();
-    for (int i = zprof::T_CLOCK_NULL; i < zprof::T_CLOCK_MAX; i++)
+    for (int i = zprof::kClockNULL; i < zprof::kClockMAX; i++)
     {
         int decl_id = ProfInst.declare_begin_id() + i;
         ASSERT_TEST(!ProfInst.node(decl_id).active);
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     }
 
     
-    for (int i = zprof::T_CLOCK_NULL; i < zprof::T_CLOCK_MAX; i++)
+    for (int i = zprof::kClockNULL; i < zprof::kClockMAX; i++)
     {
         int decl_id = ProfInst.declare_begin_id() + i;
         char buf[100];
@@ -148,20 +148,20 @@ int main(int argc, char *argv[])
 
 
 
-        START_PROF_COUNTER(T_CLOCK_SYS);
-        START_PROF_COUNTER(T_CLOCK_CLOCK);
-        START_PROF_COUNTER(T_CLOCK_CHRONO);
-        START_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
-        START_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
-        START_PROF_COUNTER(T_CLOCK_SYS_MS);
-        START_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
-        START_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
-        START_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
-        START_PROF_COUNTER(T_CLOCK_BTB_FENCE_RDTSC);
-        START_PROF_COUNTER(T_CLOCK_RDTSCP);
-        START_PROF_COUNTER(T_CLOCK_MFENCE_RDTSC);
-        START_PROF_COUNTER(T_CLOCK_BTB_MFENCE_RDTSC);
-        START_PROF_COUNTER(T_CLOCK_LOCK_RDTSC);
+        START_PROF_COUNTER(kClockSystem);
+        START_PROF_COUNTER(kClockClock);
+        START_PROF_COUNTER(kClockChrono);
+        START_PROF_COUNTER(kClockSteadyChrono);
+        START_PROF_COUNTER(kClockSystemChrono);
+        START_PROF_COUNTER(kClockSystemMS);
+        START_PROF_COUNTER(kClockVolatileRDTSC);
+        START_PROF_COUNTER(kClockPureRDTSC);
+        START_PROF_COUNTER(kClockFenceRDTSC);
+        START_PROF_COUNTER(kClockBTBFenceRDTSC);
+        START_PROF_COUNTER(kClockRDTSCP);
+        START_PROF_COUNTER(kClockMFenceRDTSC);
+        START_PROF_COUNTER(kClockBTBMFenceRDTSC);
+        START_PROF_COUNTER(kClockLockRDTSC);
 
 
 
@@ -169,36 +169,36 @@ int main(int argc, char *argv[])
         for (int i = 0; i < sleep_count; i++)
         {
 
-            RESTART_PROF_COUNTER(T_CLOCK_SYS);
-            RESTART_PROF_COUNTER(T_CLOCK_CLOCK);
-            RESTART_PROF_COUNTER(T_CLOCK_CHRONO);
-            RESTART_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
-            RESTART_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
-            RESTART_PROF_COUNTER(T_CLOCK_SYS_MS);
-            RESTART_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_BTB_FENCE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_RDTSCP);
-            RESTART_PROF_COUNTER(T_CLOCK_MFENCE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_BTB_MFENCE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_LOCK_RDTSC);
+            RESTART_PROF_COUNTER(kClockSystem);
+            RESTART_PROF_COUNTER(kClockClock);
+            RESTART_PROF_COUNTER(kClockChrono);
+            RESTART_PROF_COUNTER(kClockSteadyChrono);
+            RESTART_PROF_COUNTER(kClockSystemChrono);
+            RESTART_PROF_COUNTER(kClockSystemMS);
+            RESTART_PROF_COUNTER(kClockVolatileRDTSC);
+            RESTART_PROF_COUNTER(kClockPureRDTSC);
+            RESTART_PROF_COUNTER(kClockFenceRDTSC);
+            RESTART_PROF_COUNTER(kClockBTBFenceRDTSC);
+            RESTART_PROF_COUNTER(kClockRDTSCP);
+            RESTART_PROF_COUNTER(kClockMFenceRDTSC);
+            RESTART_PROF_COUNTER(kClockBTBMFenceRDTSC);
+            RESTART_PROF_COUNTER(kClockLockRDTSC);
 
             std::this_thread::sleep_for(std::chrono::milliseconds(low_ms));
-            RECORD_PROF_COUNTER(T_CLOCK_SYS);
-            RECORD_PROF_COUNTER(T_CLOCK_CLOCK);
-            RECORD_PROF_COUNTER(T_CLOCK_CHRONO);
-            RECORD_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
-            RECORD_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
-            RECORD_PROF_COUNTER(T_CLOCK_SYS_MS);
-            RECORD_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_BTB_FENCE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_RDTSCP);
-            RECORD_PROF_COUNTER(T_CLOCK_MFENCE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_BTB_MFENCE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_LOCK_RDTSC);
+            RECORD_PROF_COUNTER(kClockSystem);
+            RECORD_PROF_COUNTER(kClockClock);
+            RECORD_PROF_COUNTER(kClockChrono);
+            RECORD_PROF_COUNTER(kClockSteadyChrono);
+            RECORD_PROF_COUNTER(kClockSystemChrono);
+            RECORD_PROF_COUNTER(kClockSystemMS);
+            RECORD_PROF_COUNTER(kClockVolatileRDTSC);
+            RECORD_PROF_COUNTER(kClockPureRDTSC);
+            RECORD_PROF_COUNTER(kClockFenceRDTSC);
+            RECORD_PROF_COUNTER(kClockBTBFenceRDTSC);
+            RECORD_PROF_COUNTER(kClockRDTSCP);
+            RECORD_PROF_COUNTER(kClockMFenceRDTSC);
+            RECORD_PROF_COUNTER(kClockBTBMFenceRDTSC);
+            RECORD_PROF_COUNTER(kClockLockRDTSC);
         }
 
 
@@ -208,40 +208,40 @@ int main(int argc, char *argv[])
         for (int i = 0; i < sleep_count; i++)
         {
 
-            RESTART_PROF_COUNTER(T_CLOCK_SYS);
-            RESTART_PROF_COUNTER(T_CLOCK_CLOCK);
-            RESTART_PROF_COUNTER(T_CLOCK_CHRONO);
-            RESTART_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
-            RESTART_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
-            RESTART_PROF_COUNTER(T_CLOCK_SYS_MS);
-            RESTART_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_BTB_FENCE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_RDTSCP);
-            RESTART_PROF_COUNTER(T_CLOCK_MFENCE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_BTB_MFENCE_RDTSC);
-            RESTART_PROF_COUNTER(T_CLOCK_LOCK_RDTSC);
+            RESTART_PROF_COUNTER(kClockSystem);
+            RESTART_PROF_COUNTER(kClockClock);
+            RESTART_PROF_COUNTER(kClockChrono);
+            RESTART_PROF_COUNTER(kClockSteadyChrono);
+            RESTART_PROF_COUNTER(kClockSystemChrono);
+            RESTART_PROF_COUNTER(kClockSystemMS);
+            RESTART_PROF_COUNTER(kClockVolatileRDTSC);
+            RESTART_PROF_COUNTER(kClockPureRDTSC);
+            RESTART_PROF_COUNTER(kClockFenceRDTSC);
+            RESTART_PROF_COUNTER(kClockBTBFenceRDTSC);
+            RESTART_PROF_COUNTER(kClockRDTSCP);
+            RESTART_PROF_COUNTER(kClockMFenceRDTSC);
+            RESTART_PROF_COUNTER(kClockBTBMFenceRDTSC);
+            RESTART_PROF_COUNTER(kClockLockRDTSC);
 
             std::this_thread::sleep_for(std::chrono::milliseconds(high_ms));
 
-            RECORD_PROF_COUNTER(T_CLOCK_SYS);
-            RECORD_PROF_COUNTER(T_CLOCK_CLOCK);
-            RECORD_PROF_COUNTER(T_CLOCK_CHRONO);
-            RECORD_PROF_COUNTER(T_CLOCK_STEADY_CHRONO);
-            RECORD_PROF_COUNTER(T_CLOCK_SYS_CHRONO);
-            RECORD_PROF_COUNTER(T_CLOCK_SYS_MS);
-            RECORD_PROF_COUNTER(T_CLOCK_VOLATILE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_PURE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_FENCE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_BTB_FENCE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_RDTSCP);
-            RECORD_PROF_COUNTER(T_CLOCK_MFENCE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_BTB_MFENCE_RDTSC);
-            RECORD_PROF_COUNTER(T_CLOCK_LOCK_RDTSC);
+            RECORD_PROF_COUNTER(kClockSystem);
+            RECORD_PROF_COUNTER(kClockClock);
+            RECORD_PROF_COUNTER(kClockChrono);
+            RECORD_PROF_COUNTER(kClockSteadyChrono);
+            RECORD_PROF_COUNTER(kClockSystemChrono);
+            RECORD_PROF_COUNTER(kClockSystemMS);
+            RECORD_PROF_COUNTER(kClockVolatileRDTSC);
+            RECORD_PROF_COUNTER(kClockPureRDTSC);
+            RECORD_PROF_COUNTER(kClockFenceRDTSC);
+            RECORD_PROF_COUNTER(kClockBTBFenceRDTSC);
+            RECORD_PROF_COUNTER(kClockRDTSCP);
+            RECORD_PROF_COUNTER(kClockMFenceRDTSC);
+            RECORD_PROF_COUNTER(kClockBTBMFenceRDTSC);
+            RECORD_PROF_COUNTER(kClockLockRDTSC);
         }
 
-        for (int i = zprof::T_CLOCK_NULL+1; i < zprof::T_CLOCK_MAX; i++)
+        for (int i = zprof::kClockNULL+1; i < zprof::kClockMAX; i++)
         {
             int decl_id = ProfInst.declare_begin_id() + i;
 

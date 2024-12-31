@@ -41,64 +41,64 @@
 
 
 //默认的全局实例定义 如需扩展可更换INST ID使用额外的全局实例      
-#define ProfInstType zprof::Record<PROF_DEFAULT_INST_ID, PROF_RESERVE_COUNT, PROF_DECLARE_COUNT>
+using ProfInstType = zprof::Record<PROF_DEFAULT_INST_ID, PROF_RESERVE_COUNT, PROF_DECLARE_COUNT>;
 #define ProfInst ProfInstType::instance()
 
 
 //包装函数 根据模版参数在编译阶段直接使用不同的入口  从而减少常见使用场景下的运行时判断消耗.  
-template<bool IS_BAT, zprof::RecordLevel PROF_LEVEL>
+template<bool kIsBat, zprof::RecordLevel kLevel>
 inline void ProfRecordWrap(int idx, long long count, long long ticks)
 {
 
 }
 
 template<>
-inline void ProfRecordWrap<true, zprof::RECORD_LEVEL_NORMAL>(int idx, long long count, long long ticks)
+inline void ProfRecordWrap<true, zprof::kRecordLevelNormal>(int idx, long long count, long long ticks)
 {
     ProfInst.record_cpu(idx, count, ticks);
 }
 
 template<>
-inline void ProfRecordWrap<false, zprof::RECORD_LEVEL_NORMAL>(int idx, long long count, long long ticks)
+inline void ProfRecordWrap<false, zprof::kRecordLevelNormal>(int idx, long long count, long long ticks)
 {
     (void)count;
     ProfInst.record_cpu(idx, ticks);
 }
 template<>
-inline void ProfRecordWrap<true, zprof::RECORD_LEVEL_FAST>(int idx, long long count, long long ticks)
+inline void ProfRecordWrap<true, zprof::kRecordLevelFast>(int idx, long long count, long long ticks)
 {
     ProfInst.record_cpu_no_sm(idx, count, ticks);
 }
 template<>
-inline void ProfRecordWrap<false, zprof::RECORD_LEVEL_FAST>(int idx, long long count, long long ticks)
+inline void ProfRecordWrap<false, zprof::kRecordLevelFast>(int idx, long long count, long long ticks)
 {
     (void)count;
     ProfInst.record_cpu_no_sm(idx, ticks);
 }
 
 template<>
-inline void ProfRecordWrap<true, zprof::RECORD_LEVEL_FULL>(int idx, long long count, long long ticks)
+inline void ProfRecordWrap<true, zprof::kRecordLevelFull>(int idx, long long count, long long ticks)
 {
     ProfInst.record_cpu_full(idx, count, ticks);
 }
 template<>
-inline void ProfRecordWrap<false, zprof::RECORD_LEVEL_FULL>(int idx, long long count, long long ticks)
+inline void ProfRecordWrap<false, zprof::kRecordLevelFull>(int idx, long long count, long long ticks)
 {
     (void)count;
     ProfInst.record_cpu_full(idx, ticks);
 }
 
-template<long long COUNT>
+template<long long kCount>
 struct ProfCountIsGreatOne
 {
-    static const bool is_bat = COUNT > 1;
+    static const bool is_bat = kCount > 1;
 };
 
 
 //RAII小函数  
 //用于快速记录<注册条目>的性能信息  
-template <long long COUNT = 1, zprof::RecordLevel PROF_LEVEL = zprof::RECORD_LEVEL_NORMAL,
-    zprof::clock_type C = zprof::CLOCK_DEFAULT>
+template <long long kCount = 1, zprof::RecordLevel kLevel = zprof::kRecordLevelNormal,
+    zprof::ClockType C = zprof::kClockDefatultLevel>
 class ProfAutoRecord
 {
 public:
@@ -110,7 +110,7 @@ public:
     }
     ~ProfAutoRecord()
     {
-        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>(idx_, COUNT, clock_.save().cost());
+        ProfRecordWrap<ProfCountIsGreatOne<kCount>::is_bat, kLevel>(idx_, kCount, clock_.save().cost());
     }
     zprof::Clock<C>& clock() { return clock_; }
 private:
@@ -153,15 +153,15 @@ private:
 //RAII小函数  
 //一次性记录并直接输出到日志 不需要提前注册任何条目  
 //整体性能影响要稍微高于<注册条目>  但消耗部分并不影响记录本身. 使用在常见的一次性流程或者demo场景中.    
-template <zprof::RecordLevel PROF_LEVEL = zprof::RECORD_LEVEL_NORMAL,
-    zprof::clock_type C = zprof::CLOCK_DEFAULT>
+template <zprof::RecordLevel kLevel = zprof::kRecordLevelNormal,
+    zprof::ClockType C = zprof::kClockDefatultLevel>
 class ProfAutoAnonRecord
 {
 public:
     ProfAutoAnonRecord(const char* desc, long long cnt = 1)
     {
-        strncpy(desc_, desc, PROF_NAME_MAX_SIZE);
-        desc_[PROF_NAME_MAX_SIZE - 1] = '\0'; 
+        strncpy(desc_, desc, zprof::kProfNameMaxSize);
+        desc_[zprof::kProfNameMaxSize - 1] = '\0';
         cnt_ = cnt;
         clock_.start();
     }
@@ -170,11 +170,11 @@ public:
         //ProfCountIsGreatOne
         if (cnt_ == 1)
         {
-            ProfRecordWrap<false, PROF_LEVEL>(ProfInstType::INNER_NULL, cnt_, clock_.save().cost());
+            ProfRecordWrap<false, kLevel>(ProfInstType::INNER_NULL, cnt_, clock_.save().cost());
         }
         else
         {
-            ProfRecordWrap<true, PROF_LEVEL>(ProfInstType::INNER_NULL, cnt_, clock_.save().cost());
+            ProfRecordWrap<true, kLevel>(ProfInstType::INNER_NULL, cnt_, clock_.save().cost());
         }
         ProfInst.output_temp_record(desc_);
     }
@@ -183,7 +183,7 @@ public:
 private:
     long long cnt_;
     zprof::Clock<C> clock_;
-    char desc_[PROF_NAME_MAX_SIZE];
+    char desc_[zprof::kProfNameMaxSize];
 };
 
 
@@ -201,13 +201,13 @@ private:
 #define PROF_REGIST_NODE(id, name, ct, resident, re_reg)  ProfInst.regist(id, name, ct, resident, re_reg)  
 
 //快速注册条目: 提供默认计时方式, 默认该条目不开启常驻模式, 一旦调用clear相关接口该条目记录的信息会被清零.  默认该条目未被注册过 当前为新注册  
-#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, zprof::CLOCK_DEFAULT,  false, false)
+#define PROF_FAST_REGIST_NODE_ALIAS(id, name)  ProfInst.regist(id, name, zprof::kClockDefatultLevel,  false, false)
 
 //快速注册条目: 同上, 名字也默认提供 即ID自身    
 #define PROF_FAST_REGIST_NODE(id)  PROF_FAST_REGIST_NODE_ALIAS(id, #id)
 
 //快速注册条目: 同上 但是为常驻条目 
-#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, zprof::CLOCK_DEFAULT,  true, false)  
+#define PROF_FAST_REGIST_RESIDENT_NODE(id)  ProfInst.regist(id, #id, zprof::kClockDefatultLevel,  true, false)  
 
 //绑定展示层级(父子)关系  
 #define PROF_BIND_CHILD(id, cid)  ProfInst.bind_childs(id, cid) 
@@ -262,15 +262,15 @@ private:
 #define PROF_RECORD_CPU_SAMPLE(idx, ticks) ProfInst.record_cpu(idx, ticks)   
 
 //记录性能消耗信息(携带总耗时和执行次数) 平均耗时约为6ns      
-//COUNT为常数 ticks为总耗时, 根据记录等级选择性存储 平滑数据, 抖动偏差 等     RecordLevel:RECORD_LEVEL_NORMAL  
-#define PROF_RECORD_CPU_WRAP(idx, COUNT, ticks, PROF_LEVEL)  \
-        ProfRecordWrap<ProfCountIsGreatOne<COUNT>::is_bat, PROF_LEVEL>((int)(idx), (long long)(COUNT), (long long)ticks)  
+//kCount为常数 ticks为总耗时, 根据记录等级选择性存储 平滑数据, 抖动偏差 等     RecordLevel:kRecordLevelNormal  
+#define PROF_RECORD_CPU_WRAP(idx, kCount, ticks, kLevel)  \
+        ProfRecordWrap<ProfCountIsGreatOne<kCount>::is_bat, kLevel>((int)(idx), (long long)(kCount), (long long)ticks)  
 //记录性能消耗信息: 同上, 但count非常数  
-#define PROF_RECORD_CPU_DYN_WRAP(idx, count, ticks, PROF_LEVEL)  \
-        ProfRecordWrap<true, PROF_LEVEL>((int)(idx), (long long)(count), (long long)ticks)
+#define PROF_RECORD_CPU_DYN_WRAP(idx, count, ticks, kLevel)  \
+        ProfRecordWrap<true, kLevel>((int)(idx), (long long)(count), (long long)ticks)
 
 //同PROF_RECORD_CPU_SAMPLE  
-#define PROF_RECORD_CPU(idx, ticks) PROF_RECORD_CPU_WRAP((idx), 1, (ticks), zprof::RECORD_LEVEL_NORMAL)
+#define PROF_RECORD_CPU(idx, ticks) PROF_RECORD_CPU_WRAP((idx), 1, (ticks), zprof::kRecordLevelNormal)
 
 //记录内存字节数    
 //输出日志时 进行可读性处理 带k,m,g等单位  
@@ -305,7 +305,7 @@ private:
 #define PROF_STOP_AND_SAVE_COUNTER(var) var.stop_and_save()  
 
 //设置当前时间为定时器结束时间 并写入idx对应的条目中  
-#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).stop_and_save().cost(), zprof::RECORD_LEVEL_NORMAL)
+#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).stop_and_save().cost(), zprof::kRecordLevelNormal)
 
 
 
@@ -333,7 +333,7 @@ private:
 #define PROF_OUTPUT_REPORT(...)    ProfInst.output_report(__VA_ARGS__)
 
 //其他立即输出
-#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, zprof::RECORD_LEVEL_FAST>((int)ProfInstType::INNER_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
+#define PROF_OUTPUT_MULTI_COUNT_CPU(desc, count, num)  do {ProfRecordWrap<true, zprof::kRecordLevelFast>((int)ProfInstType::INNER_NULL, (long long)(count), (long long)num);  PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_MULTI_COUNT_USER(desc, ...) do {PROF_RECORD_USER(ProfInstType::INNER_NULL, ##__VA_ARGS__);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_MULTI_COUNT_MEM(desc, count, num) do {PROF_RECORD_MEM(ProfInstType::INNER_NULL, count, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
 #define PROF_OUTPUT_SINGLE_CPU(desc, num)   do {PROF_RECORD_CPU(ProfInstType::INNER_NULL, num);PROF_OUTPUT_TEMP_RECORD(desc);} while(0)
@@ -371,8 +371,8 @@ private:
 
 #define PROF_RECORD_CPU_SAMPLE(idx, ticks) 
 #define PROF_RECORD_CPU(idx, ticks) 
-#define PROF_RECORD_CPU_WRAP(idx, COUNT, ticks, PROF_LEVEL) 
-#define PROF_RECORD_CPU_DYN_WRAP(idx, count, ticks, PROF_LEVEL)
+#define PROF_RECORD_CPU_WRAP(idx, kCount, ticks, kLevel) 
+#define PROF_RECORD_CPU_DYN_WRAP(idx, count, ticks, kLevel)
 #define PROF_RECORD_MEM(idx, count, mem) 
 #define PROF_RERECORD_MEM(idx, count, mem) 
 #define PROF_RECORD_VM(idx, vm) 
@@ -406,7 +406,7 @@ private:
 
 
 //临时兼容代码  
-template<zprof::clock_type T = zprof::Clock<>::C>
+template<zprof::ClockType T = zprof::Clock<>::C>
 using ProfCounter = zprof::Clock<T>;
 
 using ProfSerializer = zprof::Report;

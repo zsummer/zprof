@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         }
         buf[test_len -1] = '\0';
         
-        ProfInst.regist(ProfInst.reserve_begin_id(), buf, zprof::CLOCK_DEFAULT, false, true);
+        ProfInst.regist(ProfInst.reserve_begin_id(), buf, zprof::kClockDefatultLevel, false, true);
         PROF_RECORD_CPU(ProfInst.reserve_begin_id(), 0);
         delete[]buf;
         //PROF_RECORD_CPU()
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "CLOCK_SYS bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_SYS>();
+            cycles += zprof::get_tick<zprof::kClockSystem>();
         }
     }
 
@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "CLOCK_CLOCK bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_CLOCK>();
+            cycles += zprof::get_tick<zprof::kClockClock>();
         }
     }
 
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "CLOCK_CHRONO bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_CHRONO>();
+            cycles += zprof::get_tick<zprof::kClockChrono>();
         }
     }
 
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "CLOCK_RDTSC_PURE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_FENCE_RDTSC>();
+            cycles += zprof::get_tick<zprof::kClockFenceRDTSC>();
         }
     }
 
@@ -221,16 +221,16 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "CLOCK_RDTSC_NOFENCE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_PURE_RDTSC>();
+            cycles += zprof::get_tick<zprof::kClockPureRDTSC>();
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "T_CLOCK_RDTSC_PURE(lfence) bat 1000w");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "kClockRDTSC_PURE(lfence) bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_FENCE_RDTSC>();
+            cycles += zprof::get_tick<zprof::kClockFenceRDTSC>();
         }
     }
 
@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "CLOCK_RDTSC_BTB(lfence) bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>();
+            cycles += zprof::get_tick<zprof::kClockBTBFenceRDTSC>();
         }
     }
 
@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 20, "CLOCK_RDTSCP bat 20");
         for (size_t i = 0; i < 20; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_RDTSCP>();
+            cycles += zprof::get_tick<zprof::kClockRDTSCP>();
         }
     }
 
@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "CLOCK_RDTSC_MFENCE bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_MFENCE_RDTSC>();
+            cycles += zprof::get_tick<zprof::kClockMFenceRDTSC>();
         }
     }
     if (true)
@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "CLOCK_RDTSC_MFENCE_BTB bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles += zprof::get_tick<zprof::T_CLOCK_BTB_MFENCE_RDTSC>();
+            cycles += zprof::get_tick<zprof::kClockBTBMFenceRDTSC>();
         }
     }
 
@@ -276,7 +276,7 @@ int main(int argc, char *argv[])
         PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000, "CLOCK_RDTSC_LOCK bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
-            cycles +=zprof::get_tick<zprof::T_CLOCK_LOCK_RDTSC>();
+            cycles +=zprof::get_tick<zprof::kClockLockRDTSC>();
         }
     }
 
@@ -320,12 +320,12 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_SYS>();
+            cycles +=zprof::get_tick<zprof::kClockSystem>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_SYS dis 1000w");
@@ -333,12 +333,12 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_CLOCK>();
+            cycles +=zprof::get_tick<zprof::kClockClock>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_CLOCK dis 1000w");
@@ -346,12 +346,12 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_CHRONO>();
+            cycles +=zprof::get_tick<zprof::kClockChrono>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_CHRONO dis 1000w");
@@ -359,12 +359,12 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_FENCE_RDTSC>();
+            cycles +=zprof::get_tick<zprof::kClockFenceRDTSC>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_PURE dis 1000w");
@@ -372,12 +372,12 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_PURE_RDTSC>();
+            cycles +=zprof::get_tick<zprof::kClockPureRDTSC>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_NOFENCE dis 1000w");
@@ -385,36 +385,36 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_FENCE_RDTSC>();
+            cycles +=zprof::get_tick<zprof::kClockFenceRDTSC>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
-        PROF_OUTPUT_TEMP_RECORD("T_CLOCK_RDTSC_PURE(lfence) dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE(lfence) dis 1000w");
     }
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>();
+            cycles +=zprof::get_tick<zprof::kClockBTBFenceRDTSC>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_BTB (lfence) dis 1000w");
     }
     if (false)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 20; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles += zprof::get_tick<zprof::T_CLOCK_RDTSCP>();
+            cycles += zprof::get_tick<zprof::kClockRDTSCP>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSCP dis 20");
@@ -422,12 +422,12 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles += zprof::get_tick<zprof::T_CLOCK_MFENCE_RDTSC>();
+            cycles += zprof::get_tick<zprof::kClockMFenceRDTSC>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_MFENCE dis 1000w");
@@ -435,12 +435,12 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_BTB_MFENCE_RDTSC>();
+            cycles +=zprof::get_tick<zprof::kClockBTBMFenceRDTSC>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_MFENCE_BTB dis 1000w");
@@ -450,12 +450,12 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_LOCK_RDTSC>();
+            cycles +=zprof::get_tick<zprof::kClockLockRDTSC>();
             PROF_RECORD_CPU(ProfInstType::INNER_NULL, cost.stop_and_save().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_LOCK dis 1000w");
@@ -470,36 +470,36 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_FENCE_RDTSC>();
-            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_NULL, 1, cost.stop_and_save().cost(), zprof::RECORD_LEVEL_FAST);
+            cycles +=zprof::get_tick<zprof::kClockFenceRDTSC>();
+            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_NULL, 1, cost.stop_and_save().cost(), zprof::kRecordLevelFast);
         }
-        PROF_OUTPUT_TEMP_RECORD("T_CLOCK_RDTSC_PURE dis 1000w | RECORD_LEVEL_FAST | DEFAULT");
+        PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE dis 1000w | kRecordLevelFast | DEFAULT");
     }
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_SYS> cost;
+        zprof::Clock<zprof::kClockSystem> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_FENCE_RDTSC>();
-            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_NULL, 1, cost.stop_and_save().cost(), zprof::RECORD_LEVEL_FAST);
+            cycles +=zprof::get_tick<zprof::kClockFenceRDTSC>();
+            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_NULL, 1, cost.stop_and_save().cost(), zprof::kRecordLevelFast);
         }
-        PROF_OUTPUT_TEMP_RECORD("T_CLOCK_RDTSC_PURE dis 1000w | RECORD_LEVEL_FAST | CLOCK_SYS");
+        PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE dis 1000w | kRecordLevelFast | CLOCK_SYS");
     }
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_PURE_RDTSC> cost;
+        zprof::Clock<zprof::kClockPureRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
-            cycles +=zprof::get_tick<zprof::T_CLOCK_FENCE_RDTSC>();
-            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_NULL, 1, cost.stop_and_save().cost(), zprof::RECORD_LEVEL_FAST);
+            cycles +=zprof::get_tick<zprof::kClockFenceRDTSC>();
+            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_NULL, 1, cost.stop_and_save().cost(), zprof::kRecordLevelFast);
         }
-        PROF_OUTPUT_TEMP_RECORD("T_CLOCK_RDTSC_PURE dis 1000w | RECORD_LEVEL_FAST | CLOCK_RDTSC_NOFENCE");
+        PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE dis 1000w | kRecordLevelFast | CLOCK_RDTSC_NOFENCE");
     }
 
 
@@ -507,30 +507,30 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000 * 10, "PROF_DEFINE_AUTO_ANON_RECORD: T_CLOCK_RDTSC_PURE(lfence)*10 bat 1000w");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 1000 * 10000 * 10, "PROF_DEFINE_AUTO_ANON_RECORD: kClockRDTSC_PURE(lfence)*10 bat 1000w");
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             for (size_t i = 0; i < 10; i++)
             {
-                cycles +=zprof::get_tick<zprof::T_CLOCK_FENCE_RDTSC>();
+                cycles +=zprof::get_tick<zprof::kClockFenceRDTSC>();
             }
         }
     }
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         PROF_RESET_CHILD(ProfInstType::INNER_NULL);
         for (size_t i = 0; i < 1000 * 10000; i++)
         {
             PROF_START_COUNTER(cost);
             for (size_t i = 0; i < 10; i++)
             {
-                cycles +=zprof::get_tick<zprof::T_CLOCK_FENCE_RDTSC>();
+                cycles +=zprof::get_tick<zprof::kClockFenceRDTSC>();
             }
-            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_NULL, 1, cost.stop_and_save().cost(), zprof::RECORD_LEVEL_FAST);
+            PROF_RECORD_CPU_WRAP(ProfInstType::INNER_NULL, 1, cost.stop_and_save().cost(), zprof::kRecordLevelFast);
         }
-        PROF_OUTPUT_TEMP_RECORD("T_CLOCK_RDTSC_PURE(lfence) * 10 dis 1000w");
+        PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE(lfence) * 10 dis 1000w");
     }
 
     PROF_BUILD_JUMP_PATH();
@@ -580,54 +580,54 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "RECORD_LEVEL_FAST 1000w (without count)");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "kRecordLevelFast 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, zprof::RECORD_LEVEL_FAST);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, zprof::kRecordLevelFast);
         }
     }
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "RECORD_LEVEL_FAST 1000w (with count)");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "kRecordLevelFast 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, zprof::RECORD_LEVEL_FAST);
-        }
-    }
-
-    if (true)
-    {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "RECORD_LEVEL_NORMAL 1000w (without count)");
-        for (int i = 0; i < 10000000; i++)
-        {
-            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, zprof::RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, zprof::kRecordLevelFast);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "RECORD_LEVEL_NORMAL 1000w (with count)");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "kRecordLevelNormal 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, zprof::RECORD_LEVEL_NORMAL);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, zprof::kRecordLevelNormal);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "RECORD_LEVEL_FULL 1000w (without count)");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "kRecordLevelNormal 1000w (with count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, zprof::RECORD_LEVEL_FULL);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, zprof::kRecordLevelNormal);
         }
     }
 
     if (true)
     {
-        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "RECORD_LEVEL_FULL 1000w (with count)");
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "kRecordLevelFull 1000w (without count)");
         for (int i = 0; i < 10000000; i++)
         {
-            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, zprof::RECORD_LEVEL_FULL);
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 1, 1000, zprof::kRecordLevelFull);
+        }
+    }
+
+    if (true)
+    {
+        PROF_DEFINE_AUTO_MULTI_ANON_RECORD(guard, 10000000, "kRecordLevelFull 1000w (with count)");
+        for (int i = 0; i < 10000000; i++)
+        {
+            PROF_RECORD_CPU_WRAP(ENUM_PROF_TEST, 10, 1000, zprof::kRecordLevelFull);
         }
     }
 
@@ -646,8 +646,8 @@ int main(int argc, char *argv[])
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
-            start =zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>();
-            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>() - start);
+            start =zprof::get_tick<zprof::kClockBTBFenceRDTSC>();
+            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::kClockBTBFenceRDTSC>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call empty rdtsc btb");
     }
@@ -657,8 +657,8 @@ int main(int argc, char *argv[])
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
-            start =zprof::get_tick<zprof::T_CLOCK_PURE_RDTSC>();
-            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::T_CLOCK_PURE_RDTSC>() - start);
+            start =zprof::get_tick<zprof::kClockPureRDTSC>();
+            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::kClockPureRDTSC>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call nofence empty");
 
@@ -672,9 +672,9 @@ int main(int argc, char *argv[])
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
-            start =zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>();
+            start =zprof::get_tick<zprof::kClockBTBFenceRDTSC>();
             cycles = cycles / start + i;
-            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>() - start);
+            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::kClockBTBFenceRDTSC>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call fdiv");
     }
@@ -686,9 +686,9 @@ int main(int argc, char *argv[])
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
-            start =zprof::get_tick<zprof::T_CLOCK_PURE_RDTSC>();
+            start =zprof::get_tick<zprof::kClockPureRDTSC>();
             cycles = cycles / start + i;
-            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::T_CLOCK_PURE_RDTSC>() - start);
+            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::kClockPureRDTSC>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call fdiv no any fence");
     }
@@ -699,9 +699,9 @@ int main(int argc, char *argv[])
         long long start = 0;
         for (int i = 0; i < 10000000; i++)
         {
-            start =zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>();
+            start =zprof::get_tick<zprof::kClockBTBFenceRDTSC>();
             cycles = cycles * start;
-            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::T_CLOCK_BTB_FENCE_RDTSC>() - start);
+            PROF_RECORD_CPU(ProfInstType::INNER_NULL,zprof::get_tick<zprof::kClockBTBFenceRDTSC>() - start);
         }
         PROF_OUTPUT_TEMP_RECORD("call fmul by rdtsc btb");
     }
@@ -813,11 +813,11 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_FENCE_RDTSC> rdtsc;
-        zprof::Clock<zprof::T_CLOCK_SYS> sys;
-        zprof::Clock<zprof::T_CLOCK_CLOCK> linux_clock;
-        zprof::Clock<zprof::T_CLOCK_CHRONO> chrono_clock;
-        zprof::Clock<zprof::T_CLOCK_SYS_MS> ms_clock;
+        zprof::Clock<zprof::kClockFenceRDTSC> rdtsc;
+        zprof::Clock<zprof::kClockSystem> sys;
+        zprof::Clock<zprof::kClockClock> linux_clock;
+        zprof::Clock<zprof::kClockChrono> chrono_clock;
+        zprof::Clock<zprof::kClockSystemMS> ms_clock;
         rdtsc.start();
         sys.start();
         linux_clock.start();

@@ -43,11 +43,11 @@ namespace zprof
     #define PROF_LINE_FEED "\n"
     #endif // WIN32
 
+    static constexpr int kProfNameMaxSize = 50;
+    static constexpr int kProfDescMaxSize = 100;
+    static constexpr int kProfLineMinSize = 200;
+    static constexpr int kProfMaxDepth = 5;
 
-    #define PROF_NAME_MAX_SIZE 50  
-    #define PROF_DESC_MAX_SIZE 100
-    #define PROF_LINE_MIN_SIZE 200
-    #define PROF_MAX_DEPTH 5
 
     class Report
     {
@@ -335,8 +335,8 @@ namespace zprof
     {
         static const char* const pi = "                                                            ";
         constexpr int pi_size = 50;
-        static_assert(pi_size >= PROF_NAME_MAX_SIZE, "");
-        static_assert(pi_size >= PROF_MAX_DEPTH*2, "indent is two blank");
+        static_assert(pi_size >= kProfNameMaxSize, "");
+        static_assert(pi_size >= kProfMaxDepth*2, "indent is two blank");
         if (count > pi_size)
         {
             count = pi_size;
@@ -360,7 +360,7 @@ namespace zprof
     {
         static const char* const pi = "------------------------------------------------------------";
         constexpr int pi_size = 50;
-        static_assert(pi_size >= PROF_NAME_MAX_SIZE, "");
+        static_assert(pi_size >= kProfNameMaxSize, "");
         if (count > pi_size)
         {
             count = pi_size;
@@ -382,7 +382,7 @@ namespace zprof
     {
     public:
         static const int BUFF_SIZE = 350;
-        static_assert(BUFF_SIZE > PROF_LINE_MIN_SIZE, "");
+        static_assert(BUFF_SIZE > kProfLineMinSize, "");
         StaticReport() :Report(buff_, BUFF_SIZE)
         {
             buff_[0] = '\0';

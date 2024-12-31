@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_PURE_RDTSC> cost;
+        zprof::Clock<zprof::kClockPureRDTSC> cost;
         //record empty cost 
         cost.start();
         cost.stop_and_save();
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockFenceRDTSC> cost;
         //record empty cost 
         cost.start();
         cost.stop_and_save();
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_FENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         //record empty cost 
         cost.start();
         cost.stop_and_save();
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_MFENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockMFenceRDTSC> cost;
         //record empty cost 
         cost.start();
         cost.stop_and_save();
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_BTB_MFENCE_RDTSC> cost;
+        zprof::Clock<zprof::kClockBTBMFenceRDTSC> cost;
         //record empty cost 
         cost.start();
         cost.stop_and_save();
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     //单独使用性能计数器  
     if (true)
     {
-        zprof::Clock<zprof::T_CLOCK_LOCK_RDTSC> cost;
+        zprof::Clock<zprof::kClockLockRDTSC> cost;
         //record empty cost 
         cost.start();
         cost.stop_and_save();

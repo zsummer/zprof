@@ -33,17 +33,18 @@ namespace zprof
 
     #define SMOOTH_CYCLES(s_ticks, ticks) (   (s_ticks * 12 + ticks * 4) >> 4   ) 
     #define SMOOTH_CYCLES_WITH_INIT(s_ticks, ticks) ( (s_ticks) == 0 ? (ticks) : SMOOTH_CYCLES(s_ticks, ticks) )
-    #define COMPACT_DATA_UNIT_SIZE 30
-    #define COMPACT_DATA_BUFF_MIN_SIZE 150    
-    #define RECORD_FORMAT_ALIGN_SIZE 35
     #define UNWIND_STR(str) str, strlen(str)
 
 
+    static constexpr int  kCompactDataUnitSize = 30;
+    static constexpr int  kCompactDataBuffMinSize = 150;
+    static constexpr int  kRecordFormatAlignSize = 35;
+
     enum RecordLevel
     {
-        RECORD_LEVEL_NORMAL,
-        RECORD_LEVEL_FAST,
-        RECORD_LEVEL_FULL,
+        kRecordLevelNormal,
+        kRecordLevelFast,
+        kRecordLevelFull,
     };
 
 
@@ -190,7 +191,7 @@ namespace zprof
         static constexpr int end_id() { return begin_id() + count(); }
         static constexpr int max_count() { return count(); }
 
-        static constexpr int compact_data_size() { return COMPACT_DATA_UNIT_SIZE * (1+end_id()); } //reserve node no name 
+        static constexpr int compact_data_size() { return kCompactDataUnitSize * (1+end_id()); } //reserve node no name 
         static_assert(end_id() == INNER_MAX + reserve_count() + declare_count(), "");
 
 
@@ -505,7 +506,7 @@ namespace zprof
     private:
         RecordNode nodes_[end_id()];
         int declare_window_;
-        double particle_for_ns_[T_CLOCK_MAX];
+        double particle_for_ns_[kClockMAX];
     };
 
     template<int INST, int RESERVE, int DECLARE>
@@ -518,7 +519,7 @@ namespace zprof
 
         output_ = &Record::default_output;  //set default log;
 
-        static_assert(compact_data_size() > COMPACT_DATA_BUFF_MIN_SIZE, "");
+        static_assert(compact_data_size() > kCompactDataBuffMinSize, "");
         compact_data_[0] = '\0';
         unknown_desc_ = 0;
         compact_writer_.push_string("unknown");
@@ -556,50 +557,50 @@ namespace zprof
         
 
 
-        particle_for_ns_[T_CLOCK_NULL] = 0;
-        particle_for_ns_[T_CLOCK_SYS] = get_inverse_frequency<T_CLOCK_SYS>();
-        particle_for_ns_[T_CLOCK_CLOCK] = get_inverse_frequency<T_CLOCK_CLOCK>();
-        particle_for_ns_[T_CLOCK_CHRONO] = get_inverse_frequency<T_CLOCK_CHRONO>();
-        particle_for_ns_[T_CLOCK_STEADY_CHRONO] = get_inverse_frequency<T_CLOCK_STEADY_CHRONO>();
-        particle_for_ns_[T_CLOCK_SYS_CHRONO] = get_inverse_frequency<T_CLOCK_SYS_CHRONO>();
-        particle_for_ns_[T_CLOCK_SYS_MS] = get_inverse_frequency<T_CLOCK_SYS_MS>();
-        particle_for_ns_[T_CLOCK_PURE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
-        particle_for_ns_[T_CLOCK_VOLATILE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
-        particle_for_ns_[T_CLOCK_FENCE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
-        particle_for_ns_[T_CLOCK_MFENCE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
-        particle_for_ns_[T_CLOCK_LOCK_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
-        particle_for_ns_[T_CLOCK_RDTSCP] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
-        particle_for_ns_[T_CLOCK_BTB_FENCE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
-        particle_for_ns_[T_CLOCK_BTB_MFENCE_RDTSC] = get_inverse_frequency<T_CLOCK_PURE_RDTSC>();
+        particle_for_ns_[kClockNULL] = 0;
+        particle_for_ns_[kClockSystem] = get_inverse_frequency<kClockSystem>();
+        particle_for_ns_[kClockClock] = get_inverse_frequency<kClockClock>();
+        particle_for_ns_[kClockChrono] = get_inverse_frequency<kClockChrono>();
+        particle_for_ns_[kClockSteadyChrono] = get_inverse_frequency<kClockSteadyChrono>();
+        particle_for_ns_[kClockSystemChrono] = get_inverse_frequency<kClockSystemChrono>();
+        particle_for_ns_[kClockSystemMS] = get_inverse_frequency<kClockSystemMS>();
+        particle_for_ns_[kClockPureRDTSC] = get_inverse_frequency<kClockPureRDTSC>();
+        particle_for_ns_[kClockVolatileRDTSC] = get_inverse_frequency<kClockPureRDTSC>();
+        particle_for_ns_[kClockFenceRDTSC] = get_inverse_frequency<kClockPureRDTSC>();
+        particle_for_ns_[kClockMFenceRDTSC] = get_inverse_frequency<kClockPureRDTSC>();
+        particle_for_ns_[kClockLockRDTSC] = get_inverse_frequency<kClockPureRDTSC>();
+        particle_for_ns_[kClockRDTSCP] = get_inverse_frequency<kClockPureRDTSC>();
+        particle_for_ns_[kClockBTBFenceRDTSC] = get_inverse_frequency<kClockPureRDTSC>();
+        particle_for_ns_[kClockBTBMFenceRDTSC] = get_inverse_frequency<kClockPureRDTSC>();
 
-        particle_for_ns_[T_CLOCK_NULL] = get_inverse_frequency<zprof::CLOCK_DEFAULT >();
+        particle_for_ns_[kClockNULL] = get_inverse_frequency<zprof::kClockDefatultLevel >();
 
         for (int i = begin_id(); i < reserve_end_id(); i++)
         {
-            regist(i, "reserve", zprof::CLOCK_DEFAULT, false, false);
+            regist(i, "reserve", zprof::kClockDefatultLevel, false, false);
         }
 
-        regist(INNER_NULL, "PROF_NULL", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_INIT_TS, "PROF_INIT_TS", T_CLOCK_SYS_MS, true, true);
-        regist(INNER_RESET_TS, "PROF_RESET_TS", T_CLOCK_SYS_MS, true, true);
-        regist(INNER_OUTPUT_TS, "PROF_OUTPUT_TS", T_CLOCK_SYS_MS, true, true);
-        regist(INNER_INIT_COST, "PROF_INIT_COST", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_MERGE_COST, "PROF_MERGE_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_NULL, "PROF_NULL", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_INIT_TS, "PROF_INIT_TS", kClockSystemMS, true, true);
+        regist(INNER_RESET_TS, "PROF_RESET_TS", kClockSystemMS, true, true);
+        regist(INNER_OUTPUT_TS, "PROF_OUTPUT_TS", kClockSystemMS, true, true);
+        regist(INNER_INIT_COST, "PROF_INIT_COST", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_MERGE_COST, "PROF_MERGE_COST", zprof::kClockDefatultLevel, true, true);
 
-        regist(INNER_REPORT_COST, "PROF_REPORT_COST", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_SERIALIZE_COST, "PROF_SERIALIZE_COST", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_OUTPUT_COST, "PROF_OUTPUT_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_REPORT_COST, "PROF_REPORT_COST", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_SERIALIZE_COST, "PROF_SERIALIZE_COST", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_OUTPUT_COST, "PROF_OUTPUT_COST", zprof::kClockDefatultLevel, true, true);
     
-        regist(INNER_CLOCK_COST, "PROF_CLOCK_COST", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_RECORD_COST, "PROF_RECORD_COST", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_RECORD_SM_COST, "PROF_RECORD_SM_COST", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_RECORD_FULL_COST, "PROF_RECORD_FULL_COST", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_CLOCK_RECORD_COST, "PROF_CLOCK_RECORD_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_CLOCK_COST, "PROF_CLOCK_COST", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_RECORD_COST, "PROF_RECORD_COST", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_RECORD_SM_COST, "PROF_RECORD_SM_COST", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_RECORD_FULL_COST, "PROF_RECORD_FULL_COST", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_CLOCK_RECORD_COST, "PROF_CLOCK_RECORD_COST", zprof::kClockDefatultLevel, true, true);
 
-        regist(INNER_ORIGIN_INC, "PROF_ORIGIN_INC", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_ATOM_RELEAX, "PROF_ATOM_RELEAX", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_ATOM_COST, "PROF_ATOM_COST", zprof::CLOCK_DEFAULT, true, true);
-        regist(INNER_ATOM_SEQ_COST, "PROF_ATOM_SEQ_COST", zprof::CLOCK_DEFAULT, true, true);
+        regist(INNER_ORIGIN_INC, "PROF_ORIGIN_INC", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_ATOM_RELEAX, "PROF_ATOM_RELEAX", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_ATOM_COST, "PROF_ATOM_COST", zprof::kClockDefatultLevel, true, true);
+        regist(INNER_ATOM_SEQ_COST, "PROF_ATOM_SEQ_COST", zprof::kClockDefatultLevel, true, true);
 
 
         if (true)
@@ -816,7 +817,7 @@ namespace zprof
         reset_mem(idx);
         reset_timer(idx);
         reset_user(idx);
-        if (depth > PROF_MAX_DEPTH)
+        if (depth > kProfMaxDepth)
         {
             return;
         }
@@ -987,7 +988,7 @@ namespace zprof
     template<int INST, int RESERVE, int DECLARE>
     int Record<INST, RESERVE, DECLARE>::output_cpu(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank)
     {
-        if (name == NULL  || name_len + name_blank > PROF_DESC_MAX_SIZE)
+        if (name == NULL  || name_len + name_blank > kProfDescMaxSize)
         {
             return -10;
         }
@@ -1054,7 +1055,7 @@ namespace zprof
     template<int INST, int RESERVE, int DECLARE>
     int Record<INST, RESERVE, DECLARE>::output_mem(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank)
     {
-        if (name == NULL || name_len + name_blank > PROF_DESC_MAX_SIZE)
+        if (name == NULL || name_len + name_blank > kProfDescMaxSize)
         {
             return -20;
         }
@@ -1099,7 +1100,7 @@ namespace zprof
     template<int INST, int RESERVE, int DECLARE>
     int Record<INST, RESERVE, DECLARE>::output_vm(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank)
     {
-        if (name == NULL || name_len + name_blank > PROF_DESC_MAX_SIZE)
+        if (name == NULL || name_len + name_blank > kProfDescMaxSize)
         {
             return -30;
         }
@@ -1140,7 +1141,7 @@ namespace zprof
     template<int INST, int RESERVE, int DECLARE>
     int Record<INST, RESERVE, DECLARE>::output_user(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank)
     {
-        if (name == NULL || name_len + name_blank > PROF_DESC_MAX_SIZE)
+        if (name == NULL || name_len + name_blank > kProfDescMaxSize)
         {
             return -40;
         }
@@ -1186,7 +1187,7 @@ namespace zprof
             return -1;
         }
 
-        if (rp.buff_len() <= PROF_LINE_MIN_SIZE)
+        if (rp.buff_len() <= kProfLineMinSize)
         {
             return -2;
         }
@@ -1210,7 +1211,7 @@ namespace zprof
         {
             return 0;
         }
-        if (node.traits.clk >= T_CLOCK_MAX)
+        if (node.traits.clk >= kClockMAX)
         {
             return 0;
         }
@@ -1229,9 +1230,9 @@ namespace zprof
         }
 
         int name_blank = (int)name_len + depth  + depth;
-        name_blank = name_blank < RECORD_FORMAT_ALIGN_SIZE ? RECORD_FORMAT_ALIGN_SIZE - name_blank : 0;
+        name_blank = name_blank < kRecordFormatAlignSize ? kRecordFormatAlignSize - name_blank : 0;
 
-        if (name_len + name_blank > PROF_DESC_MAX_SIZE)
+        if (name_len + name_blank > kProfDescMaxSize)
         {
             return -5;
         }
@@ -1259,7 +1260,7 @@ namespace zprof
             output_user(node, rp, entry_idx, depth, name, name_len, name_blank);
         }
 
-        if (depth > PROF_MAX_DEPTH)
+        if (depth > kProfMaxDepth)
         {
             rp.push_indent(depth * 2);
             output_and_clean(rp);
