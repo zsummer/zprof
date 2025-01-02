@@ -43,13 +43,13 @@ int main(int argc, char *argv[])
     if (true)
     {
         zprof::Clock<> cost;
-        cost.start();
+        cost.Start();
         for (size_t i = 0; i < 1000; i++)
         {
             volatile size_t inc = 0;
             inc++;
         }
-        cost.stop_and_save();
+        cost.StopAndSave();
         printf("scene 1: inc * 1000 used:%lld ns \n", cost.cost_ns());
         printf("scene 1: inc avg used:%g ns \n", cost.cost_ns()/1000.0);
     }
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
         //计算耗时 
         zprof::Clock<> cost;
-        cost.start();
+        cost.Start();
 
         for (size_t i = 0; i < 1000; i++)
         {
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
             inc++;
         }
 
-        cost.stop_and_save();
+        cost.StopAndSave();
 
         //记录到条目
         ProfInst.RecordCpu(scene_2_id, 1, cost.cost());
@@ -147,10 +147,10 @@ int main(int argc, char *argv[])
         static const int scene_6_tmp_id = ProfInstType::kInnerNull;
 
         zprof::Clock<> cost;
-        cost.start();
+        cost.Start();
 
         zprof::Clock<> inc_cost;
-        inc_cost.start();
+        inc_cost.Start();
 
         for (size_t i = 0; i < 1000; i++)
         {
@@ -158,14 +158,14 @@ int main(int argc, char *argv[])
             inc++;
         }
 
-        inc_cost.stop_and_save();
+        inc_cost.StopAndSave();
 
         for (size_t i = 0; i < 1000; i++)
         {
             volatile size_t sub = 0;
             sub--;
         }
-        cost.stop_and_save();
+        cost.StopAndSave();
         
         ProfInst.RecordCpu(scene_6_tmp_id, 1, cost.cost());
         ProfInst.OutputTempRecord("scene_6_tmp_id: total cost");
@@ -192,13 +192,13 @@ int main(int argc, char *argv[])
         ProfInst.Regist(scene_8_unresident_id, "scene_8_resident_id", zprof::kClockFenceRDTSC, false, false);
 
         zprof::Clock<> cost;
-        cost.start();
+        cost.Start();
         for (size_t i = 0; i < 1000; i++)
         {
             volatile size_t inc = 0;
             inc++;
         }
-        cost.stop_and_save();
+        cost.StopAndSave();
         //写入记录信息  
         ProfInst.RecordCpu(scene_8_resident_id, 1000, cost.cost());
         ProfInst.RecordCpu(scene_8_unresident_id, 1000, cost.cost());
@@ -256,48 +256,48 @@ int main(int argc, char *argv[])
         //性能统计  
         if (true)
         {
-            cost.start();
+            cost.Start();
             for (size_t i = 0; i < 1000; i++)
             {
                 volatile size_t inc = 0;
                 inc++;
             }
-            ProfInst.RecordCpu(PROF_REG_INC, 1000, cost.stop_and_save().cost());
+            ProfInst.RecordCpu(PROF_REG_INC, 1000, cost.StopAndSave().cost());
 
-            cost.start();
+            cost.Start();
             for (size_t i = 0; i < 1000; i++)
             {
                 volatile size_t sub = 0;
                 sub--;
             }
-            ProfInst.RecordCpu(PROF_REG_SUB, 1000, cost.stop_and_save().cost());
+            ProfInst.RecordCpu(PROF_REG_SUB, 1000, cost.StopAndSave().cost());
 
-            cost.start();
+            cost.Start();
             for (size_t i = 0; i < 1000; i++)
             {
                 volatile size_t mul = i;
                 mul*=1000;
             }
-            ProfInst.RecordCpu(PROF_REG_MUL, 1000, cost.stop_and_save().cost());
+            ProfInst.RecordCpu(PROF_REG_MUL, 1000, cost.StopAndSave().cost());
 
-            cost.start();
+            cost.Start();
             for (size_t i = 0; i < 1000; i++)
             {
                 volatile size_t div = i;
                 div /= 1000;
             }
-            ProfInst.RecordCpu(PROF_REG_DIV, 1000, cost.stop_and_save().cost());
+            ProfInst.RecordCpu(PROF_REG_DIV, 1000, cost.StopAndSave().cost());
         }
 
         //vm统计  
         if (true)
         {
-            cost.start();
+            cost.Start();
             //记录当前进程的vm使用情况  
             ProfInst.RecordVm(PROF_REG_VM_USE, zprof::GetSelfMem());
 
             //同时可以记录RecordVm这行的消耗到同一条目下的cpu消耗信息中 
-            ProfInst.RecordCpu(PROF_REG_VM_USE, cost.stop_and_save().cost());
+            ProfInst.RecordCpu(PROF_REG_VM_USE, cost.StopAndSave().cost());
         }
 
         //记录字节数量  
@@ -309,7 +309,7 @@ int main(int argc, char *argv[])
         //定时器稳定性
         for (size_t i = 0; i < 5; i++)
         {
-            cost.start();
+            cost.Start();
             ProfInst.RecordTimer(PROF_REG_TIMMER, cost.get_begin());
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }

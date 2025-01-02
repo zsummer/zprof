@@ -62,9 +62,9 @@ while(0)
 
 
 
-#define START_PROF_COUNTER(T) zprof::Clock<zprof::T> var_##T;  var_##T.start();
-#define RESTART_PROF_COUNTER(T) var_##T.start();
-#define RECORD_PROF_COUNTER(T) ProfInst.RecordCpuFull(ProfInst.declare_begin_id() + zprof::T, var_##T.stop_and_save().cost());;
+#define START_PROF_COUNTER(T) zprof::Clock<zprof::T> var_##T;  var_##T.Start();
+#define RESTART_PROF_COUNTER(T) var_##T.Start();
+#define RECORD_PROF_COUNTER(T) ProfInst.RecordCpuFull(ProfInst.declare_begin_id() + zprof::T, var_##T.StopAndSave().cost());;
 
 
 static inline void OutputLog(const zprof::Report& rp)

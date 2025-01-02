@@ -62,8 +62,8 @@ int main(int argc, char *argv[])
     {
         zprof::Clock<zprof::kClockPureRDTSC> cost;
         //record empty cost 
-        cost.start();
-        cost.stop_and_save();
+        cost.Start();
+        cost.StopAndSave();
         long long empty_cost = cost.cost();
         long long empty_duration_ns = cost.cost_ns();
         empty_cost = cost.cost();
@@ -73,10 +73,10 @@ int main(int argc, char *argv[])
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        cost.start();
+        cost.Start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        cost.stop_and_save();
+        cost.StopAndSave();
 
         LogInfo() << "no fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
             << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." <<"salt:" << val[2];
@@ -87,8 +87,8 @@ int main(int argc, char *argv[])
     {
         zprof::Clock<zprof::kClockFenceRDTSC> cost;
         //record empty cost 
-        cost.start();
-        cost.stop_and_save();
+        cost.Start();
+        cost.StopAndSave();
         long long empty_cost = cost.cost();
         long long empty_duration_ns = cost.cost_ns();
         empty_cost = cost.cost();
@@ -97,10 +97,10 @@ int main(int argc, char *argv[])
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        cost.start();
+        cost.Start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        cost.stop_and_save();
+        cost.StopAndSave();
 
         LogInfo() << "load fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
             << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
@@ -111,8 +111,8 @@ int main(int argc, char *argv[])
     {
         zprof::Clock<zprof::kClockBTBFenceRDTSC> cost;
         //record empty cost 
-        cost.start();
-        cost.stop_and_save();
+        cost.Start();
+        cost.StopAndSave();
         long long empty_cost = cost.cost();
         long long empty_duration_ns = cost.cost_ns();
         empty_cost = cost.cost();
@@ -121,10 +121,10 @@ int main(int argc, char *argv[])
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        cost.start();
+        cost.Start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        cost.stop_and_save();
+        cost.StopAndSave();
 
         LogInfo() << "load fence btb rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
             << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
@@ -135,8 +135,8 @@ int main(int argc, char *argv[])
     {
         zprof::Clock<zprof::kClockMFenceRDTSC> cost;
         //record empty cost 
-        cost.start();
-        cost.stop_and_save();
+        cost.Start();
+        cost.StopAndSave();
         long long empty_cost = cost.cost();
         long long empty_duration_ns = cost.cost_ns();
         empty_cost = cost.cost();
@@ -145,10 +145,10 @@ int main(int argc, char *argv[])
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        cost.start();
+        cost.Start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        cost.stop_and_save();
+        cost.StopAndSave();
 
         LogInfo() << "load&store fence rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
             << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
@@ -159,8 +159,8 @@ int main(int argc, char *argv[])
     {
         zprof::Clock<zprof::kClockBTBMFenceRDTSC> cost;
         //record empty cost 
-        cost.start();
-        cost.stop_and_save();
+        cost.Start();
+        cost.StopAndSave();
         long long empty_cost = cost.cost();
         long long empty_duration_ns = cost.cost_ns();
         empty_cost = cost.cost();
@@ -169,10 +169,10 @@ int main(int argc, char *argv[])
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        cost.start();
+        cost.Start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        cost.stop_and_save();
+        cost.StopAndSave();
 
         LogInfo() << "load&store fence back to back rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
             << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];
@@ -183,8 +183,8 @@ int main(int argc, char *argv[])
     {
         zprof::Clock<zprof::kClockLockRDTSC> cost;
         //record empty cost 
-        cost.start();
-        cost.stop_and_save();
+        cost.Start();
+        cost.StopAndSave();
         long long empty_cost = cost.cost();
         long long empty_duration_ns = cost.cost_ns();
         empty_cost = cost.cost();
@@ -194,10 +194,10 @@ int main(int argc, char *argv[])
         volatile int val[] = { 54321, 12345, 0, rand() % 2 };
 
         //get ternary operator cost 
-        cost.start();
+        cost.Start();
         val[2] = val[3] == 0 ? val[0] : val[1];
         val[1] = val[2] == 0 ? val[0] : val[1];
-        cost.stop_and_save();
+        cost.StopAndSave();
 
         LogInfo() << "lock rdtsc: empty cost:" << empty_cost << "cycles," << empty_duration_ns << "ns,"
             << "\t\tternary operator:" << cost.cost() - empty_cost << "cycles, " << cost.cost_ns() - empty_duration_ns << "ns." << "salt:" << val[2];

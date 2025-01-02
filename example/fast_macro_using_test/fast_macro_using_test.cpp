@@ -270,7 +270,7 @@ int main(int argc, char* argv[])
                 volatile size_t inc = 0;
                 inc++;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_INC, 1000, cost.stop_and_save().cost(), zprof::kRecordLevelNormal);
+            PROF_RECORD_CPU_WRAP(PROF_REG_INC, 1000, cost.StopAndSave().cost(), zprof::kRecordLevelNormal);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
                 volatile size_t sub = 0;
                 sub--;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_SUB, 1000, cost.stop_and_save().cost(), zprof::kRecordLevelNormal);
+            PROF_RECORD_CPU_WRAP(PROF_REG_SUB, 1000, cost.StopAndSave().cost(), zprof::kRecordLevelNormal);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -286,7 +286,7 @@ int main(int argc, char* argv[])
                 volatile size_t mul = i;
                 mul *= 1000;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_MUL, 1000, cost.stop_and_save().cost(), zprof::kRecordLevelNormal);
+            PROF_RECORD_CPU_WRAP(PROF_REG_MUL, 1000, cost.StopAndSave().cost(), zprof::kRecordLevelNormal);
 
             PROF_RESTART_COUNTER(cost);
             for (size_t i = 0; i < 1000; i++)
@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
                 volatile size_t div = i;
                 div /= 1000;
             }
-            PROF_RECORD_CPU_WRAP(PROF_REG_DIV, 1000, cost.stop_and_save().cost(), zprof::kRecordLevelNormal);
+            PROF_RECORD_CPU_WRAP(PROF_REG_DIV, 1000, cost.StopAndSave().cost(), zprof::kRecordLevelNormal);
         }
 
         //vm统计  
@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
             PROF_RECORD_VM(PROF_REG_VM_USE, zprof::GetSelfMem());
 
             //同时可以记录RecordVm这行的消耗到同一条目下的cpu消耗信息中 
-            PROF_RECORD_CPU_WRAP(PROF_REG_VM_USE, 1, cost.stop_and_save().cost(), zprof::kRecordLevelNormal);
+            PROF_RECORD_CPU_WRAP(PROF_REG_VM_USE, 1, cost.StopAndSave().cost(), zprof::kRecordLevelNormal);
         }
 
         //记录字节数量  

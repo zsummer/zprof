@@ -219,10 +219,6 @@ namespace zprof
         int BindMerge(int to, int child);
         void DoMerge();
 
-        PROF_ALWAYS_INLINE  RecordNode& Node(int idx)
-        {
-            return nodes_[idx];;
-        }
         PROF_ALWAYS_INLINE  void ResetCpu(int idx)
         {
             RecordNode& node = nodes_[idx];
@@ -272,13 +268,13 @@ namespace zprof
         void ResetReserveNode(bool keep_resident = true)
         {
             ResetRangeNode(reserve_begin_id(), reserve_end_id(), keep_resident);
-            RerecordUser(kInnerResetTs, zprof::Clock<>::SystemNowMS());        
+            RerecordUser(kInnerResetTs, zprof::Clock<>::SystemNowMs());        
         }
 
         void ResetDeclareNode(bool keep_resident = true)
         {
             ResetRangeNode(declare_begin_id(), declare_end_id(), keep_resident);
-            RerecordUser(kInnerResetTs, zprof::Clock<>::SystemNowMS());
+            RerecordUser(kInnerResetTs, zprof::Clock<>::SystemNowMs());
         }
 
 
@@ -428,7 +424,6 @@ namespace zprof
     public:
         Report& compact_writer() { return compact_writer_; }
         RecordNode& node(int idx) { return nodes_[idx]; }
-    
         double particle_for_ns(int t) { return  particle_for_ns_[t]; }
 
 
@@ -513,7 +508,7 @@ namespace zprof
             compact_writer_.ClosingString();
         }
         zprof::Clock<> clk;
-        clk.start();
+        clk.Start();
 
         
 
@@ -566,9 +561,9 @@ namespace zprof
 
         if (true)
         {
-            RerecordUser(kInnerInitTs, zprof::Clock<>::SystemNowMS());
-            RerecordUser(kInnerResetTs, zprof::Clock<>::SystemNowMS());
-            RerecordUser(kInnerOutputTs, zprof::Clock<>::SystemNowMS());
+            RerecordUser(kInnerInitTs, zprof::Clock<>::SystemNowMs());
+            RerecordUser(kInnerResetTs, zprof::Clock<>::SystemNowMs());
+            RerecordUser(kInnerOutputTs, zprof::Clock<>::SystemNowMs());
         }
 
         if (true)
@@ -579,80 +574,80 @@ namespace zprof
 
         if (true)
         {
-            clk.start();
+            clk.Start();
             for (int i = 0; i < 1000; i++)
             {
                 zprof::Clock<> test_cost;
-                test_cost.start();
-                test_cost.stop_and_save();
+                test_cost.Start();
+                test_cost.StopAndSave();
                 RecordCpu(kInnerNull, test_cost.cost());
             }
-            RecordCpu(kInnerClockRecordCost, 1000, clk.stop_and_save().cost());
+            RecordCpu(kInnerClockRecordCost, 1000, clk.StopAndSave().cost());
 
-            clk.start();
+            clk.Start();
             for (int i = 0; i < 1000; i++)
             {
-                clk.save();
+                clk.Save();
             }
-            RecordCpu(kInnerClockCost, 1000, clk.stop_and_save().cost());
+            RecordCpu(kInnerClockCost, 1000, clk.StopAndSave().cost());
 
-            clk.start();
+            clk.Start();
             for (int i = 0; i < 1000; i++)
             {
-                RecordCpuNoSM(kInnerNull, clk.stop_and_save().cost());
+                RecordCpuNoSM(kInnerNull, clk.StopAndSave().cost());
             }
-            RecordCpu(kInnerRecordCost, 1000, clk.stop_and_save().cost());
+            RecordCpu(kInnerRecordCost, 1000, clk.StopAndSave().cost());
 
-            clk.start();
+            clk.Start();
             for (int i = 0; i < 1000; i++)
             {
-                RecordCpu(kInnerNull, 1, clk.stop_and_save().cost());
+                RecordCpu(kInnerNull, 1, clk.StopAndSave().cost());
             }
-            RecordCpu(kInnerRecordSmoothCost, 1000, clk.stop_and_save().cost());
+            RecordCpu(kInnerRecordSmoothCost, 1000, clk.StopAndSave().cost());
 
-            clk.start();
+            clk.Start();
             for (int i = 0; i < 1000; i++)
             {
-                RecordCpuFull(kInnerNull, 1, clk.stop_and_save().cost());
+                RecordCpuFull(kInnerNull, 1, clk.StopAndSave().cost());
             }
-            RecordCpu(kInnerRecordFullCost, 1000, clk.stop_and_save().cost());
+            RecordCpu(kInnerRecordFullCost, 1000, clk.StopAndSave().cost());
 
 
             std::atomic<long long> atomll_test(0);
             volatile long long origin_feetch_add_test = 0;
-            clk.start();
+            clk.Start();
             for (int i = 0; i < 1000; i++)
             {
                 origin_feetch_add_test++;
             }
-            RecordCpu(kInnerOriginInc, 1000, clk.stop_and_save().cost());
+            RecordCpu(kInnerOriginInc, 1000, clk.StopAndSave().cost());
 
-            clk.start();
+            clk.Start();
             for (int i = 0; i < 1000; i++)
             {
                 atomll_test.fetch_add(1, std::memory_order_relaxed);
             }
-            RecordCpu(kInnerAtomRelax, 1000, clk.stop_and_save().cost());
+            RecordCpu(kInnerAtomRelax, 1000, clk.StopAndSave().cost());
 
-            clk.start();
+            clk.Start();
             for (int i = 0; i < 1000; i++)
             {
                 atomll_test++;
             }
-            RecordCpu(kInnerAtomCost, 1000, clk.stop_and_save().cost());
+            RecordCpu(kInnerAtomCost, 1000, clk.StopAndSave().cost());
 
         
-            clk.start();
+            clk.Start();
             for (int i = 0; i < 1000; i++)
             {
                 atomll_test.fetch_add(1, std::memory_order_seq_cst);
             }
-            RecordCpu(kInnerAtomSeqCost, 1000, clk.stop_and_save().cost());
+            RecordCpu(kInnerAtomSeqCost, 1000, clk.StopAndSave().cost());
 
             ResetNode(kInnerNull);
         }
 
-        RecordCpu(kInnerInitCost, clk.stop_and_save().cost());
+        RecordCpu(kInnerInitCost, clk.StopAndSave().cost());
 
         return 0;
     }
@@ -896,7 +891,7 @@ namespace zprof
     void Record<kInst, kReserve, kDeclare>::DoMerge()
     {
         Clock<> clk;
-        clk.start();
+        clk.Start();
         for (int i = 0; i < merge_leafs_size_; i++)
         {
             int leaf_id = merge_leafs_[i];
@@ -942,7 +937,7 @@ namespace zprof
                 break;
             } while (true);
         }
-        RecordCpu(kInnerMergeCost, clk.stop_and_save().cost());
+        RecordCpu(kInnerMergeCost, clk.StopAndSave().cost());
     }
 
 
@@ -955,7 +950,7 @@ namespace zprof
         }
         double cpu_rate = particle_for_ns(node.traits.clk);
         zprof::Clock<> single_line_cost;
-        single_line_cost.start();
+        single_line_cost.Start();
         rp.PushIndent(depth * 2);
         rp.PushString(UNWIND_STR("|"));
         rp.PushNumber((unsigned long long)entry_idx, 3);
@@ -1001,12 +996,12 @@ namespace zprof
             rp.PushHumanTime((long long)(node.cpu.l_sm * cpu_rate));
         }
         rp.PushString(UNWIND_STR(" --|"));
-        single_line_cost.stop_and_save();
+        single_line_cost.StopAndSave();
         RecordCpuFull(kInnerSerializeCost, single_line_cost.cost());
 
-        single_line_cost.start();
+        single_line_cost.Start();
         OutputAndClean(rp);
-        single_line_cost.stop_and_save();
+        single_line_cost.StopAndSave();
         RecordCpuFull(kInnerOutputCost, single_line_cost.cost());
 
         return 0;
@@ -1021,7 +1016,7 @@ namespace zprof
             return -20;
         }
         zprof::Clock<> single_line_cost;
-        single_line_cost.start();
+        single_line_cost.Start();
         rp.PushIndent(depth * 2);
         rp.PushString(UNWIND_STR("|"));
         rp.PushNumber((unsigned long long)entry_idx, 3);
@@ -1048,13 +1043,13 @@ namespace zprof
             rp.PushHumanMem(node.mem.delta);
         }
         rp.PushString(UNWIND_STR(" --|"));
-        single_line_cost.stop_and_save();
+        single_line_cost.StopAndSave();
         RecordCpuFull(kInnerSerializeCost, single_line_cost.cost());
 
 
-        single_line_cost.start();
+        single_line_cost.Start();
         OutputAndClean(rp);
-        single_line_cost.stop_and_save();
+        single_line_cost.StopAndSave();
         RecordCpuFull(kInnerOutputCost, single_line_cost.cost());
         return 0;
     }
@@ -1066,7 +1061,7 @@ namespace zprof
             return -30;
         }
         zprof::Clock<> single_line_cost;
-        single_line_cost.start();
+        single_line_cost.Start();
         rp.PushIndent(depth * 2);
         rp.PushString(UNWIND_STR("|"));
         rp.PushNumber((unsigned long long)entry_idx, 3);
@@ -1090,12 +1085,12 @@ namespace zprof
         }
 
         rp.PushString(UNWIND_STR(" --|"));
-        single_line_cost.stop_and_save();
+        single_line_cost.StopAndSave();
         RecordCpuFull(kInnerSerializeCost, single_line_cost.cost());
 
-        single_line_cost.start();
+        single_line_cost.Start();
         OutputAndClean(rp);
-        single_line_cost.stop_and_save();
+        single_line_cost.StopAndSave();
         RecordCpuFull(kInnerOutputCost, single_line_cost.cost());
         return 0;
     }
@@ -1107,7 +1102,7 @@ namespace zprof
             return -40;
         }
         zprof::Clock<> single_line_cost;
-        single_line_cost.start();
+        single_line_cost.Start();
         rp.PushIndent(depth * 2);
         rp.PushString(UNWIND_STR("|"));
         rp.PushNumber((unsigned long long)entry_idx, 3);
@@ -1130,12 +1125,12 @@ namespace zprof
         }
 
         rp.PushString(UNWIND_STR(" --|"));
-        single_line_cost.stop_and_save();
+        single_line_cost.StopAndSave();
         RecordCpuFull(kInnerSerializeCost, single_line_cost.cost());
 
-        single_line_cost.start();
+        single_line_cost.Start();
         OutputAndClean(rp);
-        single_line_cost.stop_and_save();
+        single_line_cost.StopAndSave();
         RecordCpuFull(kInnerOutputCost, single_line_cost.cost());
         return 0;
     }
@@ -1279,10 +1274,10 @@ namespace zprof
         {
             return -1;
         }
-        RerecordUser(kInnerOutputTs, zprof::Clock<>::SystemNowMS());
+        RerecordUser(kInnerOutputTs, zprof::Clock<>::SystemNowMs());
 
         zprof::Clock<> clk;
-        clk.start();
+        clk.Start();
         StaticReport rp;
 
         rp.reset_offset();
@@ -1295,9 +1290,9 @@ namespace zprof
         rp.PushString(UNWIND_STR(" output report at: "));
         rp.PushNowDate();
         rp.PushString(UNWIND_STR(" dist start time:["));
-        rp.PushHumanTime((Clock<>::SystemNowMS() - nodes_[kInnerInitTs].user.param1)*1000*1000);
+        rp.PushHumanTime((Clock<>::SystemNowMs() - nodes_[kInnerInitTs].user.param1)*1000*1000);
         rp.PushString(UNWIND_STR("] dist reset time:["));
-        rp.PushHumanTime((Clock<>::SystemNowMS() - nodes_[kInnerResetTs].user.param1) * 1000 * 1000);
+        rp.PushHumanTime((Clock<>::SystemNowMs() - nodes_[kInnerResetTs].user.param1) * 1000 * 1000);
         rp.PushChar(']');
         rp.PushChar(' ');
 
@@ -1355,7 +1350,7 @@ namespace zprof
         OutputAndClean(rp);
         OutputAndClean(rp);
 
-        RecordCpu(kInnerReportCost, clk.stop_and_save().cost());
+        RecordCpu(kInnerReportCost, clk.StopAndSave().cost());
         return 0;
     }
 

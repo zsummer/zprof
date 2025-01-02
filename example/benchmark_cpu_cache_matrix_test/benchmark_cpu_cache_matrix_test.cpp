@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     long long empty_cicles = 0;
 
     PROF_DEFINE_COUNTER(cost);
-    cost.start();
+    cost.Start();
     for (long long x = 0; x < matrix_x; x++)
     {
         for (long long y = 0; y < matrix_y; y++)
@@ -76,10 +76,10 @@ int main(int argc, char *argv[])
             ordered_sum += *(matrix + x * matrix_y + y);
         }
     }
-    ordered_cicles = cost.stop_and_save().cost();
+    ordered_cicles = cost.StopAndSave().cost();
 
 
-    cost.start();
+    cost.Start();
     for (long long x = 0; x < matrix_x; x++)
     {
         for (long long y = 0; y < matrix_y; y++)
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
             jump_sum += *(matrix + y * matrix_y + x);
         }
     }
-    jump_cicles = cost.stop_and_save().cost();
+    jump_cicles = cost.StopAndSave().cost();
 
     if (jump_sum != ordered_sum)
     {
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     
 
 #define CELL_SIZE 64
-    cost.start();
+    cost.Start();
     for (long long x = 0; x < matrix_x; x++)
     {
         for (long long y = 0; y < matrix_y; y++)
@@ -116,9 +116,9 @@ int main(int argc, char *argv[])
             ordered_sum += *(matrix + (new_block_x * matrix_y / CELL_SIZE + new_block_y) * CELL_SIZE + new_cell_x * CELL_SIZE + new_cell_y);
         }
     }
-    ordered_cicles = cost.stop_and_save().cost();
+    ordered_cicles = cost.StopAndSave().cost();
 
-    cost.start();
+    cost.Start();
     for (long long y = 0; y < matrix_y; y++)
     {
         for (long long x = 0; x < matrix_x; x++)
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
             jump_sum += *(matrix + (new_block_x * matrix_y / CELL_SIZE + new_block_y) * CELL_SIZE + new_cell_x * CELL_SIZE + new_cell_y);
         }
     }
-    jump_cicles = cost.stop_and_save().cost();
+    jump_cicles = cost.StopAndSave().cost();
 
     if (jump_sum != ordered_sum)
     {
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
     jump_sum = 0;
     jump_cicles = 0;
 
-    cost.start();
+    cost.Start();
     for (long long i = 0; i < matrix_y; i++)
     {
         x += step_x * sign_x;
@@ -203,9 +203,9 @@ int main(int argc, char *argv[])
         ordered_sum += *(matrix + (new_block_x * matrix_y / CELL_SIZE + new_block_y) * CELL_SIZE + new_cell_x * CELL_SIZE + new_cell_y);
     }
 
-    ordered_cicles = cost.stop_and_save().cost();
+    ordered_cicles = cost.StopAndSave().cost();
 
-    cost.start();
+    cost.Start();
     for (long long i = 0; i < matrix_y; i++)
     {
         x += step_x * sign_x;
@@ -244,11 +244,11 @@ int main(int argc, char *argv[])
         }
         jump_sum += *(matrix + y * matrix_y + x);
     }
-    jump_cicles = cost.stop_and_save().cost();
+    jump_cicles = cost.StopAndSave().cost();
 
 
 
-    cost.start();
+    cost.Start();
     for (long long i = 0; i < matrix_y; i++)
     {
         x += step_x * sign_x;
@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
         }
         empty_sum += x + y;
     }
-    empty_cicles = cost.stop_and_save().cost();
+    empty_cicles = cost.StopAndSave().cost();
 
 
     LogInfo() << "cpu cache brownian empty  use cicles:" << empty_cicles << ", read use cycles:" << empty_cicles * 1.0 / matrix_y << "per item";

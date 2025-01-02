@@ -326,7 +326,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockSystem>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_SYS dis 1000w");
     }
@@ -339,7 +339,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockClock>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_CLOCK dis 1000w");
     }
@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockChrono>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_CHRONO dis 1000w");
     }
@@ -365,7 +365,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockFenceRDTSC>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_PURE dis 1000w");
     }
@@ -378,7 +378,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockPureRDTSC>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_NOFENCE dis 1000w");
     }
@@ -391,7 +391,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockFenceRDTSC>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE(lfence) dis 1000w");
     }
@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockBTBFenceRDTSC>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_BTB (lfence) dis 1000w");
     }
@@ -415,7 +415,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += zprof::GetTick<zprof::kClockRDTSCP>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSCP dis 20");
     }
@@ -428,7 +428,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles += zprof::GetTick<zprof::kClockMFenceRDTSC>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_MFENCE dis 1000w");
     }
@@ -441,7 +441,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockBTBMFenceRDTSC>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_MFENCE_BTB dis 1000w");
     }
@@ -456,7 +456,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockLockRDTSC>();
-            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.stop_and_save().cost());
+            PROF_RECORD_CPU(ProfInstType::kInnerNull, cost.StopAndSave().cost());
         }
         PROF_OUTPUT_TEMP_RECORD("CLOCK_RDTSC_LOCK dis 1000w");
     }
@@ -471,7 +471,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockFenceRDTSC>();
-            PROF_RECORD_CPU_WRAP(ProfInstType::kInnerNull, 1, cost.stop_and_save().cost(), zprof::kRecordLevelFast);
+            PROF_RECORD_CPU_WRAP(ProfInstType::kInnerNull, 1, cost.StopAndSave().cost(), zprof::kRecordLevelFast);
         }
         PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE dis 1000w | kRecordLevelFast | DEFAULT");
     }
@@ -484,7 +484,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockFenceRDTSC>();
-            PROF_RECORD_CPU_WRAP(ProfInstType::kInnerNull, 1, cost.stop_and_save().cost(), zprof::kRecordLevelFast);
+            PROF_RECORD_CPU_WRAP(ProfInstType::kInnerNull, 1, cost.StopAndSave().cost(), zprof::kRecordLevelFast);
         }
         PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE dis 1000w | kRecordLevelFast | CLOCK_SYS");
     }
@@ -497,7 +497,7 @@ int main(int argc, char *argv[])
         {
             PROF_START_COUNTER(cost);
             cycles +=zprof::GetTick<zprof::kClockFenceRDTSC>();
-            PROF_RECORD_CPU_WRAP(ProfInstType::kInnerNull, 1, cost.stop_and_save().cost(), zprof::kRecordLevelFast);
+            PROF_RECORD_CPU_WRAP(ProfInstType::kInnerNull, 1, cost.StopAndSave().cost(), zprof::kRecordLevelFast);
         }
         PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE dis 1000w | kRecordLevelFast | CLOCK_RDTSC_NOFENCE");
     }
@@ -528,7 +528,7 @@ int main(int argc, char *argv[])
             {
                 cycles +=zprof::GetTick<zprof::kClockFenceRDTSC>();
             }
-            PROF_RECORD_CPU_WRAP(ProfInstType::kInnerNull, 1, cost.stop_and_save().cost(), zprof::kRecordLevelFast);
+            PROF_RECORD_CPU_WRAP(ProfInstType::kInnerNull, 1, cost.StopAndSave().cost(), zprof::kRecordLevelFast);
         }
         PROF_OUTPUT_TEMP_RECORD("kClockRDTSC_PURE(lfence) * 10 dis 1000w");
     }
@@ -736,11 +736,11 @@ int main(int argc, char *argv[])
         zprof::Clock<> cost;
         for (int i = 0; i < 100; i++)
         {
-            cost.start();
+            cost.Start();
             PROF_RECORD_TIMER(ProfInstType::kInnerNull, cost.get_begin());
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        cost.start();
+        cost.Start();
         PROF_RECORD_TIMER(ProfInstType::kInnerNull, cost.get_begin());
         PROF_OUTPUT_TEMP_RECORD("call timer sleep_for 10ms ");
     }
@@ -751,11 +751,11 @@ int main(int argc, char *argv[])
         zprof::Clock<> cost;
         for (int i = 0; i < 100; i++)
         {
-            cost.start();
+            cost.Start();
             PROF_RECORD_TIMER(ProfInstType::kInnerNull, cost.get_begin());
             std::this_thread::sleep_for(std::chrono::nanoseconds(10 * 1000 * 1000));
         }
-        cost.start();
+        cost.Start();
         PROF_RECORD_TIMER(ProfInstType::kInnerNull, cost.get_begin());
         PROF_OUTPUT_TEMP_RECORD("call timer sleep_for 10*1000*1000ns(10ms) ");
     }
@@ -768,11 +768,11 @@ int main(int argc, char *argv[])
     zprof::Clock<> cost;
     for (int i = 0; i < 100; i++)
     {
-        cost.start();
+        cost.Start();
         PROF_RECORD_TIMER(ProfInstType::kInnerNull, cost.get_begin());
         nanosleep(&tim, &tim2);
     }
-    cost.start();
+    cost.Start();
     PROF_RECORD_TIMER(ProfInstType::kInnerNull, cost.get_begin());
     PROF_OUTPUT_TEMP_RECORD("call timer nanosleep 10*1000*1000ns(10ms)");
 
@@ -784,11 +784,11 @@ int main(int argc, char *argv[])
         zprof::Clock<> cost;
         for (int i = 0; i < 20; i++)
         {
-            cost.start();
+            cost.Start();
             PROF_RECORD_TIMER(ProfInstType::kInnerNull, cost.get_begin());
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        cost.start();
+        cost.Start();
         PROF_RECORD_TIMER(ProfInstType::kInnerNull, cost.get_begin());
         PROF_OUTPUT_TEMP_RECORD("call timer sleep_for 100ms ");
     }
@@ -818,24 +818,24 @@ int main(int argc, char *argv[])
         zprof::Clock<zprof::kClockClock> linux_clock;
         zprof::Clock<zprof::kClockChrono> chrono_clock;
         zprof::Clock<zprof::kClockSystemMS> ms_clock;
-        rdtsc.start();
-        sys.start();
-        linux_clock.start();
-        chrono_clock.start();
-        ms_clock.start();
+        rdtsc.Start();
+        sys.Start();
+        linux_clock.Start();
+        chrono_clock.Start();
+        ms_clock.Start();
         clock_t c_clock = clock();
         long long steady_clock = std::chrono::steady_clock().now().time_since_epoch().count();
         long long sys_clock = std::chrono::system_clock().now().time_since_epoch().count();
         
         for (int i = 0; i < 1000*10000; i++)
         {
-            cycles += rdtsc.save().cost();
+            cycles += rdtsc.Save().cost();
         }
-        rdtsc.save();
-        sys.save();
-        linux_clock.save();
-        chrono_clock.save();
-        ms_clock.save();
+        rdtsc.Save();
+        sys.Save();
+        linux_clock.Save();
+        chrono_clock.Save();
+        ms_clock.Save();
         c_clock = clock() - c_clock;
         steady_clock = std::chrono::steady_clock().now().time_since_epoch().count() - steady_clock;
         sys_clock = std::chrono::system_clock().now().time_since_epoch().count() - sys_clock;

@@ -106,11 +106,11 @@ public:
     ProfAutoRecord(int idx)
     {
         idx_ = idx;
-        clock_.start();
+        clock_.Start();
     }
     ~ProfAutoRecord()
     {
-        ProfRecordWrap<ProfCountIsGreatOne<kCount>::is_bat, kLevel>(idx_, kCount, clock_.save().cost());
+        ProfRecordWrap<ProfCountIsGreatOne<kCount>::is_bat, kLevel>(idx_, kCount, clock_.Save().cost());
     }
     zprof::Clock<C>& clock() { return clock_; }
 private:
@@ -136,7 +136,7 @@ public:
         {
             return;
         }
-        long long ns = record_.clock().save().cost_ns();
+        long long ns = record_.clock().Save().cost_ns();
         if (ns > watchdog_)
         {
             dog_(ns);
@@ -163,18 +163,18 @@ public:
         strncpy(desc_, desc, zprof::kProfNameMaxSize);
         desc_[zprof::kProfNameMaxSize - 1] = '\0';
         cnt_ = cnt;
-        clock_.start();
+        clock_.Start();
     }
     ~ProfAutoAnonRecord()
     {
         //ProfCountIsGreatOne
         if (cnt_ == 1)
         {
-            ProfRecordWrap<false, kLevel>(ProfInstType::kInnerNull, cnt_, clock_.save().cost());
+            ProfRecordWrap<false, kLevel>(ProfInstType::kInnerNull, cnt_, clock_.Save().cost());
         }
         else
         {
-            ProfRecordWrap<true, kLevel>(ProfInstType::kInnerNull, cnt_, clock_.save().cost());
+            ProfRecordWrap<true, kLevel>(ProfInstType::kInnerNull, cnt_, clock_.Save().cost());
         }
         ProfInst.OutputTempRecord(desc_);
     }
@@ -296,16 +296,16 @@ private:
 #define PROF_DEFINE_COUNTER_INIT(tc, start)  zprof::Clock<> tc(start)  
 
 //设置当前时间为 定时器开始时间    
-#define PROF_START_COUNTER(var) var.start()   
+#define PROF_START_COUNTER(var) var.Start()   
 
 //重新设置当前时间为 定时器开始时间    
-#define PROF_RESTART_COUNTER(var) var.start()   
+#define PROF_RESTART_COUNTER(var) var.Start()   
 
 //设置当前时间为定时器结束时间  
-#define PROF_STOP_AND_SAVE_COUNTER(var) var.stop_and_save()  
+#define PROF_STOP_AND_SAVE_COUNTER(var) var.StopAndSave()  
 
 //设置当前时间为定时器结束时间 并写入idx对应的条目中  
-#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).stop_and_save().cost(), zprof::kRecordLevelNormal)
+#define PROF_STOP_AND_RECORD(idx, var) PROF_RECORD_CPU_WRAP((idx), 1, (var).StopAndSave().cost(), zprof::kRecordLevelNormal)
 
 
 

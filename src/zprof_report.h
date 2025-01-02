@@ -319,7 +319,7 @@ namespace zprof
 
     inline Report& Report::PushNowDate()
     {
-        return PushDate(Clock<>::SystemNowMS());
+        return PushDate(Clock<>::SystemNowMs());
     }
 
 

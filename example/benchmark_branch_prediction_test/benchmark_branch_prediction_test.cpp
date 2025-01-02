@@ -73,13 +73,13 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        cost.start();
+        cost.Start();
         for (int i = 0; i < loops; i++)
         {
             val += check_array[i] > THRESHLOD / 2 ? check_array[i] : 0;
             val -= check_array[i] <= THRESHLOD / 2 ? check_array[i] : 0;
         }
-        cost.stop_and_save();
+        cost.StopAndSave();
         LogInfo() << "un sorted array ternary operator cost:" << cost.cost() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
 
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        cost.start();
+        cost.Start();
         for (int i = 0; i < loops; i++)
         {
             if (check_array[i] > THRESHLOD / 2)
@@ -99,12 +99,12 @@ int main(int argc, char *argv[])
                 val -= check_array[i];
             }
         }
-        cost.stop_and_save();
+        cost.StopAndSave();
         LogInfo() << "un sorted array cost:" << cost.cost() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
     if (true)
     {
-        cost.start();
+        cost.Start();
         for (int i = 0; i < loops; i++)
         {
             if (check_array[i] > THRESHLOD / 2)
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
                 val -= check_array[i];
             }
         }
-        cost.stop_and_save();
+        cost.StopAndSave();
         LogInfo() << "un sorted array two jmp cost:" << cost.cost() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
 
@@ -130,20 +130,20 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        cost.start();
+        cost.Start();
         for (int i = 0; i < loops; i++)
         {
             val += check_array[i] > THRESHLOD / 2 ? check_array[i] : 0;
             val -= check_array[i] <= THRESHLOD / 2 ? check_array[i] : 0;
         }
-        cost.stop_and_save();
+        cost.StopAndSave();
         LogInfo() << "sorted array ternary operator cost:" << cost.cost() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
 
 
     if (true)
     {
-        cost.start();
+        cost.Start();
         for (int i = 0; i < loops; i++)
         {
             if (check_array[i] > THRESHLOD / 2)
@@ -155,12 +155,12 @@ int main(int argc, char *argv[])
                 val -= check_array[i];
             }
         }
-        cost.stop_and_save();
+        cost.StopAndSave();
         LogInfo() << "sorted array cost:" << cost.cost() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
     if (true)
     {
-        cost.start();
+        cost.Start();
         for (int i = 0; i < loops; i++)
         {
             if (check_array[i] > THRESHLOD / 2)
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
             }
 
         }
-        cost.stop_and_save();
+        cost.StopAndSave();
         LogInfo() << "sorted array two jmp cost:" << cost.cost() * 1.0 / ARRAY_SIZE << "cycles" << ", val=" << val;
     }
 

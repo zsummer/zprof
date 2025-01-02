@@ -432,7 +432,7 @@ namespace zprof
         ULONG  CurrentIdleState;
     };
 #endif
-    inline double get_cpu_freq()
+    inline double GetCpuFreq()
     {
         double mhz = 1;
 #ifdef __APPLE__
@@ -507,7 +507,7 @@ namespace zprof
     template<>
     inline double GetFrequency<kClockFenceRDTSC>()
     {
-        const static double frequency_per_ns = get_cpu_freq() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
+        const static double frequency_per_ns = GetCpuFreq() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
         return frequency_per_ns;
     }
     template<>
@@ -649,19 +649,19 @@ namespace zprof
             begin_ = c.begin_;
             ticks_ = c.ticks_;
         }
-        void start()
+        void Start()
         {
             begin_ = GetTick<_C>();
             ticks_ = 0;
         }
 
-        ClockBase& save()
+        ClockBase& Save()
         {
             ticks_ = GetTick<_C>() - begin_;
             return *this;
         }
 
-        ClockBase& stop_and_save() { return save(); }
+        ClockBase& StopAndSave() { return Save(); }
 
         long long ticks()const { return ticks_; }
         long long cycles()const { return ticks_; }
@@ -673,9 +673,9 @@ namespace zprof
         //utils  
     public:
         static long long Now() { return GetTick<_C>(); }
-        static long long SystemNowNS() { return GetTick<kClockSystem>(); }
-        static long long SystemNowUS() { return GetTick<kClockSystem>() / 1000; }
-        static long long SystemNowMS() { return GetTick<kClockSystem>() / 1000 / 1000; }
+        static long long SystemNowNs() { return GetTick<kClockSystem>(); }
+        static long long SystemNowUs() { return GetTick<kClockSystem>() / 1000; }
+        static long long SystemNowMs() { return GetTick<kClockSystem>() / 1000 / 1000; }
         static double SystemNowS() { return GetTick<kClockSystem>() / 1000 / 1000 / 1000;}
         static VMData GetSelfMem() { return GetSelfMem(); }
         static VMData GetSysMem() { return GetSysMem(); }
