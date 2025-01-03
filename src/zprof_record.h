@@ -215,25 +215,28 @@ namespace zprof
         // 二次初始化并完成环境数据探测  
         int Init(const char* title);
 
-        //注册条目  
+        //注册条目, 注册条目的数量要小于kDeclare  
         int Regist(int idx, const char* name, unsigned int clk, bool resident, bool re_reg);
+
+        // 获取zprof实例的title  
         const char* Title() const { return &compact_data_[title_]; }
 
         const char* Name(int idx);
         int Rename(int idx, const char* name);
 
-        // 绑定展示层级关系  
+        // 注册后可以绑定多个node之间的展示层级关系  
         int BindChilds(int idx, int child);
 
         // 展示层级跳点结构优化 提高输出效率    
         int BuildJumpPath();
 
-        // 绑定数据合并关系 
+        // 注册后可以绑定多个node的数据合并关系 
         int BindMerge(int to, int child);  
 
         // 数据合并计算   
         void DoMerge();
 
+        // 重置记录的数据 
         PROF_ALWAYS_INLINE  void ResetCpu(int idx)
         {
             RecordNode& node = nodes_[idx];
@@ -296,6 +299,10 @@ namespace zprof
 
         inline void ResetChilds(int idx, int depth = 0);
 
+        // 记录CPU开销  
+        // 这里的ticks要从zprof::Clock获取, 并且要求和注册的时钟类型一致, 否则输出报告时候可能产生不正确的物理时间换算.   
+        // c为统计的次数  
+        // ticks为对应次数的总开销  
         PROF_ALWAYS_INLINE void RecordCpu(int idx, long long c, long long ticks)
         {
             long long dis = ticks / c;
@@ -308,6 +315,7 @@ namespace zprof
             node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
             node.cpu.t_u += ticks;
         }
+
         PROF_ALWAYS_INLINE void RecordCpu(int idx, long long ticks)
         {
             RecordNode& node = nodes_[idx];
@@ -337,6 +345,7 @@ namespace zprof
             node.cpu.t_u += ticks;
         }
 
+        // 这个方法记录的内容最详细  
         PROF_ALWAYS_INLINE void RecordCpuFull(int idx, long long ticks)
         {
             RecordNode& node = nodes_[idx];
@@ -345,15 +354,19 @@ namespace zprof
             long long dis = ticks;
             long long avg = node.cpu.sum / node.cpu.c;
 
-            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);
+            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);  
+
+            //上下两个水位线的平滑值  
             node.cpu.h_sm = (dis >= avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
             node.cpu.l_sm = (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
+
             node.cpu.dv += abs(dis - node.cpu.sm);
             node.cpu.t_u += ticks;
             node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
             node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
         }
 
+        // 带count数据 
         PROF_ALWAYS_INLINE void RecordCpuFull(int idx, long long c, long long ticks)
         {
         
@@ -465,7 +478,9 @@ namespace zprof
 
 
     private:
-        int title_;
+        int title_;  
+        // 所有字符串数据都存在一个数组中并以\0为结尾, 使用字符串的地方记录的是对应字符串在该数组的起始下标  
+        // 参考ELF符号表的设计     
         char compact_data_[compact_data_size()];
         Report compact_writer_;
         int unknown_desc_;

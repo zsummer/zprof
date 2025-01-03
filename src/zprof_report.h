@@ -386,6 +386,8 @@ namespace zprof
         return *this;
     }
 
+
+    // 提供一个简单的静态封装 
     class StaticReport : public Report
     {
     public:
@@ -401,7 +403,7 @@ namespace zprof
         }
 
     private:
-        char buff_[BUFF_SIZE];//1k  
+        char buff_[BUFF_SIZE];
     };
 
 }
