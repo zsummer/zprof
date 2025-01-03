@@ -36,9 +36,11 @@ namespace zprof
     
     #define UNWIND_STR(str) str, strlen(str)
 
-
+    // 压缩的条目名长度信息   
     static constexpr int  kCompactDataUnitSize = 30;
-    static constexpr int  kCompactDataBuffMinSize = 150;
+    static constexpr int  kCompactDataBuffMinSize = 150;  
+
+    //单个字段的输出对齐长度  
     static constexpr int  kRecordFormatAlignSize = 35;
 
     enum RecordLevel
@@ -146,6 +148,10 @@ namespace zprof
     #endif
     */
 
+    // zprof 核心类:  记录性能,内存,用户自定义数据等  
+    // kInst 全局实例ID  
+    // kReserve 保留记录条目范围(自动注册,直接使用)   
+    // kDeclare 声明条目范围(自行注册后使用)   
     template<int kInst, int kReserve, int kDeclare>
     class Record 
     {
@@ -205,18 +211,27 @@ namespace zprof
 
     public:
         Record();
+
+        // 二次初始化并完成环境数据探测  
         int Init(const char* title);
+
+        //注册条目  
         int Regist(int idx, const char* name, unsigned int clk, bool resident, bool re_reg);
         const char* Title() const { return &compact_data_[title_]; }
 
         const char* Name(int idx);
         int Rename(int idx, const char* name);
 
-
+        // 绑定展示层级关系  
         int BindChilds(int idx, int child);
+
+        // 展示层级跳点结构优化 提高输出效率    
         int BuildJumpPath();
 
-        int BindMerge(int to, int child);
+        // 绑定数据合并关系 
+        int BindMerge(int to, int child);  
+
+        // 数据合并计算   
         void DoMerge();
 
         PROF_ALWAYS_INLINE  void ResetCpu(int idx)
@@ -405,8 +420,7 @@ namespace zprof
         }
 
 
-        //递归展开  
-
+        // 层级递归输出所有报告   
         int OutputCpu(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank);
         int OutputMem(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank);
         int OutputVm(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank);
@@ -414,7 +428,7 @@ namespace zprof
         int RecursiveOutput(int entry_idx, int depth, const char* opt_name, int opt_name_len, Report& rp);
 
 
-        //完整报告  
+        // 报告输出接口   
         int OutputReport(unsigned int flags = kOutFlagAll);
         int OutputOneRecord(int entry_idx);
         int OutputTempRecord(const char* opt_name, int opt_name_len);
@@ -509,8 +523,6 @@ namespace zprof
         }
         zprof::Clock<> clk;
         clk.Start();
-
-        
 
 
         particle_for_ns_[kClockNULL] = 0;
@@ -661,6 +673,7 @@ namespace zprof
             int next_upper_id = i + 1;
             while (next_upper_id < declare_end_id())
             {
+                //顶级节点  
                 if (nodes_[next_upper_id].show.upper == 0)
                 {
                     break;
@@ -854,7 +867,7 @@ namespace zprof
             return -3; //Regist method has memset all info ; 
         }
 
-        //change merge to;  
+        // duplicate bind   
         if (node.merge.to != 0)
         {
             return -4;
@@ -863,11 +876,13 @@ namespace zprof
         to_node.merge.childs++;
         node.merge.to = to;
 
+        // 非叶子节点 
         if (node.merge.childs > 0)
         {
             return 0;
         }
 
+        // 叶子节点 
         if (to_node.merge.to != 0)
         {
             for (int i = 0; i < merge_leafs_size_; i++)
@@ -881,7 +896,7 @@ namespace zprof
         }
 
 
-
+        // 叶子节点
         merge_leafs_[merge_leafs_size_++] = child;
         return 0;
     }
@@ -906,6 +921,8 @@ namespace zprof
             id = leaf.merge.to;
             leaf.cpu.t_u = 0;
             leaf.mem.t_u = 0;
+
+            // 多层级支持  
             do
             {
                 node->cpu.t_u += append_cpu;

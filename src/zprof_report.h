@@ -45,7 +45,7 @@ namespace zprof
     static constexpr int kProfLineMinSize = 200;
     static constexpr int kProfMaxDepth = 5;
 
-
+    // 报告序列化类  
     class Report
     {
     public:

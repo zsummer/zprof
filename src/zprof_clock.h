@@ -100,7 +100,7 @@
 
 namespace zprof
 {
-
+    // 不同的时钟类型   
     enum ClockType
     {
         kClockNULL,
@@ -111,6 +111,7 @@ namespace zprof
         kClockSystemChrono,
         kClockSystemMS, //wall clock 
 
+        //rdtsc指令与fence的组合  
         kClockPureRDTSC,
         kClockVolatileRDTSC,
         kClockFenceRDTSC,
@@ -126,7 +127,7 @@ namespace zprof
 
     struct VMData
     {
-        //don't use u64 or long long; uint64_t maybe is long ;
+        //don't use u64 or long long; 
         unsigned long long vm_size;
         unsigned long long rss_size;
         unsigned long long shr_size;
@@ -607,6 +608,7 @@ namespace zprof
         return chrono_frequency;
     }
 
+    //获取倒数, 运行时从tick值快速换算为物理时间  
     template<ClockType _C>
     inline double GetInverseFrequency()
     {
@@ -616,7 +618,7 @@ namespace zprof
 
 
 
-
+    //clock 封装: 提供统一的使用方式和输出 
     template<ClockType _C = kClockVolatileRDTSC>
     class ClockBase
     {
@@ -649,12 +651,13 @@ namespace zprof
             begin_ = c.begin_;
             ticks_ = c.ticks_;
         }
+        // 启动统计 
         void Start()
         {
             begin_ = GetTick<_C>();
             ticks_ = 0;
         }
-
+        // 记录elpased ticks  
         ClockBase& Save()
         {
             ticks_ = GetTick<_C>() - begin_;
@@ -663,6 +666,7 @@ namespace zprof
 
         ClockBase& StopAndSave() { return Save(); }
 
+        // elpased ticks, 其他别名和时间单位 
         long long ticks()const { return ticks_; }
         long long cycles()const { return ticks_; }
         long long cost()const { return ticks_; }
