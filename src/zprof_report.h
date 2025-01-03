@@ -45,11 +45,13 @@ namespace zprof
     static constexpr int kProfLineMinSize = 200;
     static constexpr int kProfMaxDepth = 5;
 
-    // 报告序列化类  
+    // 用于日志形式的报表格式化方法  
     class Report
     {
     public:
         Report() = delete;
+
+        // 绑定外部内存 
         explicit Report(char* buff, size_t buff_size)
         {
             buff_ = buff;
@@ -57,7 +59,7 @@ namespace zprof
             offset_ = 0;
         }
 
-
+        // 按输出格式要求 序列化需要的数据类型 
         inline Report& PushHumanCount(long long count);
         inline Report& PushHumanTime(long long ns);
         inline Report& PushHumanMem(long long bytes);
@@ -69,11 +71,14 @@ namespace zprof
         inline Report& PushNumber(unsigned long long number, int wide = 0);
         inline Report& PushNumber(long long number, int wide = 0);
 
+        // 快速填充指定长度字符  
         inline Report& PushIndent(int count);
-        inline Report& PushBlank(int count);
+        inline Report& PushHyphen(int count);
 
+        // 添加 c-style string 的结尾  
         inline void ClosingString();
-        bool IsFull() { return offset_ + 1 >= buff_len_; } //saved one char  
+
+        bool IsFull() { return offset_ + 1 >= buff_len_; }  
 
     public:
         char* buff() { return buff_; }
@@ -325,19 +330,21 @@ namespace zprof
 
     inline void Report::ClosingString()
     {
-        size_t closed_id = offset_ >= buff_len_ ? buff_len_ - 1 : offset_;
-        buff_[closed_id] = '\0';
+        size_t closed_idx = offset_ >= buff_len_ ? buff_len_ - 1 : offset_;
+        buff_[closed_idx] = '\0';
     }
 
+    // 以空格形式提供缩进支持 
     inline Report& Report::PushIndent(int count)
     {
-        static const char* const pi = "                                                            ";
-        constexpr int pi_size = 50;
-        static_assert(pi_size >= kProfNameMaxSize, "");
-        static_assert(pi_size >= kProfMaxDepth*2, "indent is two blank");
-        if (count > pi_size)
+        static const char lut[] = "                                                            ";
+        constexpr int lut_size = 50;
+        static_assert(lut_size < sizeof(lut), "overflow");
+        static_assert(lut_size <= kProfNameMaxSize, "meaningless");
+        static_assert(lut_size >= kProfMaxDepth*2, "too small");
+        if (count > lut_size)
         {
-            count = pi_size;
+            count = lut_size;
         }
         if (count <= 0)
         {
@@ -347,21 +354,24 @@ namespace zprof
         {
             return *this;
         }
-        memcpy(buff_ + offset_, pi, count);
+        memcpy(buff_ + offset_, lut, count);
         offset_ += count;
         return *this;
     }
 
 
 
-    inline Report& Report::PushBlank(int count)
+    inline Report& Report::PushHyphen(int count)
     {
-        static const char* const pi = "------------------------------------------------------------";
-        constexpr int pi_size = 50;
-        static_assert(pi_size >= kProfNameMaxSize, "");
-        if (count > pi_size)
+        static const char lut[] = "------------------------------------------------------------";
+        constexpr int lut_size = 50;
+        static_assert(lut_size < sizeof(lut), "overflow");
+        static_assert(lut_size <= kProfLineMinSize, "meaningless");
+        static_assert(lut_size >= kProfNameMaxSize, "meaningless");
+
+        if (count > lut_size)
         {
-            count = pi_size;
+            count = lut_size;
         }
         if (count <= 0)
         {
@@ -371,7 +381,7 @@ namespace zprof
         {
             return *this;
         }
-        memcpy(buff_ + offset_, pi, count);
+        memcpy(buff_ + offset_, lut, count);
         offset_ += count;
         return *this;
     }

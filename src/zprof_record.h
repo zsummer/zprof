@@ -421,10 +421,10 @@ namespace zprof
 
 
         // 层级递归输出所有报告   
-        int OutputCpu(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank);
-        int OutputMem(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank);
-        int OutputVm(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank);
-        int OutputUser(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank);
+        int OutputCpu(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
+        int OutputMem(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
+        int OutputVm(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
+        int OutputUser(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
         int RecursiveOutput(int entry_idx, int depth, const char* opt_name, int opt_name_len, Report& rp);
 
 
@@ -524,7 +524,8 @@ namespace zprof
         zprof::Clock<> clk;
         clk.Start();
 
-
+        // 获取所有时钟的频率换算信息  
+        // 运行时输出报告时直接进行值相乘计算即可获得纳秒为单位的时间    
         particle_for_ns_[kClockNULL] = 0;
         particle_for_ns_[kClockSystem] = GetInverseFrequency<kClockSystem>();
         particle_for_ns_[kClockClock] = GetInverseFrequency<kClockClock>();
@@ -673,13 +674,16 @@ namespace zprof
             int next_upper_id = i + 1;
             while (next_upper_id < declare_end_id())
             {
-                //顶级节点  
+                //找到下一个顶层节点  
                 if (nodes_[next_upper_id].show.upper == 0)
                 {
                     break;
                 }
                 next_upper_id++;
             }
+
+            // 非顶层节点总是指向下一个顶层节点 减少遍历判定开销  
+            // 默认指向下一个 即使不执行跳点优化也是逻辑正确的   
             for (int j = i; j < next_upper_id; j++)
             {
                 nodes_[j].show.jumps = next_upper_id - j - 1;
@@ -820,6 +824,11 @@ namespace zprof
         {
             return -3; //Regist method has memset all info ; 
         }
+
+        // 窗口策略: 
+        // 单个节点的所有子节点一般聚集在一个小的范围内, 最优情况下连续分布    
+        // 通过child+window确定最大最小范围, 规避掉使用list造成额外的存储开销和性能浪费  
+
         if (node.show.child == 0)
         {
             node.show.child = cidx;
@@ -882,7 +891,7 @@ namespace zprof
             return 0;
         }
 
-        // 叶子节点 
+        // 合并的目标节点如果也存在向上合并 那么要从当前的叶子节点中剔除    
         if (to_node.merge.to != 0)
         {
             for (int i = 0; i < merge_leafs_size_; i++)
@@ -896,7 +905,7 @@ namespace zprof
         }
 
 
-        // 叶子节点
+        // 加入到叶子节点列表
         merge_leafs_[merge_leafs_size_++] = child;
         return 0;
     }
@@ -907,6 +916,7 @@ namespace zprof
     {
         Clock<> clk;
         clk.Start();
+        // 所有存在向上合并数据的叶子节点均执行一次数据的合并 
         for (int i = 0; i < merge_leafs_size_; i++)
         {
             int leaf_id = merge_leafs_[i];
@@ -922,12 +932,14 @@ namespace zprof
             leaf.cpu.t_u = 0;
             leaf.mem.t_u = 0;
 
-            // 多层级支持  
+            // 1-N层父级   
             do
             {
                 node->cpu.t_u += append_cpu;
                 node->mem.t_u += append_mem;
                 node->merge.merged++;
+
+                // 非叶子节点只有当前所有子叶子节点合并完成后才能继续向上合并 
                 if (node->merge.merged >= node->merge.childs)
                 {
                     node->merge.merged = 0;
@@ -959,9 +971,9 @@ namespace zprof
 
 
     template<int kInst, int kReserve, int kDeclare>
-    int Record<kInst, kReserve, kDeclare>::OutputCpu(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank)
+    int Record<kInst, kReserve, kDeclare>::OutputCpu(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
     {
-        if (name == NULL  || name_len + name_blank > kProfDescMaxSize)
+        if (name == NULL  || name_len + name_padding > kProfDescMaxSize)
         {
             return -10;
         }
@@ -973,7 +985,7 @@ namespace zprof
         rp.PushNumber((unsigned long long)entry_idx, 3);
         rp.PushString(UNWIND_STR("| "));
         rp.PushString(name, name_len);
-        rp.PushBlank(name_blank);
+        rp.PushHyphen(name_padding);
         rp.PushString(UNWIND_STR(" |"));
 
         rp.PushString(UNWIND_STR("\tcpu*|-- "));
@@ -1026,9 +1038,9 @@ namespace zprof
 
 
     template<int kInst, int kReserve, int kDeclare>
-    int Record<kInst, kReserve, kDeclare>::OutputMem(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank)
+    int Record<kInst, kReserve, kDeclare>::OutputMem(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
     {
-        if (name == NULL || name_len + name_blank > kProfDescMaxSize)
+        if (name == NULL || name_len + name_padding > kProfDescMaxSize)
         {
             return -20;
         }
@@ -1039,7 +1051,7 @@ namespace zprof
         rp.PushNumber((unsigned long long)entry_idx, 3);
         rp.PushString(UNWIND_STR("| "));
         rp.PushString(name, name_len);
-        rp.PushBlank(name_blank);
+        rp.PushHyphen(name_padding);
         rp.PushString(UNWIND_STR(" |"));
 
         rp.PushString(UNWIND_STR("\tmem*|-- "));
@@ -1071,9 +1083,9 @@ namespace zprof
         return 0;
     }
     template<int kInst, int kReserve, int kDeclare>
-    int Record<kInst, kReserve, kDeclare>::OutputVm(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank)
+    int Record<kInst, kReserve, kDeclare>::OutputVm(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
     {
-        if (name == NULL || name_len + name_blank > kProfDescMaxSize)
+        if (name == NULL || name_len + name_padding > kProfDescMaxSize)
         {
             return -30;
         }
@@ -1084,7 +1096,7 @@ namespace zprof
         rp.PushNumber((unsigned long long)entry_idx, 3);
         rp.PushString(UNWIND_STR("| "));
         rp.PushString(name, name_len);
-        rp.PushBlank(name_blank);
+        rp.PushHyphen(name_padding);
         rp.PushString(UNWIND_STR(" |"));
 
 
@@ -1112,9 +1124,9 @@ namespace zprof
         return 0;
     }
     template<int kInst, int kReserve, int kDeclare>
-    int Record<kInst, kReserve, kDeclare>::OutputUser(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_blank)
+    int Record<kInst, kReserve, kDeclare>::OutputUser(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
     {
-        if (name == NULL || name_len + name_blank > kProfDescMaxSize)
+        if (name == NULL || name_len + name_padding > kProfDescMaxSize)
         {
             return -40;
         }
@@ -1125,7 +1137,7 @@ namespace zprof
         rp.PushNumber((unsigned long long)entry_idx, 3);
         rp.PushString(UNWIND_STR("| "));
         rp.PushString(name, name_len);
-        rp.PushBlank(name_blank);
+        rp.PushHyphen(name_padding);
         rp.PushString(UNWIND_STR(" |"));
 
 
@@ -1202,10 +1214,10 @@ namespace zprof
             name_len = opt_name_len;
         }
 
-        int name_blank = (int)name_len + depth  + depth;
-        name_blank = name_blank < kRecordFormatAlignSize ? kRecordFormatAlignSize - name_blank : 0;
+        int name_padding = (int)name_len + depth  + depth;
+        name_padding = name_padding < kRecordFormatAlignSize ? kRecordFormatAlignSize - name_padding : 0;
 
-        if (name_len + name_blank > kProfDescMaxSize)
+        if (name_len + name_padding > kProfDescMaxSize)
         {
             return -5;
         }
@@ -1215,22 +1227,22 @@ namespace zprof
 
         if (node.cpu.c > 0)
         {
-            OutputCpu(node, rp, entry_idx, depth, name, name_len, name_blank);
+            OutputCpu(node, rp, entry_idx, depth, name, name_len, name_padding);
         }
 
         if (node.mem.c > 0)
         {
-            OutputMem(node, rp, entry_idx, depth, name, name_len, name_blank);
+            OutputMem(node, rp, entry_idx, depth, name, name_len, name_padding);
         }
 
         if (node.vm.rss_size + node.vm.vm_size > 0)
         {
-            OutputVm(node, rp, entry_idx, depth, name, name_len, name_blank);
+            OutputVm(node, rp, entry_idx, depth, name, name_len, name_padding);
         }
 
         if (node.user.param1 != 0 || node.user.param2 != 0 || node.user.param3 != 0 || node.user.param4 != 0)
         {
-            OutputUser(node, rp, entry_idx, depth, name, name_len, name_blank);
+            OutputUser(node, rp, entry_idx, depth, name, name_len, name_padding);
         }
 
         if (depth > kProfMaxDepth)
@@ -1240,6 +1252,7 @@ namespace zprof
             return -4;
         }
 
+        //递归输出所有子表
         for (int i = node.show.child; i < node.show.child + node.show.window; i++)
         {
             RecordNode& child = nodes_[i];

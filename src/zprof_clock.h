@@ -498,7 +498,8 @@ namespace zprof
 
 
 
-
+    // 获取时钟的频率 以纳秒为单位 决定时钟的真实精度.    
+    // 例如CPU是2.5G 则RDTSC型时钟 频率是2.5/ns  
     template<ClockType _C>
     inline double GetFrequency()
     {
@@ -608,7 +609,8 @@ namespace zprof
         return chrono_frequency;
     }
 
-    //获取倒数, 运行时从tick值快速换算为物理时间  
+    // 获取频率(纳秒单位)的倒数   
+    // 例如CPU 2.5G  RDTSC型时钟的倒数为0.4 代表每次tick的间隔时间是0.4ns 
     template<ClockType _C>
     inline double GetInverseFrequency()
     {
