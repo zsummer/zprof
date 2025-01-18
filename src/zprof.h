@@ -181,6 +181,8 @@ public:
     }
 
     zprof::Clock<C>& clock() { return clock_; }
+    long long cnt() const { return cnt_; }
+    void set_cnt(long long cnt) { cnt_ = cnt; }
 private:
     long long cnt_;
     zprof::Clock<C> clock_;
