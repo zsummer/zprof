@@ -178,7 +178,7 @@ namespace zprof
         {
             PushNumber((unsigned long long)(bytes / 1024 / 1024 / 1024));
             PushChar('.');
-            PushNumber((unsigned long long)((bytes / 1024 / 1024) % 1024), 3);
+            PushNumber((unsigned long long)((bytes / 1024 / 1024) % 1024)*1000/1024, 3);
             PushChar('G');
             return *this;
         }
@@ -186,7 +186,7 @@ namespace zprof
         {
             PushNumber((unsigned long long)(bytes / 1024 / 1024));
             PushChar('.');
-            PushNumber((unsigned long long)((bytes / 1024) % 1024), 3);
+            PushNumber((unsigned long long)((bytes / 1024) % 1024) * 1000 / 1024, 3);
             PushChar('M');
             return *this;
         }
@@ -194,7 +194,7 @@ namespace zprof
         {
             PushNumber((unsigned long long)(bytes / 1024));
             PushChar('.');
-            PushNumber((unsigned long long)(bytes % 1024), 3);
+            PushNumber((unsigned long long)(bytes % 1024) * 1000 / 1024, 3);
             PushChar('K');
             return *this;
         }

@@ -133,6 +133,18 @@ int main(int argc, char *argv[])
     }
 
 
+    //format
+    if (true)
+    {
+        char buf[100] = { 0 };
+        zprof::Report r(buf, 100);
+        r.PushHumanMem(2 * 1024 * 1024 + 1009*1024);
+        r.ClosingString();
+        LogInfo() << buf;
+
+        buf[99] = '\0';
+        
+    }
 
     //
 
