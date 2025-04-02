@@ -266,7 +266,9 @@ int main(int argc, char *argv[])
             double l_sm = ProfInst.node(decl_id).cpu.l_sm * ProfInst.particle_for_ns(i);
             double max_u = ProfInst.node(decl_id).cpu.max_u * ProfInst.particle_for_ns(i);
             double min_u = ProfInst.node(decl_id).cpu.min_u * ProfInst.particle_for_ns(i);
-
+            LogInfo() << "sum=" << sum << "," << "sum_ms=" << sum_ms << "," << "dv=" << dv << "," << "dv_total_ms=" << dv_total_ms << "," 
+                << "sm=" << sm << "," << "high_ms=" << high_ms << "," << "low_ms=" << low_ms << "," << "avg_ms=" << avg_ms 
+                << "," << "h_sm=" << h_sm << "," << "l_sm=" << l_sm << "," << "max_u=" << max_u << "," << "min_u=" << min_u << "," << "sleep_count=" << sleep_count << ",";
             ASSERT_TEST(std::abs(sum/1000.0/1000.0 - sum_ms) < dv_total_ms, "i=", i);
             ASSERT_TEST(dv / 1000.0 / 1000.0 < dv_total_ms + (high_ms - low_ms)*sleep_count, "i=", i);
             ASSERT_TEST(sm / 1000.0 / 1000.0 > low_ms, "i=", i);
