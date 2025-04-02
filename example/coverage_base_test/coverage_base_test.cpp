@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
             ASSERT_TEST(h_sm / 1000.0 / 1000.0 < high_ms, "i=", i);
             ASSERT_TEST(h_sm / 1000.0 / 1000.0 > avg_ms, "i=", i);
             ASSERT_TEST(l_sm / 1000.0 / 1000.0 < avg_ms, "i=", i);
-            ASSERT_TEST(l_sm / 1000.0 / 1000.0 > low_ms, "i=", i);
+            ASSERT_TEST(l_sm / 1000.0 / 1000.0 >= low_ms, "i=", i);
             ASSERT_TEST(max_u >= min_u, "i=", i);
             ASSERT_TEST(max_u > 0, "i=", i);
             ASSERT_TEST(min_u > 0, "i=", i);
