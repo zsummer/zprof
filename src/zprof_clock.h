@@ -145,12 +145,14 @@ namespace zprof
 #ifdef WIN32
         _mm_lfence();
         return (long long)__rdtsc();
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) ::);
         unsigned long long val = ((unsigned long long)hi << 32) | lo;
         return (long long)val;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -163,12 +165,14 @@ namespace zprof
         ret = (long long)__rdtsc();
         _mm_lfence();
         return ret;
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("lfence;rdtsc;lfence" : "=a" (lo), "=d" (hi) ::);
         unsigned long long val = ((unsigned long long)hi << 32) | lo;
         return (long long)val;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -178,12 +182,14 @@ namespace zprof
     {
 #ifdef WIN32
         return (long long)__rdtsc();
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) ::);
         unsigned long long val = (((unsigned long long)hi) << 32 | ((unsigned long long)lo));
         return (long long)val;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -192,12 +198,14 @@ namespace zprof
     {
 #ifdef WIN32
         return (long long)__rdtsc();
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__("rdtsc" : "=a"(lo), "=d"(hi));
         unsigned long long val = (((unsigned long long)hi) << 32 | ((unsigned long long)lo));
         return (long long)val;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -207,12 +215,14 @@ namespace zprof
 #ifdef WIN32
         _mm_mfence();
         return (long long)__rdtsc();
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__("lock addq $0, 0(%%rsp); rdtsc" : "=a"(lo), "=d"(hi)::"memory");
         unsigned long long val = (((unsigned long long)hi) << 32 | ((unsigned long long)lo));
         return (long long)val;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -226,12 +236,14 @@ namespace zprof
         ret = (long long)__rdtsc();
         _mm_mfence();
         return ret;
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("mfence;rdtsc;mfence" : "=a" (lo), "=d" (hi) ::);
         unsigned long long val = ((unsigned long long)hi << 32) | lo;
         return (long long)val;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -241,12 +253,14 @@ namespace zprof
 #ifdef WIN32
         _mm_mfence();
         return (long long)__rdtsc();
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("mfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
         unsigned long long val = ((unsigned long long)hi << 32) | lo;
         return (long long)val;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -256,12 +270,14 @@ namespace zprof
 #ifdef WIN32
         unsigned int ui = 0;
         return (long long)__rdtscp(&ui);
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi)::"memory");
         unsigned long long val = (((unsigned long long)hi) << 32 | ((unsigned long long)lo));
         return (long long)val;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -274,10 +290,12 @@ namespace zprof
         win_freq.QuadPart = 0;
         QueryPerformanceCounter((LARGE_INTEGER*)&win_freq);
         return win_freq.QuadPart;
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         return ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -293,10 +311,12 @@ namespace zprof
         tsc /= 10;
         tsc -= 11644473600000000ULL;
         return (long long)tsc * 1000; //ns
-#else
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         struct timeval tm;
         gettimeofday(&tm, nullptr);
         return tm.tv_sec * 1000 * 1000 * 1000 + tm.tv_usec * 1000;
+#else
+        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -436,7 +456,9 @@ namespace zprof
     inline double GetCpuFreq()
     {
         double mhz = 1;
+//#ifdef __APPLE__
 #ifdef __APPLE__
+#if defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
         int mib[2];
         unsigned int freq;
         size_t len;
@@ -446,6 +468,7 @@ namespace zprof
         sysctl(mib, 2, &freq, &len, NULL, 0);
         mhz = freq;
         mhz /= 1000.0 * 1000.0;
+#endif
 #elif (defined WIN32)
         SYSTEM_INFO si = { 0 };
         GetSystemInfo(&si);
@@ -492,7 +515,7 @@ namespace zprof
             }
         }
         fclose(fp);
-#endif // __APPLE__
+#endif // 
         return mhz;
     }
 

@@ -45,6 +45,7 @@ fn-log是一款开源的轻量级高性能的跨平台日志库, 从log4z迭代�
   
 - [x] **常规日志功能支持** 
   > 支持日志文件回滚  
+  > 支持日期文件夹滚动  
   > 支持屏显日志染色输出  
   > 支持LOG4Z风格的流式输入  
   > 支持C++ stream风格的流式输入  
@@ -218,6 +219,11 @@ cd ../bin
   > default:  
   > desc: logger desc   
 
+- [x] define  
+  > option: list format like "key:val, key:val, key:val"
+  > default:
+  > desc: like c/c++ #define;  to replace the follow config content. warn: val length need equal or less than key length(maybe change impl).  
+
 ### Channel Option: (channel.)   
 - [x] sync
   > option: async sync 
@@ -234,8 +240,43 @@ cd ../bin
 - [x] category_extend
   > option:  
   > default: 0, invalid value.  
-  > desc: log will reserve when category in set [category, category+category_extend], and other not.   
+  > desc: log will reserve when category in set [category, category+category_extend), and other not.   
   > desc: mark content category to filter or write diff device
+
+- [x] category_wmask
+  > option: number  
+  > defualt: 
+  > desc: white list for category, a bitmap by u64.  
+- [x] category_bmask
+  > option: number  
+  > defualt: 
+  > desc: sugar for 'category_mask'  black list; 
+
+- [x] category_wlist
+  > option:   list format "1,23,44,1"   
+  > defualt: 
+  > desc: sugar for 'category_mask'  white list;        
+- [x] category_blist
+  > option:   
+  > defualt: 
+  > desc: sugar for 'category_mask'  black list;      
+   
+- [x] identify_wmask
+  > option: number  
+  > defualt: 
+  > desc: white list for identify, a bitmap by u64.  
+- [x] identify_bmask
+  > option: number  
+  > defualt: 
+  > desc: sugar for 'identify_mask'  black list; 
+- [x] identify_wlist
+  > option:   list format "1,23,44,1"   
+  > defualt: 
+  > desc: sugar for 'identify_mask'  white list;        
+- [x] identify_blist
+  > option:   
+  > defualt: 
+  > desc: sugar for 'identify_mask'  black list;        
 
 ### Device Option: (channel.device.)  
 - [x] disable  
@@ -257,13 +298,54 @@ cd ../bin
 - [x] category_extend
   > option:  
   > default: 0, invalid value.  
-  > desc: log will process when category in set [category, category+category_extend], and other not.   
+  > desc: log will process when category in set [category, category+category_extend), and other not.   
+
+- [x] category_wmask
+  > option: number  
+  > defualt: 
+  > desc: white list for category, a bitmap by u64.  
+- [x] category_bmask
+  > option: number  
+  > defualt: 
+  > desc: sugar for 'category_mask'  black list; 
+- [x] category_wlist
+  > option:   list format "1,23,44,1"   
+  > defualt: 
+  > desc: sugar for 'category_mask'  white list;        
+- [x] category_blist
+  > option:   
+  > defualt: 
+  > desc: sugar for 'category_mask'  black list;        
+
+- [x] identify
+- [x] identify_extend
+  > option:  
+  > default: 0, invalid value.  
+  > desc: log will process when identify in set [identify, identify+identify_extend), and other not.   
+
+- [x] identify_wmask
+  > option: number  
+  > defualt: 
+  > desc: white list for identify, a bitmap by u64.  
+- [x] identify_bmask
+  > option: number  
+  > defualt: 
+  > desc: sugar for 'identify_mask'  black list; 
+- [x] identify_wlist
+  > option:   list format "1,23,44,1"   
+  > defualt: 
+  > desc: sugar for 'identify_mask'  white list;        
+- [x] identify_blist
+  > option:   
+  > defualt: 
+  > desc: sugar for 'identify_mask'  black list;        
+
 
 - [x] udp_addr  
   > option:  
   > default:  
   > desc: in out_type:udp valid.  
-  > desc: example format 127.0.0.1_8080   
+  > desc: example format 127.0.0.1:8080   
 
 - [x] path  
   > option:  
@@ -296,11 +378,105 @@ cd ../bin
   > desc: rollback files when they are out limit size.   
   
 
-  ```
-  stress_test_2019.log
-  stress_test_2019.log.1
-  stress_test_2019.log.2
-  stress_test_2019.log.3
+
+ # default_log.yaml  
+  ```yaml
+
+# 基础语法   
+## 缩进 相同scope的field需要保持缩进一致
+## 缩进 子层级field缩进大于父层级field  
+
+## 数组 以-为前缀 需要放在key之前   
+## 注释 任意行内读到#之后会停止该行的解析操作, 即使位于引号内.  
+## kv分隔符 : 
+## 空白符 通常读到空白符会自动跳过, 但不包括尾随在值中间的空白符  
+## key 必须为小写字母和下划线 不允许其他值  
+## 值 会自动裁切前缀空白  
+## 值 的行尾边界有["#\r\n\0]
+## 值 的内容做了约束 范围为: 字符数字[a-zA-Z0-9]  [_-:/.,$~%]   
+## 值 的内容需求上为 文件名和路径 数字 字符 因此通过约束可以减少不必要的配置问题  
+
+# 错误码  代码中搜索ParseErrorCode, ErrNo查找对应说明. 
+
+# 宏语义 当前实现方式 原地替换(inplace)**随后**的所有字符串内容  
+# 宏语义 要注意替换后的内容不能长于原有内容, 可以避免内存重分配开销.
+# 宏语义 要注意不要替换掉正常的字符串, 包含值中的内容  
+ 
+
+# 变量 和宏替换类似, 不同点在于执行替换动作时候会增加前缀$进行替换, 并包裹{}重复执行一次.   例如var:{tag0=1}  会替换掉${tag0} 和 $tag0  
+
+# 宏,变量 均不能重复定义 (替换无法再替换)   
+# 宏,变量 通常为符号名+字面量 用来定义在随后重复使用的数字类编号 category, indentify, mask等  
+
+
+- define: LIST______ 0,1,2,3   # used like c-style;  warn: def name len must bigger than content.    
+- def: EMPTY______    
+
+- var: id = 234
+- var: id0 = 0, id1 =1    # use var $id0  or ${id0}  
+- var: {key="sss", val=999}   
+
+
+# - shm_key: 33321231
+# - hot_update:[true][false]
+# - logger_name: string  # log content prefix "LOG_PREFIX_NAME" 
+# - logger_desc: string  # log content prefix "LOG_PREFIX_DESC" 
+ - channel: 0
+    sync: async  
+    #sync: [async][sync][ASYNC][SYNC]
+    #priority:[trace][debug][info][warn][error][alarm][fatal]
+    #category: id
+    #category_extend: count
+    #category_wmask: 255 (white mask)
+    #category_wlist: {2,3,43} (white list)
+    #category_bmask: 255 (black mask)
+    #category_blist: {1,23,4} (black list)
+    #identify: id
+    #identify_extend: count
+    #identify_wmask: 255 (white mask)
+    #identify_wlist: {2,3,43} (white list)
+    #identify_bmask: 255 (black mask)
+    #identify_blist: {1,23,4} (black list)
+    - device: 0
+        disable: false
+        #disable: [false][true][FALSE][TRUE]
+        #priority:[trace][debug][info][warn][error][alarm][fatal]
+        #category: id
+        #category_extend: count
+        #category_wmask: 255 (white mask)
+        #category_wlist: {2,3,43} (white list)
+        #category_bmask: 255 (black mask)
+        #category_blist: {1,23,4} (black list)
+        #identify: id
+        #identify_extend: count
+        #identify_wmask: 255 (white mask)
+        #identify_wlist: {2,3,43} (white list)
+        #identify_bmask: 255 (black mask)
+        #identify_blist: {1,23,4} (black list)
+        out_type: file
+        #out_type:[file][null][udp][screen][virtual]
+        file: "$PNAME"  #in file type it's log file name
+        path: ./ #in file type it's log file path  
+        rollback: 4 #in file type it's this device log file rollback count.   
+        limit_size: 100 m #in file type it's one log file limit size  
+        #stuff_up: [true][false]  #in file type it's 'false' will rollback old file when reopen logger.  the 'true' will append exist log file still reach 'limit_size'  
+        #udp_addr: [ip:port]  # in udp type     
+    - device: 1
+        disable: false
+        out_type: file
+        priority: error
+        file: "$PNAME_error"
+        rollback: 4
+        limit_size: 100 m #only support M byte
+    - device: 2
+        disable: false
+        out_type: screen
+        priority: info
+ - channel: 1
+    sync: sync
+    - device: 0
+        disable: true
+
   ```
 
 

@@ -2,44 +2,12 @@
 #pragma GCC push_options
 #pragma GCC optimize ("O2")
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
- * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
- * VERSION:  1.0.0
- * PURPOSE:  fn-log is a cpp-based logging utility.
- * CREATION: 2019.4.20
- * RELEASED: 2019.6.27
- * QQGROUP:  524700770
- */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once
@@ -71,7 +39,7 @@
 #include <unordered_set>
 #include <memory>
 #include <atomic>
-
+#include <fcntl.h>
 #ifdef WIN32
 #ifndef KEEP_INPUT_QUICK_EDIT
 #define KEEP_INPUT_QUICK_EDIT false
@@ -83,6 +51,7 @@
 #include <io.h>
 #include <shlwapi.h>
 #include <process.h>
+#include <ws2tcpip.h>
 #pragma comment(lib, "shlwapi")
 #pragma comment(lib, "User32.lib")
 #pragma comment(lib,"ws2_32.lib")
@@ -97,13 +66,13 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <fcntl.h>
+
 #include <semaphore.h>
 #include <sys/syscall.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <stdlib.h>
-#
+#include <netdb.h>
 #endif
 
 
@@ -114,6 +83,12 @@
 #define NFLOG_HAVE_LIBPROC
 #include <libproc.h>
 #endif
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#define FNLOG_GCC 1
+#else
+#define FNLOG_GCC 0
 #endif
 
 
@@ -193,6 +168,7 @@ namespace FNLog
     FileHandler::FileHandler()
     {
         file_ = nullptr;
+        chunk_1_[0] = '\0';
     }
     FileHandler::~FileHandler()
     {
@@ -316,10 +292,10 @@ namespace FNLog
         char buf[260] = { 0 };
 #ifdef WIN32
         DWORD winPID = GetCurrentProcessId();
-        sprintf(buf, "%06u", winPID);
+        snprintf(buf, 260, "%06u", winPID);
         pid = buf;
 #else
-        sprintf(buf, "%06d", getpid());
+        snprintf(buf, 260, "%06d", getpid());
         pid = buf;
 #endif
         return pid;
@@ -350,7 +326,7 @@ namespace FNLog
         name = buf;
         return name;;
 #else
-        sprintf(buf, "/proc/%d/cmdline", (int)getpid());
+        snprintf(buf, 260, "/proc/%d/cmdline", (int)getpid());
         FileHandler i;
 	struct stat file_stat;
         i.open(buf, "rb", file_stat);
@@ -462,6 +438,8 @@ public:
     {
         chunk_1_[0] = '\0';
         handler_ = FNLOG_INVALID_SOCKET;
+        open_ts_ = 0;
+        memset(&addr_, 0, sizeof(addr_));
     }
     ~UDPHandler()
     {
@@ -476,9 +454,53 @@ public:
         return handler_ != FNLOG_INVALID_SOCKET;
     }
 
-    void open()
+    int open()
     {
+        if (time(NULL) <= open_ts_ + 2)
+        {
+            return 0; //but not open
+        }
+        open_ts_ = time(NULL);
+
         handler_ = socket(AF_INET, SOCK_DGRAM, 0);
+        if (handler_ == FNLOG_INVALID_SOCKET)
+        {
+            //int ret = WSAGetLastError();
+            return -1;
+        }
+        memset(&addr_, 0, sizeof(addr_));
+#ifdef WIN32
+        u_long argp = 1;
+        int ret = ioctlsocket(handler_, FIONBIO, &argp);
+        if (ret != NO_ERROR)
+        {
+            return -2;
+        }
+#else
+        int oldf = fcntl(handler_, F_GETFL, 0);
+        int newf = oldf | O_NONBLOCK;
+        int ret = fcntl(handler_, F_SETFL, newf);
+        if (ret == -1)
+        {
+            return -2;
+        }
+#endif
+        
+        return 0;
+    }
+
+    int bind(unsigned int ip, unsigned short port)
+    {
+        addr_.sin_family = AF_INET;
+        addr_.sin_port = port;
+        addr_.sin_addr.s_addr = ip;
+        int ret = ::bind(handler_, (struct sockaddr*)&addr_, sizeof(addr_));
+        (void)ret;
+        if (ret != 0)
+        {
+            return ret;
+        }
+        return 0;
     }
 
     void close()
@@ -494,24 +516,39 @@ public:
         }
     }
 
-    void write(unsigned int ip, unsigned short port, const char* data, int len)
+
+    int write(unsigned int ip, unsigned short port, const char* data, int len)
     {
         if (handler_ == FNLOG_INVALID_SOCKET)
         {
-            return;
+            return 0;
+        }
+        addr_.sin_family = AF_INET;
+        addr_.sin_port = port;
+        addr_.sin_addr.s_addr = ip;
+        int ret = sendto(handler_, data, len, 0, (struct sockaddr*) &addr_, sizeof(addr_));
+        (void)ret;
+        return ret;
+    }
+
+    int read(char* data, int data_len)
+    {
+        if (handler_ == FNLOG_INVALID_SOCKET)
+        {
+            return 0;
         }
 
-        struct sockaddr_in addr;
-        memset(&addr, 0, sizeof(addr));
-        addr.sin_family = AF_INET;
-        addr.sin_port = port;
-        addr.sin_addr.s_addr = ip;
-        int ret = sendto(handler_, data, len, 0, (struct sockaddr*) &addr, sizeof(addr));
-        (void)ret;
+        int ret = recvfrom(handler_, data, data_len, 0, NULL, NULL);
+        if (ret < 0)
+        {
+            return 0;
+        }
+        return ret;
     }
- 
 public:
     char chunk_1_[128];
+    time_t open_ts_;
+    struct sockaddr_in addr_;
     FNLOG_SOCKET handler_;
 };
 
@@ -562,6 +599,10 @@ public:
 #define _FN_LOG_DATA_H_
 
 
+#ifndef FN_LOG_MAX_DEVICE_SIZE
+#define FN_LOG_MAX_DEVICE_SIZE 20
+#endif
+
 #ifndef FN_LOG_MAX_CHANNEL_SIZE
 #define FN_LOG_MAX_CHANNEL_SIZE 2
 #endif
@@ -574,13 +615,30 @@ public:
 #define FN_LOG_MAX_LOG_QUEUE_SIZE 1000
 #endif
 
+#ifndef FN_LOG_FREQ_LIMIT_SIZE
+#define FN_LOG_FREQ_LIMIT_SIZE 2
+#endif
+
+
+#ifndef FN_LOG_MAX_ASYNC_SLEEP_MS 
+#define FN_LOG_MAX_ASYNC_SLEEP_MS 10
+#endif
+
+#ifndef FN_LOG_FORCE_FLUSH_QUE 
+#define FN_LOG_FORCE_FLUSH_QUE 10000
+#endif
 
 #ifndef FN_LOG_HOTUPDATE_INTERVEL
 #define FN_LOG_HOTUPDATE_INTERVEL 5
 #endif
 
 
-//#define FN_LOG_USING_ATOM_CFG
+
+
+#define FN_LOG_CPU_COST_STAT
+
+#define FN_LOG_USING_ATOM_CFG
+
 
 namespace FNLog
 {
@@ -647,6 +705,11 @@ namespace FNLog
         char content_[LOG_SIZE]; //content
     };
 
+    enum DeviceInType
+    {
+        DEVICE_IN_NULL,
+        DEVICE_IN_UDP,
+    };
 
     enum DeviceOutType
     {
@@ -655,6 +718,7 @@ namespace FNLog
         DEVICE_OUT_FILE,
         DEVICE_OUT_UDP,
         DEVICE_OUT_VIRTUAL,
+        DEVICE_OUT_EMPTY,
     };
 
 
@@ -664,12 +728,14 @@ namespace FNLog
         DEVICE_CFG_PRIORITY,  
         DEVICE_CFG_CATEGORY,  
         DEVICE_CFG_CATEGORY_EXTEND, 
-        DEVICE_CFG_CATEGORY_FILTER,
+        DEVICE_CFG_CATEGORY_MASK,
         DEVICE_CFG_IDENTIFY,
         DEVICE_CFG_IDENTIFY_EXTEND,
-        DEVICE_CFG_IDENTIFY_FILTER,
+        DEVICE_CFG_IDENTIFY_MASK,
         DEVICE_CFG_FILE_LIMIT_SIZE, 
         DEVICE_CFG_FILE_ROLLBACK,
+        DEVICE_CFG_FILE_ROLLDAILY,
+        DEVICE_CFG_FILE_ROLLHOURLY,
         DEVICE_CFG_FILE_STUFF_UP,
         DEVICE_CFG_UDP_IP,
         DEVICE_CFG_UDP_PORT,
@@ -680,11 +746,16 @@ namespace FNLog
     {
         DEVICE_LOG_CUR_FILE_SIZE, 
         DEVICE_LOG_CUR_FILE_CREATE_TIMESTAMP,  
-        DEVICE_LOG_CUR_FILE_CREATE_DAY, 
+        DEVICE_LOG_CUR_FILE_CREATE_DAY,
+        DEVICE_LOG_CUR_FILE_CREATE_HOUR,
         DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP,
         DEVICE_LOG_LAST_TRY_CREATE_ERROR,
+        DEVICE_LOG_LAST_TRY_CREATE_CNT,
+        DEVICE_LOG_PRIORITY, //== PRIORITY_TRACE
+        DEVICE_LOG_PRIORITY_MAX = DEVICE_LOG_PRIORITY + PRIORITY_MAX,
         DEVICE_LOG_TOTAL_WRITE_LINE,
-        DEVICE_LOG_TOTAL_WRITE_BYTE,  
+        DEVICE_LOG_TOTAL_WRITE_BYTE,
+        DEVICE_LOG_TOTAL_LOSE_LINE,
         DEVICE_LOG_MAX_ID
     };
 
@@ -707,15 +778,14 @@ namespace FNLog
 #else
         using ConfigFields = long long[DEVICE_CFG_MAX_ID];
 #endif // FN_LOG_USING_ATOM_CFG
-        using LogFields = std::array<std::atomic_llong, DEVICE_LOG_MAX_ID>;
-
+        
     public:
         int device_id_;
         unsigned int out_type_;
+        unsigned int in_type_;
         char out_file_[MAX_LOGGER_NAME_LEN];
         char out_path_[MAX_PATH_LEN];
         ConfigFields config_fields_;
-        LogFields log_fields_;
     };
 
    
@@ -730,21 +800,32 @@ namespace FNLog
         CHANNEL_CFG_PRIORITY, 
         CHANNEL_CFG_CATEGORY,  
         CHANNEL_CFG_CATEGORY_EXTEND, 
-        CHANNEL_CFG_CATEGORY_FILTER,
+        CHANNEL_CFG_CATEGORY_MASK,
         CHANNEL_CFG_IDENTIFY,
         CHANNEL_CFG_IDENTIFY_EXTEND,
-        CHANNEL_CFG_IDENTIFY_FILTER,
+        CHANNEL_CFG_IDENTIFY_MASK,
         CHANNEL_CFG_MAX_ID
     };
 
 
     enum ChannelLogEnum
     {
+        CHANNEL_LOG_WAIT_COUNT,
         CHANNEL_LOG_HOLD,
         CHANNEL_LOG_PUSH,
         CHANNEL_LOG_PRIORITY, //== PRIORITY_TRACE
         CHANNEL_LOG_PRIORITY_MAX = CHANNEL_LOG_PRIORITY + PRIORITY_MAX,
-        CHANNEL_LOG_PROCESSED = CHANNEL_LOG_PUSH + 8,
+
+        CHANNEL_LOG_BOUND = CHANNEL_LOG_PRIORITY_MAX + 8, //ull*8 
+
+        CHANNEL_LOG_PROCESSED,
+        CHANNEL_LOG_PROCESSED_BYTES,
+        CHANNEL_LOG_MAX_PROC_QUE_SIZE,
+        CHANNEL_LOG_MAX_DELAY_TIME_S, //second 
+
+        CHANNEL_LOG_HOTUPDATE_CHECK,
+        CHANNEL_LOG_HOTUPDATE_CHANGE,
+
         CHANNEL_LOG_MAX_ID
     };
 
@@ -760,6 +841,7 @@ namespace FNLog
     {
     public:
         static const int BUFFER_LEN = FN_LOG_MAX_LOG_QUEUE_SIZE;
+        static_assert(BUFFER_LEN > 10, "ring queue size too little");
     public:
         char chunk_1_[CHUNK_SIZE];
         std::atomic_int write_idx_;
@@ -771,6 +853,8 @@ namespace FNLog
         std::atomic_int proc_idx_;
         char chunk_5_[CHUNK_SIZE];
         LogData buffer_[BUFFER_LEN];
+        char chunk_6_[CHUNK_SIZE];
+        LogData udp_buffer_;
     };
 
     struct Channel
@@ -782,25 +866,26 @@ namespace FNLog
         using ConfigFields = long long[CHANNEL_CFG_MAX_ID];
 #endif // FN_LOG_USING_ATOM_CFG
 
-        using LogFields = std::array<std::atomic_llong, CHANNEL_LOG_MAX_ID>;
-        static const int MAX_DEVICE_SIZE = 20;
-
+        using ChannelLogFields = std::array<std::atomic_llong, CHANNEL_LOG_MAX_ID>;
+        static const int MAX_DEVICE_SIZE = FN_LOG_MAX_DEVICE_SIZE;
+        using DeviceLogFields = std::array<std::atomic_llong, DEVICE_LOG_MAX_ID>;
 
     public:
-        char chunk_1_[CHUNK_SIZE];
-
+        
         int  channel_id_;
         int  channel_type_;
-        unsigned int channel_state_;
-        time_t yaml_mtime_;
-        time_t last_hot_check_;
-
-        int chunk_;
         int virtual_device_id_;
         int device_size_;
-        Device devices_[MAX_DEVICE_SIZE];
+        unsigned int channel_state_;
         ConfigFields config_fields_;
-        LogFields log_fields_;
+        Device devices_[MAX_DEVICE_SIZE];
+
+        char chunk_1_[CHUNK_SIZE];
+
+        time_t yaml_mtime_;
+        time_t last_hot_check_;
+        ChannelLogFields channel_log_fields_;
+        DeviceLogFields device_log_fields_[MAX_DEVICE_SIZE];
     };
 
 
@@ -811,6 +896,8 @@ namespace FNLog
         LOGGER_STATE_RUNNING,
         LOGGER_STATE_CLOSING,
     };
+
+
     
     struct SHMLogger
     {
@@ -851,6 +938,14 @@ namespace FNLog
         bool noop_;
     };
 
+
+    struct LoggerFreqLimit
+    {
+        unsigned long long ts; //ms  
+        unsigned long long cd; //cd 
+        unsigned long long skips;
+    };
+
     class Logger
     {
     public:
@@ -874,16 +969,20 @@ namespace FNLog
 
 
     public:
+        static const int MAX_FREQ_LIMIT_SIZE = FN_LOG_FREQ_LIMIT_SIZE;
         Logger();
         ~Logger();
         bool hot_update_;
         std::string yaml_path_;
         unsigned int logger_state_;
-        StateLock state_lock;
+        StateLock state_lock_;
         char desc_[MAX_LOGGER_DESC_LEN];
         int desc_len_;
         char name_[MAX_LOGGER_NAME_LEN];
         int name_len_;
+        LoggerFreqLimit freq_limits_[MAX_FREQ_LIMIT_SIZE]; // used __COUNTER__  
+        std::atomic<long long> tick_sum_;
+        std::atomic<long long> tick_count_;
 
         long long shm_key_;
         SHMLogger* shm_;
@@ -915,72 +1014,91 @@ namespace FNLog
 #define AtomicLoadC(m, eid) m.config_fields_[eid]
 #endif // FN_LOG_USING_ATOM_CFG
 
-
-    template <class M>
-    inline long long AtomicLoadL(M& m, unsigned eid)
+    inline long long AtomicLoadChannelLog(Channel& c, unsigned eid)
     {
-        return m.log_fields_[eid].load(std::memory_order_relaxed);
+        return c.channel_log_fields_[eid].load(std::memory_order_relaxed);
     }
 
-    template <class M>
-    inline void AtomicAddL(M& m, unsigned eid)
+    inline void AtomicIncChannelLog(Channel& c, unsigned eid, long long v)
     {
-        m.log_fields_[eid].fetch_add(1, std::memory_order_relaxed);
-    }
-    template <class M>
-    inline void AtomicAddLV(M& m, unsigned eid, long long v)
-    {
-        m.log_fields_[eid].fetch_add(v, std::memory_order_relaxed);
+        c.channel_log_fields_[eid].fetch_add(v, std::memory_order_relaxed);
     }
 
-    template <class M>
-    inline void AtomicStoreL(M& m, unsigned eid, long long v)
+    inline void AtomicStoreChannelLog(Channel& c, unsigned eid, long long v)
     {
-        m.log_fields_[eid].store(v, std::memory_order_relaxed);
+        c.channel_log_fields_[eid].store(v, std::memory_order_relaxed);
     }
+
+
+
+    inline long long AtomicLoadDeviceLog(Channel& c, int device_id, unsigned eid)
+    {
+        return c.device_log_fields_[device_id][eid].load(std::memory_order_relaxed);
+    }
+
+    inline void AtomicIncDeviceLog(Channel& c, int device_id, unsigned eid, long long v)
+    {
+        c.device_log_fields_[device_id][eid].fetch_add(v, std::memory_order_relaxed);
+    }
+
+    inline void AtomicStoreDeviceLog(Channel& c, int device_id, unsigned eid, long long v)
+    {
+        c.device_log_fields_[device_id][eid].store(v, std::memory_order_relaxed);
+    }
+
+
+    enum ErrNo
+    {
+        E_SUCCESS = 0,
+
+        E_LOGGER_IN_USE,
+        E_LOGGER_NOT_INIT,
+        E_LOGGER_NOT_RUNNING,
+
+        E_INVALID_CONFIG_PATH,
+
+        E_INVALID_CHANNEL_SIZE,
+        E_INVALID_CHANNEL_SYNC,
+        E_INVALID_CHANNEL_STATE,
+        E_CHANNEL_THREAD_FAILED,
+        E_CHANNEL_NOT_SEQUENCE,
+
+
+        E_OUT_OF_DEVICE_SIZE,
+        E_DEVICE_NOT_SEQUENCE,
+
+
+
+
+
+        E_SHMGET_PROBE_ERROR,
+        E_SHMGET_CREATE_ERROR,
+        E_SHMAT_ERROR,
+        E_SHM_VERSION_WRONG,
+
+        E_VERSION_MISMATCH,
+
+
+        E_DISABLE_HOTUPDATE,
+        E_NO_CONFIG_PATH,
+        E_CONFIG_NO_CHANGE,
+        E_OUT_RINGBUFFER,
+
+        E_BASE_ERRNO_MAX
+
+    };
+
 
 }
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once
@@ -993,52 +1111,124 @@ namespace FNLog
 {
     enum ParseErrorCode
     {
-        PEC_NONE, 
-        PEC_ERROR,
-        PEC_ILLEGAL_CHARACTER,
+        PEC_NONE = E_SUCCESS,
+        PEC_ERROR = E_BASE_ERRNO_MAX,
+        PEC_NONSUPPORT_SYNTAX,
         PEC_ILLEGAL_KEY,
+        PEC_ILLEGAL_VAR_NAME,
+        PEC_ILLEGAL_VAR_VALUE,
         PEC_NOT_CLOSURE,
         PEC_ILLEGAL_ADDR_IP,
         PEC_ILLEGAL_ADDR_PORT,
+        PEC_DEFINED_TARGET_TOO_LONG,
 
         PEC_UNDEFINED_DEVICE_KEY,
         PEC_UNDEFINED_DEVICE_TYPE,
         PEC_UNDEFINED_CHANNEL_KEY,
         PEC_UNDEFINED_GLOBAL_KEY,
 
-        PEC_DEVICE_NOT_ARRAY,
-        PEC_DEVICE_INDEX_OUT_MAX,
-        PEC_DEVICE_INDEX_NOT_SEQUENCE,
- 
-
-        PEC_CHANNEL_NOT_ARRAY,
-        PEC_CHANNEL_INDEX_OUT_MAX,
-        PEC_CHANNEL_INDEX_NOT_SEQUENCE,
-        PEC_NO_ANY_CHANNEL,
     };
 
-    enum LineType
+
+    inline std::string DebugErrno(int error_code)
     {
-        LINE_NULL,
-        LINE_ARRAY,
-        LINE_BLANK,
-        LINE_EOF,
-    };
+        switch (error_code)
+        {
+        case E_SUCCESS:
+            return "success";
+        case E_LOGGER_IN_USE:
+            return "logger alread in use";
+        case E_LOGGER_NOT_INIT:
+            return "logger not init";
+        case E_LOGGER_NOT_RUNNING:
+            return "logger not running";
+        case E_INVALID_CONFIG_PATH:
+            return "invalid config path";
+        case E_INVALID_CHANNEL_SIZE:
+            return "invalid channel size";
+        case E_INVALID_CHANNEL_SYNC:
+            return "invalid channel sync";
+        case E_INVALID_CHANNEL_STATE:
+            return "invalid channel state";
+        case E_CHANNEL_THREAD_FAILED:
+            return "create thread faield";
+        case E_CHANNEL_NOT_SEQUENCE:
+            return "channel index need sequence.";
+
+        case E_OUT_OF_DEVICE_SIZE:
+        {
+            char buf[30];
+            snprintf(buf, 30, "%d", FN_LOG_MAX_DEVICE_SIZE);
+            return std::string("out of device size(") + buf + ")";
+        }
+            
+        case E_DEVICE_NOT_SEQUENCE:
+            return "device index need sequence.";
+
+        case E_SHMGET_PROBE_ERROR:
+        case E_SHMGET_CREATE_ERROR:
+        case E_SHMAT_ERROR:
+        case E_SHM_VERSION_WRONG:
+        case E_VERSION_MISMATCH:
+            return "shm error";
+        
+        case E_DISABLE_HOTUPDATE:
+        case E_NO_CONFIG_PATH:
+        case E_CONFIG_NO_CHANGE:
+        case E_OUT_RINGBUFFER:
+            return "some warn";
+
+        case PEC_ERROR:
+            return "syntax error";
+        case PEC_NONSUPPORT_SYNTAX:
+            return "unsupport syntax";
+        case PEC_ILLEGAL_KEY:
+            return "unknown key";
+
+        case PEC_ILLEGAL_VAR_NAME:
+            return "name or key invalid";
+        case PEC_NOT_CLOSURE:
+            return "not closure line ";
+        case PEC_ILLEGAL_ADDR_IP:
+        case PEC_ILLEGAL_ADDR_PORT:
+            return "udp addr error";
+        case PEC_DEFINED_TARGET_TOO_LONG:
+            return "var/macro name len must longger than/equal new name.";
+
+        case PEC_UNDEFINED_DEVICE_KEY:
+        case PEC_UNDEFINED_DEVICE_TYPE:
+        case PEC_UNDEFINED_CHANNEL_KEY:
+        case PEC_UNDEFINED_GLOBAL_KEY:
+            return "undefined type";
+
+
+
+
+
+        default:
+            break;
+        }
+        return "unknown error.";
+    }
+
+
     enum BlockType
     {
-        BLOCK_BLANK,
-        BLOCK_PRE_KEY,
+        BLOCK_NONE,
         BLOCK_KEY,
         BLOCK_PRE_SEP,
         BLOCK_PRE_VAL,
         BLOCK_VAL,
         BLOCK_CLEAN,
     };
+
     enum ReseveKey
     {
         RK_NULL,
         RK_SHM_KEY,
         RK_CHANNEL,
+        RK_DEFINE, //the symbol name len must equal or great than new name;   like tag0 10, tag1 100;  will error by "tag0 100000" 
+        RK_VARIABLE,
         RK_DEVICE,
         RK_SYNC,
         RK_DISABLE,
@@ -1048,24 +1238,148 @@ namespace FNLog
         RK_PRIORITY,
         RK_CATEGORY,
         RK_CATEGORY_EXTEND,
-        RK_CATEGORY_FILTER,
+        RK_CATEGORY_WLIST, //bitset list 
+        RK_CATEGORY_BLIST,
+        RK_CATEGORY_WMASK, 
+        RK_CATEGORY_BMASK, 
         RK_IDENTIFY,
         RK_IDENTIFY_EXTEND,
-        RK_IDENTIFY_FILTER,
+        RK_IDENTIFY_WLIST, //bitset list 
+        RK_IDENTIFY_BLIST,
+        RK_IDENTIFY_WMASK,
+        RK_IDENTIFY_BMASK, 
+        RK_IN_TYPE,
         RK_OUT_TYPE,
         RK_FILE,
         RK_PATH,
         RK_LIMIT_SIZE,
         RK_ROLLBACK,
+        RK_ROLLDAILY,
+        RK_ROLLHOURLY,
         RK_FILE_STUFF_UP,
         RK_UDP_ADDR,
     };
 
-#if __GNUG__ && __GNUC__ >= 6
+#if FNLOG_GCC && __GNUC__ >= 6
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
 
+    struct Line
+    {
+        int blank_;
+        int chars_;
+        int block_type_;
+        char block_stack_;
+        int key_;
+        const char* key_begin_;
+        const char* key_end_;
+        const char* val_begin_;
+        const char* val_end_;
+    };
+
+    struct LexState
+    {
+        int line_no_;
+        const char* first_;
+        const char* current_;
+        const char* end_;
+        Line line_;
+        SHMLogger::Channels channels_;
+        int channel_size_;
+        long long shm_key_;
+        bool hot_update_;
+        char desc_[Logger::MAX_LOGGER_DESC_LEN];
+        int desc_len_;
+        char name_[Logger::MAX_LOGGER_NAME_LEN];
+        int name_len_;
+    };
+    inline bool IsNumber(char ch)
+    {
+        return ch >= '0' && ch <= '9';
+    }
+    inline bool IsBlank(char ch)
+    {
+        //not std::isblank
+        switch (ch)
+        {
+        case ' ':
+        case '\t': 
+        case '\v':
+        case '\f':
+            return true;
+        default:
+            break;
+        }
+        return false;
+    }
+    inline bool IsSoftLineBound(char ch)
+    {
+        //not std::isblank
+        switch (ch)
+        {
+        case '\0':
+        case '\r':
+        case '\n':
+        case '#':
+            return true;
+        default:
+            break;
+        }
+        return false;
+    }
+    inline bool IsLineBound(char ch)
+    {
+        //not std::isblank
+        switch (ch)
+        {
+        case '\0':
+        case '\r':
+        case '\n':
+            return true;
+        default:
+            break;
+        }
+        return false;
+    }
+
+    inline bool IsValidName(char ch)
+    {
+        if (ch >= 'a' && ch <= 'z')
+        {
+            return true;
+        }
+        if (ch >= 'A' && ch <= 'Z')
+        {
+            return true;
+        }
+        if (ch >= '0' && ch <= '9')
+        {
+            return true;
+        }
+        if (ch == '_')
+        {
+            return true;
+        }
+        return false;
+    }
+
+    inline bool IsValidNameFirst(char ch)
+    {
+        if (ch >= 'a' && ch <= 'z')
+        {
+            return true;
+        }
+        if (ch >= 'A' && ch <= 'Z')
+        {
+            return true;
+        }
+        if (ch == '_')
+        {
+            return true;
+        }
+        return false;
+    }
 
     inline ReseveKey ParseReserve(const char* begin, const char* end)
     {
@@ -1082,9 +1396,34 @@ namespace FNLog
             }
             else if (*(begin + 1) == 'a')
             {
-                if (end - begin > (int)sizeof("category_e") - 1)
+                if (end - begin > (int)sizeof("category_ex") - 1)
                 {
-                    return *(begin + 9) == 'e' ? RK_CATEGORY_EXTEND : RK_CATEGORY_FILTER;
+                    if (*(begin + 9) == 'e')  //category_extend
+                    {
+                        return RK_CATEGORY_EXTEND;
+                    }
+                    else if (*(begin + 9) == 'w')
+                    {
+                        if (*(begin + 10) == 'l')  //category_wlist  
+                        {
+                            return RK_CATEGORY_WLIST;
+                        }
+                        else if (*(begin + 10) == 'm')
+                        {
+                            return RK_CATEGORY_WMASK;
+                        }
+                    }
+                    else if (*(begin + 9) == 'b')
+                    {
+                        if (*(begin + 10) == 'l')  //category_blist; black list   
+                        {
+                            return RK_CATEGORY_BLIST;
+                        }
+                        else if (*(begin + 10) == 'm')
+                        {
+                            return RK_CATEGORY_BMASK;
+                        }
+                    }
                 }
                 else
                 {
@@ -1093,7 +1432,15 @@ namespace FNLog
             }
             break;
         case 'd':
-            if (*(begin+1) == 'e')
+            if (end - begin < 3)
+            {
+                return RK_NULL;
+            }
+            if (*(begin + 2) == 'f')
+            {
+                return RK_DEFINE;
+            }
+            else if (*(begin+1) == 'e')
             {
                 return RK_DEVICE;
             }
@@ -1107,9 +1454,38 @@ namespace FNLog
         case 'h':
             return RK_HOT_UPDATE;
         case 'i':
-            if (end - begin > (int)sizeof("identify_e") - 1)
+            if (*(begin+1) == 'n')
             {
-                return *(begin + 9) == 'e' ? RK_IDENTIFY_EXTEND : RK_IDENTIFY_FILTER;
+                return RK_IN_TYPE;
+            }
+            else if (end - begin > (int)sizeof("identify_ex") - 1)
+            {
+                if (*(begin + 9) == 'e')
+                {
+                    return RK_IDENTIFY_EXTEND;
+                }
+                else if (*(begin + 9) == 'w')
+                {
+                    if (*(begin + 10) == 'l')  //identify_wlist  
+                    {
+                        return RK_IDENTIFY_WLIST;
+                    }
+                    else if (*(begin + 10) == 'm')
+                    {
+                        return RK_IDENTIFY_WMASK;
+                    }
+                }
+                else if (*(begin + 9) == 'b')
+                {
+                    if (*(begin + 10) == 'l')  //identify_blist;  black list  
+                    {
+                        return RK_IDENTIFY_BLIST;
+                    }
+                    else if (*(begin + 10) == 'm')
+                    {
+                        return RK_IDENTIFY_BMASK;
+                    }
+                }
             }
             else
             {
@@ -1144,7 +1520,22 @@ namespace FNLog
             }
             break;
         case 'r':
-            return RK_ROLLBACK;
+            if (end - begin > (int)sizeof("rollb"))
+            {
+                if (*(begin + 4) == 'b')
+                {
+                    return RK_ROLLBACK;
+                }
+                else if (*(begin + 4) == 'd')
+                {
+                    return RK_ROLLDAILY;
+                }
+                else if (*(begin + 4) == 'h')
+                {
+                    return RK_ROLLHOURLY;
+                }
+            }
+            break;
         case 'o':
             return RK_OUT_TYPE;
         case 's':
@@ -1159,6 +1550,8 @@ namespace FNLog
             return RK_SHM_KEY;
         case 'u':
             return RK_UDP_ADDR;
+        case 'v':
+            return RK_VARIABLE;
         default:
             break;
         }
@@ -1198,7 +1591,7 @@ namespace FNLog
         {
             return false;
         }
-        if (*begin == '0' || *begin == 'f')
+        if (*begin == '0' || *begin == 'f' || *begin == 'F')
         {
             return false;
         }
@@ -1247,7 +1640,21 @@ namespace FNLog
         }
         return CHANNEL_SYNC;
     }
-    
+
+    inline DeviceInType ParseInType(const char* begin, const char* end)
+    {
+        if (end <= begin)
+        {
+            return DEVICE_IN_NULL;
+        }
+        switch (*begin)
+        {
+        case 'u': case 'U':
+            return DEVICE_IN_UDP;
+        }
+        return DEVICE_IN_NULL;
+    }
+
     inline DeviceOutType ParseOutType(const char* begin, const char* end)
     {
         if (end <= begin)
@@ -1256,6 +1663,8 @@ namespace FNLog
         }
         switch (*begin)
         {
+        case 'e': case 'E':
+            return DEVICE_OUT_EMPTY;
         case 'f': case 'F':
             return DEVICE_OUT_FILE;
         case 'n': case 'N':
@@ -1270,34 +1679,89 @@ namespace FNLog
         return DEVICE_OUT_NULL;
     }
 
-    inline std::pair<long long, const char*> ParseAddresIP(const char* begin, const char* end)
+    inline std::pair<long long, const char*> ParseAddresIP(const char* begin, const char* end, bool parse_dn)
     {
         if (end <= begin)
         {
             return std::make_pair(0, end);
         }
+        //only support ipv4 
         const char* ip_begin = begin;
-        while ((*ip_begin < '1' || *ip_begin > '9') && ip_begin != end)
+        while (IsBlank(*ip_begin) && ip_begin != end)
         {
             ip_begin++;
         }
         const char* ip_end = ip_begin;
-        while (((*ip_end >= '0' && *ip_end <= '9') || *ip_end == '.') && ip_end != end)
+        bool is_dn = false;
+        while (!(IsBlank(*ip_end) || *ip_end == ':') && ip_end != end)
         {
+            if (!(*ip_end >= '0' && *ip_end <= '9') && *ip_end != '.')
+            {
+                is_dn = true;
+            }
             ip_end++;
         }
-        if (ip_end - ip_begin > 40)
+
+        if (ip_end - ip_begin <= 0)
         {
             return std::make_pair(0, end);
         }
-        char buff[50];
-        memcpy(buff, ip_begin, ip_end - ip_begin);
-        buff[ip_end - ip_begin] = '\0';
-        return std::make_pair((long long)inet_addr(buff), ip_end); 
+        std::string dn(ip_begin, ip_end - ip_begin);
+
+        if (is_dn) //syn to get    
+        {
+            if (false)
+            {
+                struct addrinfo* res = nullptr;
+                struct addrinfo hints;
+                memset(&hints, 0, sizeof(hints));
+                hints.ai_family = AF_UNSPEC;
+                hints.ai_socktype = SOCK_STREAM;
+                hints.ai_flags = AI_PASSIVE;
+                
+                if (getaddrinfo(dn.c_str(), "", &hints, &res) == 0)
+                {
+                    char buf[100] = { 0 };
+                    if (res->ai_family == AF_INET)
+                    {
+                        inet_ntop(res->ai_family, &(((sockaddr_in*)res->ai_addr)->sin_addr), buf, 100);
+                    }
+                    else if (res->ai_family == AF_INET6)
+                    {
+                        inet_ntop(res->ai_family, &(((sockaddr_in6*)res->ai_addr)->sin6_addr), buf, 100);
+                    }
+                    return std::make_pair((long long)inet_addr(buf), ip_end);
+                }
+            }
+            if (parse_dn)
+            {
+                struct hostent* rhost = gethostbyname(dn.c_str());
+                if (rhost == nullptr)
+                {
+                    return std::make_pair(0, end);
+                }
+                if (rhost->h_addrtype == AF_INET)
+                {
+                    int i = 0;
+                    struct in_addr addr;
+                    while (rhost->h_addr_list[i] != 0) 
+                    {
+                        addr.s_addr = *(u_long*)rhost->h_addr_list[i++];
+                        return std::make_pair((long long)inet_addr(inet_ntoa(addr)), ip_end);
+                        //printf("%s", inet_ntoa(addr));
+                    }
+                }
+                
+            }
+            return std::make_pair(0, end);
+        }
+
+
+        return std::make_pair((long long)inet_addr(dn.c_str()), ip_end);
     }
 
 
-    inline void ParseAddres(const char* begin, const char* end, long long & ip, long long& port)
+    inline void ParseAddres(const char* begin, const char* end, bool parse_dn, long long & ip, long long& port)
     {
         ip = 0;
         port = 0;
@@ -1305,7 +1769,7 @@ namespace FNLog
         {
             return;
         }
-        auto result_ip = ParseAddresIP(begin, end);
+        auto result_ip = ParseAddresIP(begin, end, parse_dn);
         const char* port_begin = result_ip.second;
         while (port_begin != end && (*port_begin < '1' || *port_begin > '9')  )
         {
@@ -1322,7 +1786,7 @@ namespace FNLog
         char buff[50];
         memcpy(buff, port_begin, end - port_begin);
         buff[end - port_begin] = '\0';
-        port = htons(atoi(buff));
+        port = htons((unsigned short)atoi(buff));
         ip = result_ip.first;
         return;
     }
@@ -1337,48 +1801,223 @@ namespace FNLog
         const char* offset = begin;
         while (offset < end)
         {
-            if (*offset >= '0' && *offset <= '9')
+            while (offset < end && !IsNumber(*offset))
             {
-                int bit_offset = atoi(offset);
-                bitmap |= (1ULL << bit_offset);
-                while (offset < end && (*offset >= '0' && *offset <= '9'))
-                {
-                    offset++;
-                }
+                offset++;
+            }
+            if (offset == end)
+            {
+                break;
+            }
+
+            int bit_offset_first = atoi(offset);
+            while (offset < end && (IsNumber(*offset) || IsBlank(*offset)))
+            {
+                offset++;
+            }
+
+            if (offset == end || *offset != '-') //
+            {
+                bitmap |= (1ULL << bit_offset_first);
                 continue;
             }
-            offset++;
+
+            while (offset < end && !IsNumber(*offset) && *offset != ',' )
+            {
+                offset++;
+            }
+
+            if (offset == end || !IsNumber(*offset))
+            {
+                bitmap |= (1ULL << bit_offset_first);
+                continue;
+            }
+
+            int bit_offset_last = atoi(offset);
+            for (int i = (std::min)(bit_offset_first, bit_offset_last); i <= (std::max)(bit_offset_first, bit_offset_last); i++)
+            {
+                bitmap |= (1ULL << i);
+            }
         }
         return bitmap;
     }
-    struct Line
+    inline int PredefinedInplace(std::string& text, std::string::size_type text_offset, std::string key, std::string val, bool pre_bound, bool suffix_bound)
     {
-        int blank_;
-        int line_type_;
-        int block_type_;
-        int key_;
-        const char* key_begin_;
-        const char* key_end_;
-        const char* val_begin_;
-        const char* val_end_;
-    };
+        if (val.length() > key.length())
+        {
+            return PEC_DEFINED_TARGET_TOO_LONG;
+        }
 
-    struct LexState
+        //fixed len
+        while (val.length() < key.length())
+        {
+            val.push_back(' ');
+        }
+
+        //replace 
+        while (true)
+        {
+            text_offset = text.find(key, text_offset);
+            if (text_offset == std::string::npos)
+            {
+                //finish 
+                break;
+            }
+            bool bound_ok = true;
+            while (bound_ok && pre_bound)
+            {
+                if (text_offset == 0)
+                {
+                    break;
+                }
+                char ch = text[text_offset - 1];
+                if (IsValidName(ch))
+                {
+                    bound_ok = false;
+                    text_offset++;
+                    break;
+                }
+                break;
+            }
+
+            while (bound_ok && suffix_bound)
+            {
+                if (text_offset + val.length() == text.length())
+                {
+                    break;
+                }
+                char ch = text[text_offset + val.length()];
+                if (IsValidName(ch))
+                {
+                    bound_ok = false;
+                    text_offset++;
+                    break;
+                }
+                break;
+            }
+
+            if (bound_ok)
+            {
+                memcpy(&text[text_offset], val.c_str(), val.length());
+            }
+        };
+        return 0;
+    }
+    inline int PredefinedMacro(LexState& ls, std::string& text)
     {
-        int line_number_;
-        const char* first_;
-        const char* current_;
-        const char* end_;
-        Line line_;
-        SHMLogger::Channels channels_;
-        int channel_size_;
-        long long shm_key_;
-        bool hot_update_;
-        char desc_[Logger::MAX_LOGGER_DESC_LEN];
-        int desc_len_;
-        char name_[Logger::MAX_LOGGER_NAME_LEN];
-        int name_len_;
-    };
+        std::string line(ls.line_.val_begin_, ls.line_.val_end_ - ls.line_.val_begin_);
+        std::string symbol;
+        std::string::size_type sep = line.find(' ');
+        if (sep == std::string::npos)
+        {
+            return PEC_NOT_CLOSURE;
+        }
+        symbol = line.substr(0, sep);
+        if (symbol.empty())
+        {
+            return PEC_NOT_CLOSURE;
+        }
+
+        while (sep < line.length())
+        {
+            if (IsBlank(line[sep]))
+            {
+                sep++;
+                continue;
+            }
+            break;
+        }
+        std::string content = line.substr(sep);
+
+        int ret = PredefinedInplace(text, ls.line_.val_end_ - text.c_str(), symbol, content, true, true);
+        if (ret != PEC_NONE)
+        {
+            return ret;
+        }
+        return PEC_NONE;
+    }
+
+    inline int PredefinedVar(LexState& ls, std::string& text)
+    {
+        std::string line(ls.line_.val_begin_, ls.line_.val_end_ - ls.line_.val_begin_);
+        std::string::size_type offset = 0;
+        std::string var; 
+        std::string val;
+        while (offset < line.length())
+        {
+            if (line.at(offset) == ' ' || line.at(offset) == '\t')
+            {
+                offset++;
+                continue;
+            }
+
+            std::string::size_type dot = line.find(',', offset);
+            if (dot == std::string::npos)
+            {
+                dot = line.length();
+            }
+
+            std::string::size_type sep = line.find('=', offset);
+            if (sep >= dot)
+            {
+                offset = dot + 1;
+                return PEC_ILLEGAL_VAR_VALUE;
+            }
+            var = line.substr(offset, sep - offset);
+            while (!var.empty() && IsBlank(var.back()))
+            {
+                var.pop_back();
+            }
+
+            if (var.empty())
+            {
+                //has dot but wrong
+                offset = dot + 1;
+                //continue;
+                return PEC_DEFINED_TARGET_TOO_LONG;
+            }
+
+            if (!IsValidNameFirst(var[0]))
+            {
+                //has dot but wrong
+                offset = dot + 1;
+                //continue;
+                return PEC_ILLEGAL_VAR_NAME;
+            }
+
+            sep++;
+            while (sep < dot &&  IsBlank(line.at(offset)))
+            {
+                sep++;
+            }
+            val = line.substr(sep, dot - sep);
+            while (!val.empty() && IsBlank(val.back()))
+            {
+                val.pop_back();
+            }
+
+
+
+            std::string::size_type text_offset = ls.line_.val_end_ - text.c_str();
+
+            int ret = PredefinedInplace(text, text_offset, std::string("${") + var + "}", val, false, false);
+            if (ret != 0)
+            {
+                offset = dot + 1;
+                return ret;
+            }
+            ret = PredefinedInplace(text, text_offset, std::string("$") + var, val, false, true);
+            if (ret != 0)
+            {
+                offset = dot + 1;
+                return ret;
+            }
+
+            offset = dot + 1;
+        }
+  
+        return PEC_NONE;
+    }
 
     inline void InitState(LexState& state)
     {
@@ -1389,17 +2028,118 @@ namespace FNLog
     inline int Lex(LexState& ls)
     {
         memset(&ls.line_, 0, sizeof(ls.line_));
+        if (ls.current_ >= ls.end_)
+        {
+            return PEC_NONE;
+        }
         while (true)
         {
             char ch = *ls.current_++;
-            if (ls.line_.block_type_ == BLOCK_CLEAN && ch != '\0' && ch != '\r' && ch != '\n')
+            ls.line_.chars_++;
+
+            bool is_blank = IsBlank(ch);
+            bool is_end_char = IsSoftLineBound(ch);
+
+            if (ls.line_.block_type_ == BLOCK_CLEAN && !IsLineBound(ch))
             {
                 continue;
             }
 
-            //preprocess
-            if (ls.line_.block_type_ == BLOCK_KEY && (ch < 'a' || ch > 'z') && ch != '_')
+            if (is_end_char)
             {
+                if (ls.line_.block_type_ == BLOCK_VAL)
+                {
+                    if (ls.line_.block_stack_ != '\0')
+                    {
+                        return PEC_NOT_CLOSURE;
+                    }
+
+                    ls.line_.block_type_ = BLOCK_CLEAN;
+                    ls.line_.val_end_ = ls.current_ - 1;
+                }
+
+                //no value 
+                if (ls.line_.block_type_ == BLOCK_PRE_VAL)
+                {
+                    ls.line_.block_type_ = BLOCK_CLEAN;
+                    ls.line_.val_begin_ = ls.current_ - 1;
+                    ls.line_.val_end_ = ls.current_ - 1;
+                }
+
+                if (ls.line_.block_type_ != BLOCK_NONE && ls.line_.block_type_ != BLOCK_CLEAN)
+                {
+                    return PEC_NOT_CLOSURE;
+                }
+
+                while (ls.line_.val_end_ > ls.line_.val_begin_)
+                {
+                    char suffix = *(ls.line_.val_end_ - 1);
+                    if (IsBlank(suffix))
+                    {
+                        ls.line_.val_end_--;
+                        continue;
+                    }
+                    break;
+                }
+
+
+                if (ch == '\r' || ch == '\n')
+                {
+                    if ((*ls.current_ == '\r' || *ls.current_ == '\n') && *ls.current_ != ch)
+                    {
+                        ls.current_++;//jump win rt  
+                    }
+                    ls.line_no_++;
+                    return PEC_NONE;
+                }
+
+                if (ch == '\0')
+                {
+                    ls.current_--; //safe; set current referer to '\0'   
+                    ls.line_no_++; //last line compensate that the line no aways ref valid lex line no.  
+                    return PEC_NONE;
+                }
+
+                if (ch == '#')
+                {
+                    ls.line_.block_type_ = BLOCK_CLEAN;
+                    continue;
+                }
+            }
+
+
+            if (ls.line_.block_type_ == BLOCK_NONE)
+            {
+                if (is_blank)
+                {
+                    if (ls.line_.blank_ == ls.line_.chars_ - 1)
+                    {
+                        ls.line_.blank_++;
+                    }
+                    continue;
+                }
+                //ignore array char 
+                if (ch == '-')
+                {
+                    continue;
+                }
+
+                //first char 
+                if (ch < 'a' || ch > 'z')
+                {
+                    return PEC_ILLEGAL_KEY;
+                }
+                ls.line_.block_type_ = BLOCK_KEY;
+                ls.line_.key_begin_ = ls.current_ - 1;
+            }
+
+            //key must in [a-z_0-9]
+            if (ls.line_.block_type_ == BLOCK_KEY)
+            {
+                if ((ch >= 'a' && ch <= 'z') || ch == '_' || (ch >= '0' && ch <= '9'))
+                {
+                    continue;
+                }
                 ls.line_.block_type_ = BLOCK_PRE_SEP;
                 ls.line_.key_end_ = ls.current_ - 1;
                 ls.line_.key_ = ParseReserve(ls.line_.key_begin_, ls.line_.key_end_);
@@ -1407,114 +2147,82 @@ namespace FNLog
                 {
                     return PEC_ILLEGAL_KEY;
                 }
-            }
-            if (ls.line_.block_type_ == BLOCK_VAL)
-            {
-                switch (ch)
-                {
-                case '\0': case'\n':case '\r': case '#': case '\"':
-                    ls.line_.block_type_ = BLOCK_CLEAN;
-                    ls.line_.val_end_ = ls.current_ - 1;
-                    break;
-                }
+
             }
 
-            //end of line check
-            switch (ch)
+            
+            if (ls.line_.block_type_ == BLOCK_PRE_SEP)
             {
-            case '\0': case '\n':case '\r': case '#':
-                if (ls.line_.block_type_ == BLOCK_BLANK)
-                {
-                    ls.line_.block_type_ = BLOCK_CLEAN;
-                    ls.line_.line_type_ = LINE_BLANK;
-                }
-                if (ls.line_.block_type_ != BLOCK_CLEAN)
-                {
-                    return PEC_NOT_CLOSURE;
-                }
-                break;
-            }
-
-            //process
-            switch (ch)
-            {
-            case ' ': case '\f': case '\t': case '\v': case '\"':
-                if (ls.line_.block_type_ == BLOCK_BLANK)
-                {
-                    ls.line_.blank_++;
-                    break;
-                }
-                break;
-            case '\n':case '\r':
-                ls.line_number_++;
-                if ((*ls.current_ == '\r' || *ls.current_ == '\n') && *ls.current_ != ch)
-                {
-                    ls.current_++; //skip '\n\r' or '\r\n'
-                }
-                return PEC_NONE;
-            case '\0':
-                if (ls.line_.line_type_ != LINE_BLANK)
-                {
-                    ls.current_--;
-                    return PEC_NONE;
-                }
-                else
-                {
-                    ls.line_.line_type_ = LINE_EOF;
-                    return PEC_NONE;
-                }
-                
-            case '-':
-                if (ls.line_.block_type_ == BLOCK_BLANK)
-                {
-                    ls.line_.block_type_ = BLOCK_PRE_KEY;
-                    ls.line_.line_type_ = LINE_ARRAY;
-                    break;
-                }
-                else if (ls.line_.block_type_ != BLOCK_VAL)
-                {
-                    return PEC_ILLEGAL_CHARACTER;
-                }
-                break;
-            case ':':
-                if (ls.line_.block_type_ == BLOCK_PRE_SEP)
+                if (ch == ':')
                 {
                     ls.line_.block_type_ = BLOCK_PRE_VAL;
-                    break;
+                    continue;
                 }
-                else if (ls.line_.block_type_ != BLOCK_VAL)
+                //not support yaml '-' array 
+                if (ch != ' ' && ch != '\t')
                 {
-                    return PEC_ILLEGAL_CHARACTER;
+                    return PEC_NONSUPPORT_SYNTAX;
                 }
-                break;
-            default:
-                if ((ch >= 'a' && ch <= 'z')
-                    || (ch >= 'A' && ch <= 'Z')
-                    || (ch >= '0' && ch <= '9')
-                    || ch == '_' || ch == '-' || ch == ':' || ch == '/' || ch == '.' || ch == ',' || ch == '$' || ch == '~' || ch =='%')
-                {
-                    switch (ls.line_.block_type_)
-                    {
-                    case BLOCK_CLEAN: case BLOCK_KEY: case BLOCK_VAL:
-                        break;
-                    case BLOCK_BLANK: case BLOCK_PRE_KEY:
-                        ls.line_.block_type_ = BLOCK_KEY;
-                        ls.line_.key_begin_ = ls.current_ - 1;
-                        break;
-                    case BLOCK_PRE_VAL:
-                        ls.line_.block_type_ = BLOCK_VAL;
-                        ls.line_.val_begin_ = ls.current_ - 1;
-                        break;
-                    default:
-                        return PEC_ILLEGAL_CHARACTER;
-                    }
-                    break;
-                }
-                else if (ls.line_.block_type_ != BLOCK_CLEAN)
-                {
-                    return PEC_ILLEGAL_CHARACTER;
-                }
+                continue;
             }
+
+            if (ls.line_.block_type_ == BLOCK_PRE_VAL)
+            {
+                if (IsBlank(ch))
+                {
+                    continue;
+                }
+                if (ch == '\"')
+                {
+                    ls.line_.block_stack_ = '\"';
+                    ls.line_.block_type_ = BLOCK_VAL;
+                    ls.line_.val_begin_ = ls.current_;
+                    continue;
+                }
+                if (ch == '[')
+                {
+                    ls.line_.block_stack_ = ']';
+                    ls.line_.block_type_ = BLOCK_VAL;
+                    ls.line_.val_begin_ = ls.current_;
+                    continue;
+                }
+                if (ch == '{')
+                {
+                    ls.line_.block_stack_ = '}';
+                    ls.line_.block_type_ = BLOCK_VAL;
+                    ls.line_.val_begin_ = ls.current_;
+                    continue;
+                }
+                ls.line_.block_stack_ = '\0';
+                ls.line_.block_type_ = BLOCK_VAL;
+                ls.line_.val_begin_ = ls.current_ - 1;
+            }
+
+
+            if (ls.line_.block_type_ == BLOCK_VAL)
+            {
+                if (ls.line_.val_begin_ == ls.current_ - 1)
+                {
+                    //trim blank begin "{[  
+                    if (is_blank)
+                    {
+                        ls.line_.val_begin_ = ls.current_;
+                        continue;
+                    }
+                }
+
+                if (ls.line_.block_stack_ != '\0' && ch == ls.line_.block_stack_)
+                {
+                    ls.line_.block_type_ = BLOCK_CLEAN;
+                    ls.line_.val_end_ = ls.current_ - 1;
+                    continue;
+                }
+
+
+
+                continue;
+            }
+
         }
         return PEC_ERROR;
     }
@@ -1528,32 +2236,39 @@ namespace FNLog
             if (ret != PEC_NONE)
             {
                 ls.current_ = current;
-                ls.line_number_--;
                 return ret;
             }
-            if (ls.line_.line_type_ == LINE_EOF)
+
+            if (ls.line_.key_end_ - ls.line_.key_begin_ == 0)
             {
-                return ret;
-            }
-            if (ls.line_.line_type_ == LINE_BLANK)
-            {
+                if (ls.current_ >= ls.end_)
+                {
+                    //eof 
+                    return ret;
+                }
+                //blank line 
                 continue;
             }
             
             if (ls.line_.blank_ <= indent)
             {
                 ls.current_ = current;
-                ls.line_number_--;
-                ls.line_.line_type_ = LINE_BLANK;
+                ls.line_no_--; //upper re lex
                 return 0;
             }
 
             switch (ls.line_.key_)
             {
+            case RK_IN_TYPE:
+                device.in_type_ = ParseInType(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
             case RK_OUT_TYPE:
                 device.out_type_ = ParseOutType(ls.line_.val_begin_, ls.line_.val_end_);
                 if (device.out_type_ == DEVICE_OUT_NULL)
                 {
+                    //logic error:
+                    ls.current_ = current;
+                    ls.line_no_--;
                     return PEC_UNDEFINED_DEVICE_TYPE;
                 }
                 break;
@@ -1569,22 +2284,47 @@ namespace FNLog
             case RK_CATEGORY_EXTEND:
                 device.config_fields_[DEVICE_CFG_CATEGORY_EXTEND] = atoll(ls.line_.val_begin_);
                 break;
-            case RK_CATEGORY_FILTER:
-                device.config_fields_[DEVICE_CFG_CATEGORY_FILTER] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+            case RK_CATEGORY_WLIST:
+                device.config_fields_[DEVICE_CFG_CATEGORY_MASK] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
+            case RK_CATEGORY_BLIST:
+                device.config_fields_[DEVICE_CFG_CATEGORY_MASK] = ~ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
+            case RK_CATEGORY_WMASK:
+                device.config_fields_[DEVICE_CFG_CATEGORY_MASK] = atoll(ls.line_.val_begin_);
+                break;
+            case RK_CATEGORY_BMASK:
+                device.config_fields_[DEVICE_CFG_CATEGORY_MASK] = ~atoll(ls.line_.val_begin_);
+                break;
             case RK_IDENTIFY:
                 device.config_fields_[DEVICE_CFG_IDENTIFY] = atoll(ls.line_.val_begin_);
                 break;
             case RK_IDENTIFY_EXTEND:
                 device.config_fields_[DEVICE_CFG_IDENTIFY_EXTEND] = atoll(ls.line_.val_begin_);
                 break;
-            case RK_IDENTIFY_FILTER:
-                device.config_fields_[DEVICE_CFG_IDENTIFY_FILTER] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+            case RK_IDENTIFY_WLIST:
+                device.config_fields_[DEVICE_CFG_IDENTIFY_MASK] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
+            case RK_IDENTIFY_BLIST:
+                device.config_fields_[DEVICE_CFG_IDENTIFY_MASK] = ~ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
+            case RK_IDENTIFY_WMASK:
+                device.config_fields_[DEVICE_CFG_IDENTIFY_MASK] = atoll(ls.line_.val_begin_);
+                break;
+            case RK_IDENTIFY_BMASK:
+                device.config_fields_[DEVICE_CFG_IDENTIFY_MASK] = ~atoll(ls.line_.val_begin_);
                 break;
             case RK_LIMIT_SIZE:
                 device.config_fields_[DEVICE_CFG_FILE_LIMIT_SIZE] = atoll(ls.line_.val_begin_) * 1000*1000;
                 break;
             case RK_ROLLBACK:
                 device.config_fields_[DEVICE_CFG_FILE_ROLLBACK] = atoll(ls.line_.val_begin_);
+                break;
+            case RK_ROLLDAILY:
+                device.config_fields_[DEVICE_CFG_FILE_ROLLDAILY] = ParseBool(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
+            case RK_ROLLHOURLY:
+                device.config_fields_[DEVICE_CFG_FILE_ROLLHOURLY] = ParseBool(ls.line_.val_begin_, ls.line_.val_end_);
                 break;
             case RK_FILE_STUFF_UP:
                 device.config_fields_[DEVICE_CFG_FILE_STUFF_UP] = ParseBool(ls.line_.val_begin_, ls.line_.val_end_);  
@@ -1606,28 +2346,40 @@ namespace FNLog
                 }
                 break;
             case RK_UDP_ADDR:
-                if (true)
+                if (true) 
                 {
                     long long ip = 0;
                     long long port = 0;
-                    ParseAddres(ls.line_.val_begin_, ls.line_.val_end_, ip, port);
+                    bool parse_dn = device.config_fields_[DEVICE_CFG_ABLE] != 0;
+                    ParseAddres(ls.line_.val_begin_, ls.line_.val_end_, parse_dn, ip, port);
                     device.config_fields_[DEVICE_CFG_UDP_IP] = ip;
                     device.config_fields_[DEVICE_CFG_UDP_PORT] = port;
                 }
-                
-                if (device.config_fields_[DEVICE_CFG_UDP_IP] == 0)
+                if (device.config_fields_[DEVICE_CFG_ABLE])
                 {
-                    return PEC_ILLEGAL_ADDR_IP;
+                    if (device.in_type_ == DEVICE_IN_NULL && device.config_fields_[DEVICE_CFG_UDP_IP] == 0)
+                    {
+                        //logic error:
+                        ls.current_ = current;
+                        ls.line_no_--;
+                        return PEC_ILLEGAL_ADDR_IP;
+                    }
+
+                    if (device.config_fields_[DEVICE_CFG_UDP_PORT] == 0)
+                    {
+                        //logic error:
+                        ls.current_ = current;
+                        ls.line_no_--;
+                        return PEC_ILLEGAL_ADDR_PORT;
+                    }
                 }
-                if (device.config_fields_[DEVICE_CFG_UDP_PORT] == 0)
-                {
-                    return PEC_ILLEGAL_ADDR_PORT;
-                }
+
+
                 break;
             default:
                 return PEC_UNDEFINED_DEVICE_KEY;
             }
-        } while (ls.line_.line_type_ != LINE_EOF);
+        } while (ls.current_ < ls.end_);
         return 0;
     }
     inline int ParseChannel(LexState& ls, Channel& channel, int indent)
@@ -1639,23 +2391,21 @@ namespace FNLog
             if (ret != PEC_NONE)
             {
                 ls.current_ = current;
-                ls.line_number_--;
                 return ret;
             }
-            if (ls.line_.line_type_ == LINE_EOF)
+            if (ls.line_.key_end_ - ls.line_.key_begin_ == 0)
             {
-                return ret;
-            }
-            if (ls.line_.line_type_ == LINE_BLANK)
-            {
+                if (ls.current_ >= ls.end_)
+                {
+                    return ret;
+                }
                 continue;
             }
 
             if (ls.line_.blank_ <= indent)
             {
                 ls.current_ = current;
-                ls.line_number_--;
-                ls.line_.line_type_ = LINE_BLANK;
+                ls.line_no_--; //upper re lex
                 return 0;
             }
 
@@ -1673,8 +2423,17 @@ namespace FNLog
             case RK_CATEGORY_EXTEND:
                 channel.config_fields_[CHANNEL_CFG_CATEGORY_EXTEND] = atoi(ls.line_.val_begin_);
                 break;
-            case RK_CATEGORY_FILTER:
-                channel.config_fields_[CHANNEL_CFG_CATEGORY_FILTER] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+            case RK_CATEGORY_WLIST:
+                channel.config_fields_[CHANNEL_CFG_CATEGORY_MASK] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
+            case RK_CATEGORY_BLIST:
+                channel.config_fields_[CHANNEL_CFG_CATEGORY_MASK] = ~ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
+            case RK_CATEGORY_WMASK:
+                channel.config_fields_[CHANNEL_CFG_CATEGORY_MASK] = atoll(ls.line_.val_begin_);
+                break;
+            case RK_CATEGORY_BMASK:
+                channel.config_fields_[CHANNEL_CFG_CATEGORY_MASK] = ~atoll(ls.line_.val_begin_);
                 break;
             case RK_IDENTIFY:
                 channel.config_fields_[CHANNEL_CFG_IDENTIFY] = atoi(ls.line_.val_begin_);
@@ -1682,24 +2441,35 @@ namespace FNLog
             case RK_IDENTIFY_EXTEND:
                 channel.config_fields_[CHANNEL_CFG_IDENTIFY_EXTEND] = atoi(ls.line_.val_begin_);
                 break;
-            case RK_IDENTIFY_FILTER:
-                channel.config_fields_[CHANNEL_CFG_IDENTIFY_FILTER] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+            case RK_IDENTIFY_WLIST:
+                channel.config_fields_[CHANNEL_CFG_IDENTIFY_MASK] = ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
                 break;
+            case RK_IDENTIFY_BLIST:
+                channel.config_fields_[CHANNEL_CFG_IDENTIFY_MASK] = ~ParseBitArray(ls.line_.val_begin_, ls.line_.val_end_);
+                break;
+            case RK_IDENTIFY_WMASK:
+                channel.config_fields_[CHANNEL_CFG_IDENTIFY_MASK] = atoll(ls.line_.val_begin_);
+                break;
+            case RK_IDENTIFY_BMASK:
+                channel.config_fields_[CHANNEL_CFG_IDENTIFY_MASK] = ~atoll(ls.line_.val_begin_);
+                break;
+
             case RK_DEVICE:
-                if (ls.line_.line_type_ != LINE_ARRAY)
-                {
-                    return PEC_DEVICE_NOT_ARRAY;
-                }
-                else
                 {
                     int device_id = atoi(ls.line_.val_begin_);
                     if (channel.device_size_ >= Channel::MAX_DEVICE_SIZE)
                     {
-                        return PEC_DEVICE_INDEX_OUT_MAX;
+                        //logic error:
+                        ls.current_ = current;
+                        ls.line_no_--;
+                        return E_OUT_OF_DEVICE_SIZE;
                     }
                     if (device_id != channel.device_size_)
                     {
-                        return PEC_DEVICE_INDEX_NOT_SEQUENCE;
+                        //logic error:
+                        ls.current_ = current;
+                        ls.line_no_--;
+                        return E_DEVICE_NOT_SEQUENCE;
                     }
                     Device& device = channel.devices_[channel.device_size_++];
                     memset(&device, 0, sizeof(device));
@@ -1709,7 +2479,7 @@ namespace FNLog
                     {
                         channel.virtual_device_id_ = device.device_id_;
                     }
-                    if (ret != PEC_NONE || ls.line_.line_type_ == LINE_EOF)
+                    if (ret != PEC_NONE)
                     {
                         return ret;
                     }
@@ -1719,10 +2489,11 @@ namespace FNLog
                 return PEC_UNDEFINED_CHANNEL_KEY;
             }
 
-        } while (ls.line_.line_type_ != LINE_EOF);
+        } while (ls.current_ < ls.end_);
         return 0;
     }
-    inline int ParseLogger(LexState& ls, const std::string& text)
+
+    inline int ParseLogger(LexState& ls, std::string& text)
     {
         //UTF8 BOM 
         const char* first = &text[0];
@@ -1739,8 +2510,7 @@ namespace FNLog
         ls.channel_size_ = 0;
         ls.hot_update_ = false;
         ls.current_ = ls.first_;
-        ls.line_.line_type_ = LINE_NULL;
-        ls.line_number_ = 1;
+        ls.line_no_ = 1; 
         ls.desc_len_ = 0;
         ls.name_len_ = 0;
         do
@@ -1750,15 +2520,14 @@ namespace FNLog
             if (ret != PEC_NONE)
             {
                 ls.current_ = current;
-                ls.line_number_--;
                 return ret;
             }
-            if (ls.line_.line_type_ == LINE_EOF)
+            if (ls.line_.key_end_ - ls.line_.key_begin_ == 0)
             {
-                break;
-            }
-            if (ls.line_.line_type_ == LINE_BLANK)
-            {
+                if (ls.current_ >= ls.end_)
+                {
+                    return ret;
+                }
                 continue;
             }
 
@@ -1766,6 +2535,28 @@ namespace FNLog
             {
             case RK_HOT_UPDATE:
                 ls.hot_update_ = ParseBool(ls.line_.val_begin_, ls.line_.val_end_);//"disable"
+                break;
+            case RK_DEFINE:
+                //do nothing  
+                ret = PredefinedMacro(ls, text);
+                if (ret != PEC_NONE)
+                {
+                    //logic error:
+                    ls.current_ = current;
+                    ls.line_no_--;
+                    return ret;
+                }
+                break;
+            case RK_VARIABLE:
+                //do nothing  
+                ret = PredefinedVar(ls, text);
+                if (ret != PEC_NONE)
+                {
+                    //logic error:
+                    ls.current_ = current;
+                    ls.line_no_--;
+                    return ret;
+                }
                 break;
             case RK_LOGGER_NAME:
                 ParseString(ls.line_.val_begin_, ls.line_.val_end_, ls.name_, Logger::MAX_LOGGER_NAME_LEN, ls.name_len_);
@@ -1777,20 +2568,21 @@ namespace FNLog
                 ls.shm_key_ = ParseNumber(ls.line_.val_begin_, ls.line_.val_end_);
                 break;
             case RK_CHANNEL:
-                if (ls.line_.line_type_ != LINE_ARRAY)
-                {
-                    return PEC_CHANNEL_NOT_ARRAY;
-                }
-                else
                 {
                     int channel_id = atoi(ls.line_.val_begin_);
                     if (ls.channel_size_ >= Logger::MAX_CHANNEL_SIZE)
                     {
-                        return PEC_CHANNEL_INDEX_OUT_MAX;
+                        //logic error:
+                        ls.current_ = current;
+                        ls.line_no_--;
+                        return E_INVALID_CHANNEL_SIZE;
                     }
                     if (ls.channel_size_ != channel_id)
                     {
-                        return PEC_CHANNEL_INDEX_NOT_SEQUENCE;
+                        //logic error:
+                        ls.current_ = current;
+                        ls.line_no_--;
+                        return E_CHANNEL_NOT_SEQUENCE;
                     }
                     Channel& channel = ls.channels_[ls.channel_size_++];
                     memset(&channel, 0, sizeof(channel));
@@ -1805,15 +2597,15 @@ namespace FNLog
             default:
                 return PEC_UNDEFINED_GLOBAL_KEY;
             }
-        } while (ls.line_.line_type_ != LINE_EOF);
+        } while (ls.current_ < ls.end_);
         if (ls.channel_size_ == 0)
         {
-            return PEC_NO_ANY_CHANNEL;
+            return E_INVALID_CHANNEL_SIZE;
         }
         return PEC_NONE;
     }
 
-#if __GNUG__ && __GNUC__ >= 6
+#if FNLOG_GCC && __GNUC__ >= 6
 #pragma GCC diagnostic pop
 #endif
 
@@ -1821,44 +2613,12 @@ namespace FNLog
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once
@@ -2127,7 +2887,7 @@ namespace FNLog
         {
             if (fabst < 0.0001 && fabst > 0.0000001)
             {
-                sprintf(dst, "%.08lf", fabst);
+                snprintf(dst, 30, "%.08lf", fabst);
             }
             else
             {
@@ -2256,44 +3016,12 @@ namespace FNLog
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 #pragma once
 #ifndef _FN_LOG_LOAD_H_
@@ -2303,11 +3031,25 @@ namespace FNLog
 
 namespace FNLog
 {
-#if __GNUG__ && __GNUC__ >= 6
+#if FNLOG_GCC && __GNUC__ >= 6
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
     
+    inline void ResetSHMLogger(SHMLogger& shm)
+    {
+        shm.shm_id_ = 0;
+        shm.shm_size_ = 0;
+        shm.channel_size_ = 0;
+        memset(&shm.channels_, 0, sizeof(SHMLogger::Channels));
+        for (int i = 0; i < SHMLogger::MAX_CHANNEL_SIZE; i++)
+        {
+            shm.ring_buffers_[i].write_idx_ = 0;
+            shm.ring_buffers_[i].hold_idx_ = 0;
+            shm.ring_buffers_[i].read_idx_ = 0;
+            shm.ring_buffers_[i].proc_idx_ = 0;
+        }
+    }
 
     inline int LoadSharedMemory(Logger& logger)
     {
@@ -2315,7 +3057,7 @@ namespace FNLog
         if (logger.shm_key_ <= 0)
         {
             logger.shm_ = new SHMLogger();
-            memset(logger.shm_, 0, sizeof(SHMLogger));
+            ResetSHMLogger(*logger.shm_);
             return 0;
         }
         SHMLogger* shm = nullptr;
@@ -2324,7 +3066,7 @@ namespace FNLog
         {
             printf("shmget error. key:<0x%llx>, errno:<%d>. can use 'ipcs -m', 'ipcrm -m' to view and clear.\n",
                 logger.shm_key_, errno);
-            return -1;
+            return E_SHMGET_PROBE_ERROR;
         }
 
         if (idx < 0)
@@ -2333,16 +3075,16 @@ namespace FNLog
             if (idx < 0)
             {
                 printf("new shm. shmget error. key:<0x%llx>, errno:<%d>.\n", logger.shm_key_, errno);
-                return -2;
+                return E_SHMGET_CREATE_ERROR;
             }
             void* addr = shmat(idx, nullptr, 0);
             if (addr == nullptr || addr == (void*)-1)
             {
                 printf("new shm. shmat error. key:<0x%llx>, idx:<%d>, errno:<%d>.\n", logger.shm_key_, idx, errno);
-                return -3;
+                return E_SHMAT_ERROR;
             }
-            memset(addr, 0, sizeof(SHMLogger));
             shm = (SHMLogger*)addr;
+            ResetSHMLogger(*shm);
             shm->shm_size_ = sizeof(SHMLogger);
             shm->shm_id_ = idx;
         }
@@ -2352,7 +3094,7 @@ namespace FNLog
             if (addr == nullptr || addr == (void*)-1)
             {
                 printf("shmat error. key:<%llx>, idx:<%d>, errno:<%d>.\n", logger.shm_key_, idx, errno);
-                return -4;
+                return E_SHMAT_ERROR;
             }
             shm = (SHMLogger*)addr;
         }
@@ -2362,19 +3104,19 @@ namespace FNLog
             printf("shm version error. key:<0x%llx>, old id:<%d>, new id:<%d>, old size:<%d> new size:<%d>. "
                 "can use 'ipcs -m', 'ipcrm -m' to view and clear.\n",
                 logger.shm_key_, shm->shm_id_, idx, shm->shm_size_, (int)sizeof(SHMLogger));
-            return -5;
+            return E_SHM_VERSION_WRONG;
         }
         for (int i = 0; i < shm->channel_size_; i++)
         {
             if (i >= SHMLogger::MAX_CHANNEL_SIZE)
             {
-                return -6;
+                return E_SHM_VERSION_WRONG;
             }
 
             if (shm->ring_buffers_[i].write_idx_ >= RingBuffer::BUFFER_LEN
                 || shm->ring_buffers_[i].write_idx_ < 0)
             {
-                return -7;
+                return E_SHM_VERSION_WRONG;
             }
 
             while (shm->ring_buffers_[i].write_idx_.load() != shm->ring_buffers_[i].hold_idx_.load())
@@ -2409,7 +3151,7 @@ namespace FNLog
         logger.shm_ = shm;
 #else
         logger.shm_ = new SHMLogger();
-        memset(logger.shm_, 0, sizeof(SHMLogger));
+        ResetSHMLogger(*logger.shm_);
 #endif
         return 0;
     }
@@ -2432,13 +3174,12 @@ namespace FNLog
     }
 
 
-    inline int InitFromYMAL(Logger& logger, const std::string& text, const std::string& path)
+    inline int InitFromYMAL(Logger& logger, std::string text, const std::string& path)
     {
-        Logger::StateLockGuard state_guard(logger.state_lock);
         if (logger.logger_state_ != LOGGER_STATE_UNINIT)
         {
-            printf("init from ymal:<%s> text error\n", path.c_str());
-            return -1;
+            printf("InitFromYMAL:<%s> text error\n", path.c_str());
+            return E_LOGGER_IN_USE;
         }
 
         std::unique_ptr<LexState> ls(new LexState);
@@ -2446,13 +3187,22 @@ namespace FNLog
         if (ret != PEC_NONE)
         {
             std::stringstream os;
-            os << "load has error:<" << ret << "> in line:[" << ls->line_number_ << "], line type:" << ls->line_.line_type_;
+            os << "ParseLogger has error:<" << ret << " " << DebugErrno(ret).c_str() << "> in line:[" << ls->line_no_ << "] ";
             if (ls->current_ != nullptr)
             {
-                os << " before:";
+                os << " before:\n";
                 int limit = 0;
-                while (limit < 30 && ls->current_ + limit < ls->end_ && ls->current_[limit] != '\0')
+                while (ls->current_ + limit < ls->end_ && ls->current_[limit] != '\0')
                 {
+                    if (limit < 380)
+                    {
+                        limit++;
+                        continue;
+                    }
+                    if (ls->current_[limit] == '\n')
+                    {
+                        break;
+                    }
                     limit++;
                 }
                 os.write(ls->current_, limit);
@@ -2460,6 +3210,15 @@ namespace FNLog
             printf("%s\n", os.str().c_str());
             return ret;
         }
+
+        Logger::StateLockGuard state_guard(logger.state_lock_);
+        if (logger.logger_state_ != LOGGER_STATE_UNINIT)
+        {
+            printf("InitFromYMAL:<%s> text error\n", path.c_str());
+            return E_LOGGER_IN_USE;
+        }
+
+
         if (ls->name_len_ > 0)
         {
             memcpy(logger.name_, ls->name_, ls->name_len_+1);
@@ -2473,33 +3232,30 @@ namespace FNLog
         logger.yaml_path_ = path;
         logger.hot_update_ = ls->hot_update_;
         logger.shm_key_ = ls->shm_key_;
-        if (logger.shm_  == NULL)
+        if (logger.shm_ == NULL)
         {
             ret = LoadSharedMemory(logger);
-            if (ret != 0)
+            if (ret != 0 || logger.shm_ == NULL)
             {
-                printf("LoadSharedMemory has error:%d,  yaml:%s\n", ret, text.c_str());
+                printf("InitFromYMAL has error:%d,  yaml:%s\n", ret, text.c_str());
                 return ret;
             }
         }
         logger.shm_->channel_size_ = ls->channel_size_;
         for (int i = 0; i < ls->channel_size_; i++)
         {
-            memcpy(&ls->channels_[i].log_fields_, &logger.shm_->channels_[i].log_fields_,
-                sizeof(ls->channels_[i].log_fields_));
-            for (int j = 0; j < ls->channels_[i].device_size_; j++)
-            {
-                memcpy(&ls->channels_[i].devices_[j].log_fields_, 
-                    &logger.shm_->channels_[i].devices_[j].log_fields_,
-                    sizeof(ls->channels_[i].devices_[j].log_fields_));
-            }
+            memcpy(&ls->channels_[i].channel_log_fields_, &logger.shm_->channels_[i].channel_log_fields_,
+                sizeof(ls->channels_[i].channel_log_fields_));
+
+            memcpy(&ls->channels_[i].device_log_fields_, &logger.shm_->channels_[i].device_log_fields_,
+                sizeof(ls->channels_[i].device_log_fields_));
         }
         memcpy(&logger.shm_->channels_, &ls->channels_, sizeof(logger.shm_->channels_));
 
         if (logger.shm_->channel_size_ > Logger::MAX_CHANNEL_SIZE || logger.shm_->channel_size_ <= 0)
         {
-            printf("start error 2");
-            return -2;
+            printf("InitFromYMAL channel size:%d out channel max%d. \n", logger.shm_->channel_size_, Logger::MAX_CHANNEL_SIZE);
+            return E_INVALID_CHANNEL_SIZE;
         }
         return 0;
     }
@@ -2515,13 +3271,15 @@ namespace FNLog
         config.open(path.c_str(), "rb", file_stat);
         if (!config.is_open())
         {
-            printf("ymal:<%s> open file error\n", path.c_str());
-            return -1;
+            printf("InitFromYMALFile:<%s> open file error\n", path.c_str());
+            return E_INVALID_CONFIG_PATH;
         }
-        int ret = InitFromYMAL(logger, config.read_content(), path);
+        std::string text = config.read_content();
+        config.close();
+        int ret = InitFromYMAL(logger, text, path);
         if (ret != 0)
         {
-            printf("ymal:<%s> has parse/init error\n", path.c_str());
+            printf("InitFromYMALFile:<%s> has parse/init error:%d %s\n", path.c_str(), ret, DebugErrno(ret).c_str());
             return ret;
         }
 
@@ -2536,15 +3294,15 @@ namespace FNLog
     {
         if (logger.shm_->channel_size_ <= channel_id)
         {
-            return -1;
+            return E_INVALID_CHANNEL_SIZE;
         }
         if (!logger.hot_update_)
         {
-            return -2;
+            return E_DISABLE_HOTUPDATE;
         }
         if (logger.yaml_path_.empty())
         {
-            return -3;
+            return E_NO_CONFIG_PATH;
         }
 
         Channel& dst_chl = logger.shm_->channels_[channel_id];
@@ -2554,42 +3312,47 @@ namespace FNLog
             return 0;
         }
         dst_chl.last_hot_check_ = now;
-
+        AtomicIncChannelLog(dst_chl, CHANNEL_LOG_HOTUPDATE_CHECK, 1);
         FileHandler config;
         struct stat file_stat;
         config.open(logger.yaml_path_.c_str(), "rb", file_stat);
         if (!config.is_open())
         {
-            return -5;
+            return E_INVALID_CONFIG_PATH;
         }
         if (file_stat.st_mtime == dst_chl.yaml_mtime_)
         {
-            return -6;
+            return E_CONFIG_NO_CHANGE;
         }
-
-        Logger::StateLockGuard state_guard(logger.state_lock);
         if (logger.logger_state_ != LOGGER_STATE_RUNNING)
         {
-            return -7;
+            return E_LOGGER_NOT_RUNNING;
         }
 
-        dst_chl.yaml_mtime_ = file_stat.st_mtime;
-
-        std::unique_ptr<LexState> ls(new LexState);
-        static_assert(std::is_same<decltype(logger.shm_->channels_), decltype(ls->channels_)>::value, "");
-        //static_assert(std::is_trivial<decltype(logger.shm_->channels_)>::value, "");
-
         std::string text = config.read_content();
+        config.close();
+        std::unique_ptr<LexState> ls(new LexState);
         int ret = ParseLogger(*ls, text);
         if (ret != PEC_NONE)
         {
             return ret;
         }
+
+
+        Logger::StateLockGuard state_guard(logger.state_lock_);
+        if (logger.logger_state_ != LOGGER_STATE_RUNNING)
+        {
+            return E_LOGGER_NOT_RUNNING;
+        }
         if (!logger.hot_update_)
         {
-            return -8;
+            return E_DISABLE_HOTUPDATE;
         }
+        dst_chl.yaml_mtime_ = file_stat.st_mtime;
         logger.hot_update_ = ls->hot_update_;
+        
+        static_assert(std::is_same<decltype(logger.shm_->channels_), decltype(ls->channels_)>::value, "");
+        //static_assert(std::is_trivial<decltype(logger.shm_->channels_)>::value, "");
 
         static_assert(std::is_same<decltype(logger.shm_->channels_[channel_id].config_fields_), decltype(ls->channels_[channel_id].config_fields_)>::value, "");
         
@@ -2598,7 +3361,7 @@ namespace FNLog
         Channel& src_chl = ls->channels_[channel_id];
         if (dst_chl.channel_id_ != src_chl.channel_id_ || src_chl.channel_id_ != channel_id)
         {
-            return -10;
+            return E_VERSION_MISMATCH;
         }
         for (int field_id = 0; field_id < CHANNEL_CFG_MAX_ID; field_id++)
         {
@@ -2612,73 +3375,70 @@ namespace FNLog
             Device& src_dvc = src_chl.devices_[device_id];
             if (src_dvc.device_id_ != device_id)
             {
-                return -11;
+                return E_VERSION_MISMATCH;
             }
             if (device_id < dst_chl.device_size_)
             {
                 Device& dst_dvc = dst_chl.devices_[device_id];
                 if (dst_dvc.device_id_ != device_id)
                 {
-                    return -12;
+                    return E_VERSION_MISMATCH;
                 }
                 memcpy(&dst_dvc.config_fields_, &src_dvc.config_fields_, sizeof(dst_dvc.config_fields_));
                 continue;
             }
             if (dst_chl.device_size_ != device_id)
             {
-                return -13;
+                return E_VERSION_MISMATCH;
             }
             memcpy(&dst_chl.devices_[dst_chl.device_size_++], &src_dvc, sizeof(src_dvc));
             
         }
-
+        AtomicIncChannelLog(dst_chl, CHANNEL_LOG_HOTUPDATE_CHANGE, 1);
         return 0;
     }
 
-#if __GNUG__ && __GNUC__ >= 6
+#if FNLOG_GCC && __GNUC__ >= 6
 #pragma GCC diagnostic pop
 #endif
 }
 
 
 #endif
-/*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
 
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+/*
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
+
+
+#pragma once
+#ifndef _FN_LOG_OUT_EMPTY_DEVICE_H_
+#define _FN_LOG_OUT_EMPTY_DEVICE_H_
+
+
+namespace FNLog
+{
+
+    inline void EnterProcOutEmptyDevice(Logger& logger, int channel_id, int device_id, LogData& log)
+    {
+        Channel& channel = logger.shm_->channels_[channel_id];
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_LINE, 1);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_PRIORITY + log.priority_, log.content_len_);
+    }
+
+}
+
+
+#endif
+
+/*
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 #pragma once
 #ifndef _FN_LOG_OUT_FILE_DEVICE_H_
@@ -2734,6 +3494,8 @@ namespace FNLog
     // 
     inline std::string FmtName(const std::string& fmt_name, int channel_id, int device_id, const struct tm& t)
     {
+        (void)device_id;
+        (void)channel_id;
         if (fmt_name.empty())
         {
             return fmt_name;
@@ -2774,7 +3536,7 @@ namespace FNLog
                 if (name.substr(pos + 2, 3) == "EAR")
                 {
                     char buff[30] = { 0 };
-                    sprintf(buff, "%04d", t.tm_year + 1900);
+                    snprintf(buff, 30, "%04d", t.tm_year + 1900);
                     name.replace(pos, 5, buff);
                     break;
                 }
@@ -2784,14 +3546,14 @@ namespace FNLog
                 if (name.substr(pos + 2, 2) == "ON")
                 {
                     char buff[30] = { 0 };
-                    sprintf(buff, "%02d", t.tm_mon + 1);
+                    snprintf(buff, 30, "%02d", t.tm_mon + 1);
                     name.replace(pos, 4, buff);
                     break;
                 }
                 if (name.substr(pos + 2, 2) == "IN")
                 {
                     char buff[30] = { 0 };
-                    sprintf(buff, "%02d", t.tm_min);
+                    snprintf(buff, 30, "%02d", t.tm_min);
                     name.replace(pos, 4, buff);
                     break;
                 }
@@ -2801,7 +3563,7 @@ namespace FNLog
                 if (name.substr(pos + 2, 2) == "AY")
                 {
                     char buff[30] = { 0 };
-                    sprintf(buff, "%02d", t.tm_mday);
+                    snprintf(buff, 30, "%02d", t.tm_mday);
                     name.replace(pos, 4, buff);
                     break;
                 }
@@ -2811,7 +3573,7 @@ namespace FNLog
                 if (name.substr(pos + 2, 3) == "OUR")
                 {
                     char buff[30] = { 0 };
-                    sprintf(buff, "%02d", t.tm_hour);
+                    snprintf(buff, 30, "%02d", t.tm_hour);
                     name.replace(pos, 5, buff);
                     break;
                 }
@@ -2821,7 +3583,7 @@ namespace FNLog
                 if (name.substr(pos + 2, 2) == "EC")
                 {
                     char buff[30] = { 0 };
-                    sprintf(buff, "%02d", t.tm_sec);
+                    snprintf(buff, 30, "%02d", t.tm_sec);
                     name.replace(pos, 4, buff);
                     break;
                 }
@@ -2857,35 +3619,58 @@ namespace FNLog
     //[$PNAME $PID $YEAR $MON $DAY $HOUR $MIN $SEC]
     inline std::string MakePathName(const std::string& fmt_name, int channel_id, int device_id, const struct tm& t)
     {
-        if (fmt_name.empty())
-        {
-            return "./log/";
-        }
         return FmtName(fmt_name, channel_id, device_id, t);
     }
 
 
     inline void OpenFileDevice(Logger & logger, Channel & channel, Device & device, FileHandler & writer, LogData & log)
     {
-        bool sameday = true;
-        if (log.timestamp_ < AtomicLoadL(device, DEVICE_LOG_CUR_FILE_CREATE_DAY)
-            || log.timestamp_ >= AtomicLoadL(device, DEVICE_LOG_CUR_FILE_CREATE_DAY) + 24 * 3600)
-        {
-            sameday = false;
-        }
+        (void)logger;
 
-        bool file_over = false;
-        if (AtomicLoadC(device, DEVICE_CFG_FILE_LIMIT_SIZE) > 0 && AtomicLoadC(device, DEVICE_CFG_FILE_ROLLBACK) > 0
-            && AtomicLoadL(device, DEVICE_LOG_CUR_FILE_SIZE) + log.content_len_ > AtomicLoadC(device, DEVICE_CFG_FILE_LIMIT_SIZE))
-        {
-            file_over = true;
-        }
+        bool close_file = false;
+        bool limit_out = false;
 
-        bool stuff_up = (bool)AtomicLoadC(device, DEVICE_CFG_FILE_STUFF_UP);
+        
 
-        if (file_over  || (!sameday && !stuff_up))
+        do
         {
-            AtomicStoreL(device, DEVICE_LOG_CUR_FILE_SIZE, 0);
+            //rollback only limit size && rollback > 0 
+            if (AtomicLoadC(device, DEVICE_CFG_FILE_LIMIT_SIZE) > 0 && AtomicLoadC(device, DEVICE_CFG_FILE_ROLLBACK) > 0
+                && AtomicLoadDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_SIZE) + log.content_len_ > AtomicLoadC(device, DEVICE_CFG_FILE_LIMIT_SIZE))
+            {
+                close_file = true;
+                limit_out = true;
+                break;
+            }
+
+            //daily rolling
+            if (AtomicLoadC(device, DEVICE_CFG_FILE_ROLLDAILY))
+            {
+                if (log.timestamp_ < AtomicLoadDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_CREATE_DAY)
+                    || log.timestamp_ >= AtomicLoadDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_CREATE_DAY) + 24 * 3600)
+                {
+                    close_file = true;
+                }
+                break;
+            }
+
+            //hourly rolling 
+            if (AtomicLoadC(device, DEVICE_CFG_FILE_ROLLHOURLY))
+            {
+                if (log.timestamp_ < AtomicLoadDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_CREATE_HOUR)
+                    || log.timestamp_ >= AtomicLoadDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_CREATE_HOUR) + 3600)
+                {
+                    close_file = true;
+                }
+                break;
+            }
+
+        } while (false);
+
+
+        if (close_file)
+        {
+            AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_SIZE, 0);
             if (writer.is_open())
             {
                 writer.close();
@@ -2898,13 +3683,15 @@ namespace FNLog
         }
 
         long long create_day = 0;
+        long long create_hour = 0;
         tm t = FileHandler::time_to_tm(log.timestamp_);
         if (true) //process day time   
         {
             tm day = t;
-            day.tm_hour = 0;
             day.tm_min = 0;
             day.tm_sec = 0;
+            create_hour = mktime(&day);
+            day.tm_hour = 0;
             create_day = mktime(&day);
         }
 
@@ -2925,14 +3712,15 @@ namespace FNLog
 
         if (path.length() >= Device::MAX_PATH_LEN + Device::MAX_LOGGER_NAME_LEN)
         {
-            AtomicStoreL(device, DEVICE_LOG_LAST_TRY_CREATE_ERROR, 1);
-            AtomicStoreL(device, DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP, log.timestamp_);
+            AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_LAST_TRY_CREATE_ERROR, 1);
+            AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP, log.timestamp_);
             return;
         }
 
         if (AtomicLoadC(device, DEVICE_CFG_FILE_ROLLBACK) > 0 || AtomicLoadC(device, DEVICE_CFG_FILE_LIMIT_SIZE) > 0)
         {
-            if (!stuff_up || file_over)
+            bool stuff_up = (bool)AtomicLoadC(device, DEVICE_CFG_FILE_STUFF_UP);
+            if (!stuff_up || limit_out)
             {
                 //when no rollback but has limit size. need try rollback once.
                 long long limit_roll = device.config_fields_[DEVICE_CFG_FILE_ROLLBACK];
@@ -2945,15 +3733,19 @@ namespace FNLog
         long writed_byte = writer.open(path.c_str(), "ab", file_stat);
         if (!writer.is_open())
         {
-            AtomicStoreL(device, DEVICE_LOG_LAST_TRY_CREATE_ERROR, 2);
-            AtomicStoreL(device, DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP, log.timestamp_);
+            AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_LAST_TRY_CREATE_ERROR, 2);
+            AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP, log.timestamp_);
             return;
         }
-        AtomicStoreL(device, DEVICE_LOG_LAST_TRY_CREATE_ERROR, 0);
-        AtomicStoreL(device, DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP, 0);
-        AtomicStoreL(device, DEVICE_LOG_CUR_FILE_CREATE_TIMESTAMP, log.timestamp_);
-        AtomicStoreL(device, DEVICE_LOG_CUR_FILE_CREATE_DAY, create_day);
-        AtomicStoreL(device, DEVICE_LOG_CUR_FILE_SIZE, writed_byte);
+        
+        AtomicIncDeviceLog(channel, device.device_id_, DEVICE_LOG_LAST_TRY_CREATE_CNT, 1);
+
+        AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_LAST_TRY_CREATE_ERROR, 0);
+        AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP, 0);
+        AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_CREATE_TIMESTAMP, log.timestamp_);
+        AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_CREATE_DAY, create_day);
+        AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_CREATE_HOUR, create_hour);
+        AtomicStoreDeviceLog(channel, device.device_id_, DEVICE_LOG_CUR_FILE_SIZE, writed_byte);
     }
 
 
@@ -2964,7 +3756,7 @@ namespace FNLog
         Device& device = channel.devices_[device_id];
         FileHandler& writer = logger.file_handles_[channel_id * Channel::MAX_DEVICE_SIZE + device_id];
 
-        if (!writer.is_open() && AtomicLoadL(device, DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP) + 5 > log.timestamp_)
+        if (!writer.is_open() && AtomicLoadDeviceLog(channel, device_id, DEVICE_LOG_LAST_TRY_CREATE_TIMESTAMP) + 5 > log.timestamp_)
         {
             return;
         }
@@ -2974,9 +3766,10 @@ namespace FNLog
             return;
         }
         writer.write(log.content_, log.content_len_);
-        AtomicAddL(device, DEVICE_LOG_TOTAL_WRITE_LINE);
-        AtomicAddLV(device, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
-        AtomicAddLV(device, DEVICE_LOG_CUR_FILE_SIZE, log.content_len_);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_LINE, 1);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_CUR_FILE_SIZE, log.content_len_);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_PRIORITY + log.priority_, log.content_len_);
     }
 
 
@@ -2984,44 +3777,12 @@ namespace FNLog
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once
@@ -3035,63 +3796,40 @@ namespace FNLog
     inline void EnterProcOutUDPDevice(Logger& logger, int channel_id, int device_id, LogData& log)
     {
         auto& udp = logger.udp_handles_[channel_id * Channel::MAX_DEVICE_SIZE + device_id];
+        Channel& channel = logger.shm_->channels_[channel_id];
+        Device& device = logger.shm_->channels_[channel_id].devices_[device_id];
+
         if (!udp.is_open())
         {
             udp.open();
         }
         if (!udp.is_open())
         {
+            AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_LOSE_LINE, 1);
             return;
         }
-        Device& device = logger.shm_->channels_[channel_id].devices_[device_id];
+        
         long long ip = AtomicLoadC(device, DEVICE_CFG_UDP_IP);
         long long port = AtomicLoadC(device, DEVICE_CFG_UDP_PORT);
-        udp.write((unsigned long)ip, (unsigned short)port, log.content_, log.content_len_);
-        AtomicAddL(device, DEVICE_LOG_TOTAL_WRITE_LINE);
-        AtomicAddLV(device, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
+        int ret = udp.write((unsigned long)ip, (unsigned short)port, log.content_, log.content_len_);
+        if (ret <= 0)
+        {
+            AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_LOSE_LINE, 1);
+        }
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_LINE, 1);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_PRIORITY + log.priority_, log.content_len_);
     }
 }
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once
@@ -3105,9 +3843,12 @@ namespace FNLog
     inline void EnterProcOutScreenDevice(Logger& logger, int channel_id, int device_id, LogData& log)
     {
         Logger::ScreenLockGuard l(logger.screen_lock_);
-        Device& device = logger.shm_->channels_[channel_id].devices_[device_id];
-        AtomicAddL(device, DEVICE_LOG_TOTAL_WRITE_LINE);
-        AtomicAddLV(device, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
+        Channel& channel = logger.shm_->channels_[channel_id];
+
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_LINE, 1);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
+        AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_PRIORITY + log.priority_, log.content_len_);
+
         int priority = log.priority_;
         if (log.priority_ < PRIORITY_INFO)
         {
@@ -3149,44 +3890,12 @@ namespace FNLog
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2021 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once
@@ -3218,10 +3927,10 @@ namespace FNLog
             Device::ConfigFields& fields = channel.devices_[device_id].config_fields_;
             long long field_begin_category = fields[FNLog::DEVICE_CFG_CATEGORY];
             long long field_category_count = fields[FNLog::DEVICE_CFG_CATEGORY_EXTEND];
-            unsigned long long field_category_filter = (unsigned long long)fields[FNLog::DEVICE_CFG_CATEGORY_FILTER];
+            unsigned long long field_category_mask = (unsigned long long)fields[FNLog::DEVICE_CFG_CATEGORY_MASK];
             long long field_begin_identify = fields[FNLog::DEVICE_CFG_IDENTIFY];
             long long field_identify_count = fields[FNLog::DEVICE_CFG_IDENTIFY_EXTEND];
-            unsigned long long field_identify_filter = (unsigned long long)fields[FNLog::DEVICE_CFG_IDENTIFY_FILTER];
+            unsigned long long field_identify_mask = (unsigned long long)fields[FNLog::DEVICE_CFG_IDENTIFY_MASK];
 
             if (field_category_count > 0 && (log.category_ < field_begin_category || log.category_ >= field_begin_category + field_category_count))
             {
@@ -3232,11 +3941,11 @@ namespace FNLog
             {
                 return;
             }
-            if (field_category_filter && (field_category_filter & ((1ULL) << (unsigned int)log.category_)) == 0)
+            if (field_category_mask && (field_category_mask & ((1ULL) << (unsigned int)log.category_)) == 0)
             {
                 return;
             }
-            if (field_identify_filter && (field_identify_filter & ((1ULL) << (unsigned int)log.identify_)) == 0)
+            if (field_identify_mask && (field_identify_mask & ((1ULL) << (unsigned int)log.identify_)) == 0)
             {
                 return;
             }
@@ -3244,9 +3953,9 @@ namespace FNLog
             int content_len_ = FN_MIN(log.content_len_, LogData::LOG_SIZE - 1);
             log.content_[content_len_] = '\0'; //virtual device hook maybe direct used content like c-string 
 
-            Device& device = logger.shm_->channels_[channel_id].devices_[device_id];
-            AtomicAddL(device, DEVICE_LOG_TOTAL_WRITE_LINE);
-            AtomicAddLV(device, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
+            AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_LINE, 1);
+            AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_TOTAL_WRITE_BYTE, log.content_len_);
+            AtomicIncDeviceLog(channel, device_id, DEVICE_LOG_PRIORITY + log.priority_, log.content_len_);
             (*RefVirtualDevice())(log);
         }
     }
@@ -3255,43 +3964,11 @@ namespace FNLog
 
 #endif
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
 
 
 #pragma once
@@ -3309,11 +3986,11 @@ namespace FNLog
         Logger::ReadGuard rg(logger.read_locks_[channel_id], channel.channel_type_ == CHANNEL_ASYNC);
         switch (device.out_type_)
         {
-        case DEVICE_OUT_FILE:
-            EnterProcOutFileDevice(logger, channel_id, device_id, log);
-            break;
         case DEVICE_OUT_SCREEN:
             EnterProcOutScreenDevice(logger, channel_id, device_id, log);
+            break;
+        case DEVICE_OUT_FILE:
+            EnterProcOutFileDevice(logger, channel_id, device_id, log);
             break;
         case DEVICE_OUT_UDP:
             EnterProcOutUDPDevice(logger, channel_id, device_id, log);
@@ -3321,6 +3998,10 @@ namespace FNLog
         case DEVICE_OUT_VIRTUAL:
             //EnterProcOutVirtualDevice(logger, channel_id, device_id, log);
             break;        
+        case DEVICE_OUT_EMPTY:
+            EnterProcOutEmptyDevice(logger, channel_id, device_id, log);
+            break;
+            break;
         default:
             break;
         }
@@ -3336,16 +4017,20 @@ namespace FNLog
             {
                 continue;
             }
+            if (device.in_type_ != DEVICE_IN_NULL)
+            {
+                continue;
+            }
             if (log.priority_ < AtomicLoadC(device, DEVICE_CFG_PRIORITY))
             {
                 continue;
             }
             long long begin_category = AtomicLoadC(device, DEVICE_CFG_CATEGORY);
             long long category_count = AtomicLoadC(device, DEVICE_CFG_CATEGORY_EXTEND);
-            unsigned long long category_filter = (unsigned long long)AtomicLoadC(device, DEVICE_CFG_CATEGORY_FILTER);
+            unsigned long long category_mask = (unsigned long long)AtomicLoadC(device, DEVICE_CFG_CATEGORY_MASK);
             long long begin_identify = AtomicLoadC(device, DEVICE_CFG_IDENTIFY);
             long long identify_count =AtomicLoadC(device, DEVICE_CFG_IDENTIFY_EXTEND);
-            unsigned long long identify_filter = (unsigned long long)AtomicLoadC(device, DEVICE_CFG_IDENTIFY_FILTER);
+            unsigned long long identify_mask = (unsigned long long)AtomicLoadC(device, DEVICE_CFG_IDENTIFY_MASK);
 
             if (category_count > 0 && (log.category_ < begin_category || log.category_ >= begin_category + category_count))
             {
@@ -3355,18 +4040,19 @@ namespace FNLog
             {
                 continue;
             }
-            if (category_filter && (category_filter & ((1ULL) << (unsigned int)log.category_)) == 0)
+            if (category_mask && (category_mask & ((1ULL) << (unsigned int)log.category_)) == 0)
             {
                 continue;
             }
-            if (identify_filter && (identify_filter & ((1ULL) << (unsigned int)log.identify_)) == 0)
+            if (identify_mask && (identify_mask & ((1ULL) << (unsigned int)log.identify_)) == 0)
             {
                 continue;
             }
             EnterProcDevice(logger, channel.channel_id_, device_id, log);
         }
     }
-    
+
+    inline void InitLogData(Logger& logger, LogData& log, int channel_id, int priority, int category, unsigned long long identify, unsigned int prefix);
  
     inline void EnterProcChannel(Logger& logger, int channel_id)
     {
@@ -3374,7 +4060,8 @@ namespace FNLog
         RingBuffer& ring_buffer = logger.shm_->ring_buffers_[channel_id];
         do
         {
-            int local_write_count = 0;
+            int flush_count = 0;
+            bool empty_tick = true;
             do
             {
                 int old_idx = ring_buffer.proc_idx_.load(std::memory_order_acquire);
@@ -3394,10 +4081,35 @@ namespace FNLog
                 auto& cur_log = ring_buffer.buffer_[old_idx];
                 DispatchLog(logger, channel, cur_log);
                 cur_log.data_mark_ = 0;
-                AtomicAddL(channel, CHANNEL_LOG_PROCESSED);
-                local_write_count ++;
+                AtomicIncChannelLog(channel, CHANNEL_LOG_PROCESSED, 1);
+                AtomicIncChannelLog(channel, CHANNEL_LOG_PROCESSED_BYTES, cur_log.content_len_);
+                flush_count ++;
+                empty_tick = false;
+                int write_id = ring_buffer.write_idx_.load(std::memory_order_acquire);
+                int proc_que_size = 0;
+                if (old_idx <= write_id)
+                {
+                    proc_que_size = write_id - old_idx;
+                }
+                else
+                {
+                    proc_que_size = write_id + RingBuffer::BUFFER_LEN - old_idx;
+                }
 
+                if (proc_que_size > AtomicLoadChannelLog(channel, CHANNEL_LOG_MAX_PROC_QUE_SIZE))
+                {
+                    AtomicStoreChannelLog(channel, CHANNEL_LOG_MAX_PROC_QUE_SIZE, proc_que_size);
+                }
 
+                if (cur_log.timestamp_ > 0)
+                {
+                    long long now = (long long)time(NULL);
+                    long long diff = now - 1 - cur_log.timestamp_;
+                    if (diff > AtomicLoadChannelLog(channel, CHANNEL_LOG_MAX_DELAY_TIME_S) )
+                    {
+                        AtomicStoreChannelLog(channel, CHANNEL_LOG_MAX_DELAY_TIME_S, diff);
+                    }
+                }
                 do
                 {
                     //set read index to proc index  
@@ -3415,9 +4127,10 @@ namespace FNLog
                 } while (true);  
 
                 //if want the high log security can reduce this threshold or enable shared memory queue.  
-                if (local_write_count > 10000)
+                if (flush_count > FN_LOG_FORCE_FLUSH_QUE)
                 {
-                    local_write_count = 0;
+                    //break;
+                    flush_count = 0;
                     for (int i = 0; i < channel.device_size_; i++)
                     {
                         if (channel.devices_[i].out_type_ == DEVICE_OUT_FILE)
@@ -3434,7 +4147,7 @@ namespace FNLog
                 channel.channel_state_ = CHANNEL_STATE_RUNNING;
             }
 
-            if (local_write_count)
+            if (flush_count != 0)
             {
                 for (int i = 0; i < channel.device_size_; i++)
                 {
@@ -3444,10 +4157,65 @@ namespace FNLog
                     }
                 }
             }
-            HotUpdateLogger(logger, channel.channel_id_);
-            if (channel.channel_type_ == CHANNEL_ASYNC)
+
+            for (int i = 0; i < channel.device_size_; i++)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                Device& device = channel.devices_[i];
+                if (device.in_type_ != DEVICE_IN_UDP)
+                {
+                    continue;
+                }
+
+                UDPHandler& udp = logger.udp_handles_[channel_id * Channel::MAX_DEVICE_SIZE + i];
+                if (!device.config_fields_[DEVICE_CFG_ABLE])
+                {
+                    if (udp.is_open())
+                    {
+                        udp.close();
+                    }
+                    continue;
+                }
+                
+                if (!udp.is_open())
+                {
+                    udp.open();
+                    if (udp.is_open())
+                    {
+                        int ret = udp.bind((unsigned int)AtomicLoadC(device, DEVICE_CFG_UDP_IP), (unsigned short)AtomicLoadC(device, DEVICE_CFG_UDP_PORT));
+                        if (ret != 0)
+                        {
+                            udp.close();
+                        }
+                    }
+                }
+
+                if (!udp.is_open())
+                {
+                    continue;
+                }
+                
+                for (int i = 0; i < 1000; i++)
+                {
+                    InitLogData(logger, ring_buffer.udp_buffer_, channel.channel_id_, PRIORITY_INFO, 0, 0, LOG_PREFIX_NULL);
+                    ring_buffer.udp_buffer_.content_len_ = udp.read(ring_buffer.udp_buffer_.content_, LogData::LOG_SIZE);
+                    if (ring_buffer.udp_buffer_.content_len_ == LogData::LOG_SIZE)
+                    {
+                        ring_buffer.udp_buffer_.content_[ring_buffer.udp_buffer_.content_len_ - 2] = '\n';
+                        ring_buffer.udp_buffer_.content_[ring_buffer.udp_buffer_.content_len_ - 1] = '\0';
+                    }
+                    if (ring_buffer.udp_buffer_.content_len_ == 0)
+                    {
+                        break;
+                    }
+                    empty_tick = false; 
+                    EnterProcDevice(logger, channel.channel_id_, device.device_id_, ring_buffer.udp_buffer_);
+                }
+            }
+
+            HotUpdateLogger(logger, channel.channel_id_);
+            if (channel.channel_type_ == CHANNEL_ASYNC && empty_tick)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(FN_LOG_MAX_ASYNC_SLEEP_MS));
             }
             
         } while (channel.channel_type_ == CHANNEL_ASYNC 
@@ -3463,6 +4231,8 @@ namespace FNLog
 
     inline void InitLogData(Logger& logger, LogData& log, int channel_id, int priority, int category, unsigned long long identify, unsigned int prefix)
     {
+        (void)logger;
+        (void)prefix;
         log.channel_id_ = channel_id;
         log.priority_ = priority;
         log.category_ = category;
@@ -3510,7 +4280,7 @@ namespace FNLog
         log.prefix_len_ = log.content_len_;
         return;
     }
-#ifdef __GNUG__
+#if FNLOG_GCC
 #pragma GCC push_options
 #pragma GCC optimize ("O2")
 #endif
@@ -3541,10 +4311,10 @@ namespace FNLog
 
         long long begin_category = AtomicLoadC(channel, CHANNEL_CFG_CATEGORY);
         long long category_count = AtomicLoadC(channel, CHANNEL_CFG_CATEGORY_EXTEND);
-        unsigned long long category_filter = (unsigned long long)AtomicLoadC(channel, CHANNEL_CFG_CATEGORY_FILTER);
+        unsigned long long category_mask = (unsigned long long)AtomicLoadC(channel, CHANNEL_CFG_CATEGORY_MASK);
         long long begin_identify = AtomicLoadC(channel, CHANNEL_CFG_IDENTIFY);
         long long identify_count = AtomicLoadC(channel, CHANNEL_CFG_IDENTIFY_EXTEND);
-        unsigned long long identify_filter = (unsigned long long)AtomicLoadC(channel, CHANNEL_CFG_IDENTIFY_FILTER);
+        unsigned long long identify_mask = (unsigned long long)AtomicLoadC(channel, CHANNEL_CFG_IDENTIFY_MASK);
 
         if (category_count > 0 && (category < begin_category || category >= begin_category + category_count))
         {
@@ -3554,11 +4324,11 @@ namespace FNLog
         {
             return true;
         }
-        if (category_filter && (category_filter & ((1ULL) << (unsigned int)category)) == 0)
+        if (category_mask && (category_mask & ((1ULL) << (unsigned int)category)) == 0)
         {
             return true;
         }
-        if (identify_filter && (identify_filter & ((1ULL) << (unsigned int)identify)) == 0)
+        if (identify_mask && (identify_mask & ((1ULL) << (unsigned int)identify)) == 0)
         {
             return true;
         }
@@ -3570,34 +4340,40 @@ namespace FNLog
             Device::ConfigFields& fields = channel.devices_[i].config_fields_;
             long long field_able = fields[FNLog::DEVICE_CFG_ABLE];
             long long field_priority = fields[FNLog::DEVICE_CFG_PRIORITY];
+            if (!field_able || priority < field_priority)
+            {
+                continue;
+            }
+            if (channel.devices_[i].in_type_ != DEVICE_IN_NULL)
+            {
+                continue;
+            }
             long long field_begin_category = fields[FNLog::DEVICE_CFG_CATEGORY];
             long long field_category_count = fields[FNLog::DEVICE_CFG_CATEGORY_EXTEND];
-            unsigned long long field_category_filter = (unsigned long long)fields[FNLog::DEVICE_CFG_CATEGORY_FILTER];
+            unsigned long long field_category_mask = (unsigned long long)fields[FNLog::DEVICE_CFG_CATEGORY_MASK];
             long long field_begin_identify = fields[FNLog::DEVICE_CFG_IDENTIFY];
             long long field_identify_count = fields[FNLog::DEVICE_CFG_IDENTIFY_EXTEND];
-            unsigned long long field_identify_filter = (unsigned long long)fields[FNLog::DEVICE_CFG_IDENTIFY_FILTER];
+            unsigned long long field_identify_mask = (unsigned long long)fields[FNLog::DEVICE_CFG_IDENTIFY_MASK];
 
-            if (field_able && priority >= field_priority)
+
+            if (field_category_count > 0 && (category < field_begin_category || category >= field_begin_category + field_category_count))
             {
-                if (field_category_count > 0 && (category < field_begin_category || category >= field_begin_category + field_category_count))
-                {
-                    continue;
-                }
-                if (field_identify_count > 0 && (identify < field_begin_identify || identify >= field_begin_identify + field_identify_count))
-                {
-                    continue;
-                }
-                if (field_category_filter &&  (field_category_filter & ((1ULL) << (unsigned int)category)) == 0)
-                {
-                    continue;
-                }
-                if (field_identify_filter &&  (field_identify_filter & ((1ULL) << (unsigned int)identify)) == 0)
-                {
-                    continue;
-                }
-                need_write = true;
-                break;
+                continue;
             }
+            if (field_identify_count > 0 && (identify < field_begin_identify || identify >= field_begin_identify + field_identify_count))
+            {
+                continue;
+            }
+            if (field_category_mask &&  (field_category_mask & ((1ULL) << (unsigned int)category)) == 0)
+            {
+                continue;
+            }
+            if (field_identify_mask &&  (field_identify_mask & ((1ULL) << (unsigned int)identify)) == 0)
+            {
+                continue;
+            }
+            need_write = true;
+            break;
         }
         if (!need_write)
         {
@@ -3606,12 +4382,12 @@ namespace FNLog
         
         return false;
     }
-#ifdef __GNUG__
+#if FNLOG_GCC
 #pragma GCC pop_options
 #endif
     inline int HoldChannel(Logger& logger, int channel_id, int priority, int category, long long identify)
     {
-        if (BlockInput(logger, channel_id, priority, category, identify))
+        if (channel_id >= logger.shm_->channel_size_)
         {
             return -1;
         }
@@ -3623,7 +4399,8 @@ namespace FNLog
         {
             if (state > 0)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                AtomicIncChannelLog(channel, CHANNEL_LOG_WAIT_COUNT, 1);
+                std::this_thread::sleep_for(std::chrono::milliseconds(FN_LOG_MAX_ASYNC_SLEEP_MS));
             }
             state++;
 
@@ -3641,7 +4418,7 @@ namespace FNLog
                 }
                 if (ring_buffer.hold_idx_.compare_exchange_strong(old_idx, hold_idx))
                 {
-                    AtomicAddL(channel, CHANNEL_LOG_HOLD);
+                    AtomicIncChannelLog(channel, CHANNEL_LOG_HOLD, 1);
                     ring_buffer.buffer_[old_idx].data_mark_.store(MARK_HOLD, std::memory_order_release);
                     return old_idx;
                 }
@@ -3659,17 +4436,17 @@ namespace FNLog
     {
         if (channel_id >= logger.shm_->channel_size_ || channel_id < 0)
         {
-            return -1;
+            return E_INVALID_CHANNEL_SIZE;
         }
         if (hold_idx >= RingBuffer::BUFFER_LEN || hold_idx < 0)
         {
-            return -2;
+            return E_OUT_RINGBUFFER;
         }
         Channel& channel = logger.shm_->channels_[channel_id];
         RingBuffer& ring_buffer = logger.shm_->ring_buffers_[channel_id];
         if (channel.channel_state_ != CHANNEL_STATE_RUNNING)
         {
-            return -1;
+            return E_LOGGER_NOT_RUNNING;
         }
 
         LogData& log = ring_buffer.buffer_[hold_idx];
@@ -3678,7 +4455,7 @@ namespace FNLog
         log.content_[log.content_len_] = '\0';
 
         log.data_mark_ = 2;
-        AtomicAddL(channel, CHANNEL_LOG_PRIORITY + log.priority_);
+        AtomicIncChannelLog(channel, CHANNEL_LOG_PRIORITY + log.priority_, log.content_len_);
 
         do
         {
@@ -3694,7 +4471,7 @@ namespace FNLog
             }
             if (ring_buffer.write_idx_.compare_exchange_strong(old_idx, next_idx))
             {
-                AtomicAddL(channel, CHANNEL_LOG_PUSH);
+                AtomicIncChannelLog(channel, CHANNEL_LOG_PUSH, 1);
             }
         } while (channel.channel_state_ == CHANNEL_STATE_RUNNING);
 
@@ -3706,22 +4483,31 @@ namespace FNLog
     }
 
     //combine virtual device  can transmit log to other channel 
-    inline int TransmitChannel(Logger& logger, int channel_id, const LogData& log)
+    inline int TransmitChannel(Logger& logger, int channel_id, int category, long long identify, const LogData& log)
     {
         if (log.channel_id_ == channel_id)
         {
-            return -1;
+            return 0;
         }
-        int hold_idx = FNLog::HoldChannel(logger, channel_id, log.priority_, log.category_, log.identify_);
+        if (BlockInput(logger, channel_id, log.priority_, category, identify))
+        {
+            return 0;
+        }
+
+        int hold_idx = FNLog::HoldChannel(logger, channel_id, log.priority_, category, identify);
         if (hold_idx < 0)
         {
-            return -2;
+            if (hold_idx == -1)
+            {
+                return 0;
+            }
+            return 0;
         }
         LogData& trans_log = logger.shm_->ring_buffers_[channel_id].buffer_[hold_idx];
         trans_log.channel_id_ = channel_id;
         trans_log.priority_ = log.priority_;
-        trans_log.category_ = log.category_;
-        trans_log.identify_ = log.identify_;
+        trans_log.category_ = category;
+        trans_log.identify_ = identify;
         trans_log.code_line_ = log.code_line_;
         trans_log.code_func_len_ = log.code_func_len_;
         trans_log.code_file_len_ = log.code_file_len_;
@@ -3739,44 +4525,12 @@ namespace FNLog
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once
@@ -3787,47 +4541,17 @@ namespace FNLog
 namespace FNLog
 {
 
-#if __GNUG__ && __GNUC__ >= 6
+#if FNLOG_GCC && __GNUC__ >= 6
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
 
     inline int PushLog(Logger& logger, int channel_id, int hold_idx, bool state_safly_env = false)
     {
+        (void)state_safly_env;
         return PushChannel(logger, channel_id, hold_idx);
     }
 
-    //not thread-safe
-    inline Channel* NewChannel(Logger& logger, int channel_type)
-    {
-        Channel * channel = nullptr;
-        if (logger.shm_->channel_size_ < Logger::MAX_CHANNEL_SIZE) 
-        {
-            int channel_id = logger.shm_->channel_size_;
-            logger.shm_->channel_size_++;
-            channel = &logger.shm_->channels_[channel_id];
-            channel->channel_id_ = channel_id;
-            channel->channel_type_ = channel_type;
-            return channel;
-        }
-        return channel;
-    }
-
-    //not thread-safe
-    inline Device* NewDevice(Logger& logger, Channel& channel, int out_type)
-    {
-        Device* device = nullptr;
-        if (channel.device_size_ < Channel::MAX_DEVICE_SIZE) {
-            int device_id = channel.device_size_;
-            channel.device_size_++;
-            device = &channel.devices_[device_id];
-            device->device_id_ = device_id;
-            device->out_type_ = out_type;
-            device->config_fields_[DEVICE_CFG_ABLE] = 1;
-            return device;
-        }
-        return device;
-    }
 
     inline int StartChannels(Logger& logger)
     {
@@ -3846,8 +4570,8 @@ namespace FNLog
                 thd = std::thread(EnterProcChannel, std::ref(logger), channel_id);
                 if (!thd.joinable())
                 {
-                    printf("%s", "start async log thread has error.\n");
-                    return -1;
+                    printf("StartChannels %s", "start async log thread has error.\n");
+                    return E_CHANNEL_THREAD_FAILED;
                 }
                 int state = 0;
                 while (channel.channel_state_ == CHANNEL_STATE_NULL && state < 100)
@@ -3857,19 +4581,19 @@ namespace FNLog
                 }
                 if (channel.channel_state_ == CHANNEL_STATE_NULL)
                 {
-                    printf("%s", "start async log thread timeout.\n");
-                    return -2;
+                    printf("StartChannels %s", "start async log thread timeout.\n");
+                    return E_CHANNEL_THREAD_FAILED;
                 }
                 if (channel.channel_state_ != CHANNEL_STATE_RUNNING)
                 {
-                    printf("%s", "start async log thread has inner error.\n");
-                    return -3;
+                    printf("StartChannels %s", "start async log thread has inner error.\n");
+                    return E_INVALID_CHANNEL_STATE;
                 }
             }
             break;
             default:
                 printf("%s", "unknown channel type");
-                return -10;
+                return E_INVALID_CHANNEL_SYNC;
             }
         }
         return 0;
@@ -3901,8 +4625,8 @@ namespace FNLog
             }
             break;
             default:
-                printf("%s", "unknown channel type");
-                return -10;
+                printf("StopChannels %s", "unknown channel type");
+                return E_INVALID_CHANNEL_SYNC;
             }
         }
         return 0;
@@ -3912,31 +4636,38 @@ namespace FNLog
     {
         if (logger.logger_state_ != LOGGER_STATE_UNINIT)
         {
-            printf("start error. state:<%u> not uninit:<%u>.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
-            return -1;
+            printf("StartLogger error. state:<%u> not uninit:<%u>.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
+            return E_LOGGER_IN_USE;
         }
-        if (logger.shm_ == NULL || logger.shm_->channel_size_ > Logger::MAX_CHANNEL_SIZE || logger.shm_->channel_size_ <= 0)
+        if (logger.shm_ == NULL)
         {
-            printf("start error. channel size:<%d> invalid.\n", logger.shm_->channel_size_);
-            return -2;
-        }
-        Logger::StateLockGuard state_guard(logger.state_lock);
-        if (logger.logger_state_ != LOGGER_STATE_UNINIT)
-        {
-            printf("start error. state:<%u> not uninit:<%u>.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
-            return -3;
+            printf("StartLogger error. logger not init %p.\n", logger.shm_);
+            return E_LOGGER_NOT_INIT;
         }
         if (logger.shm_->channel_size_ > Logger::MAX_CHANNEL_SIZE || logger.shm_->channel_size_ <= 0)
         {
-            printf("start error. channel size:<%d> invalid.\n", logger.shm_->channel_size_);
-            return -4;
+            printf("StartLogger error. logger invalid channel size: %d.\n", logger.shm_->channel_size_);
+            return E_INVALID_CHANNEL_SIZE;
+        }
+        Logger::StateLockGuard state_guard(logger.state_lock_);
+        if (logger.logger_state_ != LOGGER_STATE_UNINIT)
+        {
+            printf("StartLogger error. state:<%u> not uninit:<%u>.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
+            return E_LOGGER_IN_USE;
+        }
+        if (logger.shm_->channel_size_ > Logger::MAX_CHANNEL_SIZE || logger.shm_->channel_size_ <= 0)
+        {
+            printf("StartLogger error. channel size:<%d> invalid.\n", logger.shm_->channel_size_);
+            return E_INVALID_CHANNEL_SIZE;
         }
         logger.logger_state_ = LOGGER_STATE_INITING;
-        if (StartChannels(logger) != 0)
+        int ret = StartChannels(logger);
+        if (ret != 0)
         {
             StopChannels(logger);
             logger.logger_state_ = LOGGER_STATE_UNINIT;
-            return -5;
+            printf("StartLogger error. StartChannels failed. channel size:<%d>. \n", logger.shm_->channel_size_);
+            return ret;
         }
         logger.logger_state_ = LOGGER_STATE_RUNNING;
         return 0;
@@ -3966,20 +4697,20 @@ namespace FNLog
     {
         if (logger.shm_->channel_size_ > Logger::MAX_CHANNEL_SIZE || logger.shm_->channel_size_ <= 0)
         {
-            printf("try stop error. channel size:<%d> invalid.\n", logger.shm_->channel_size_);
-            return -1;
+            printf("StopLogger error. channel size:<%d> invalid.\n", logger.shm_->channel_size_);
+            return E_INVALID_CHANNEL_SIZE;
         }
         if (logger.logger_state_ != LOGGER_STATE_RUNNING)
         {
-            printf("try stop logger error. state:<%u> not running:<%u>.\n", logger.logger_state_, LOGGER_STATE_RUNNING);
-            return -2;
+            printf("StopLogger logger error. state:<%u> not running:<%u>.\n", logger.logger_state_, LOGGER_STATE_RUNNING);
+            return E_LOGGER_NOT_RUNNING;
         }
-        Logger::StateLockGuard state_guard(logger.state_lock);
+        Logger::StateLockGuard state_guard(logger.state_lock_);
         
         if (logger.logger_state_ != LOGGER_STATE_RUNNING)
         {
-            printf("try stop logger error. state:<%u> not running:<%u>.\n", logger.logger_state_, LOGGER_STATE_RUNNING);
-            return -3;
+            printf("StopLogger logger error. state:<%u> not running:<%u>.\n", logger.logger_state_, LOGGER_STATE_RUNNING);
+            return E_LOGGER_NOT_RUNNING;
         }
         logger.logger_state_ = LOGGER_STATE_CLOSING;
         StopChannels(logger);
@@ -4008,25 +4739,25 @@ namespace FNLog
     {
         if (logger.logger_state_ != LOGGER_STATE_UNINIT)
         {
-            printf("parse and start error. state:<%u> not uninit:<%u> by fast try.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
-            return -1;
+            printf("ParseAndStartLogger error. state:<%u> not uninit:<%u> by fast try.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
+            return E_LOGGER_IN_USE;
         }
-        Logger::StateLockGuard state_guard(logger.state_lock);
+        Logger::StateLockGuard state_guard(logger.state_lock_);
         if (logger.logger_state_ != LOGGER_STATE_UNINIT)
         {
-            printf("parse and start error. state:<%u> not uninit:<%u> in locked check.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
-            return -2;
+            printf("ParseAndStartLogger error. state:<%u> not uninit:<%u> in locked check.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
+            return E_LOGGER_IN_USE;
         }
         int ret = InitFromYMAL(logger, config_content, "");
         if (ret != 0)
         {
-            printf("init and load default logger error. ret:<%d>.\n", ret);
+            printf("ParseAndStartLogger error. ret:<%d>:%s.\n", ret, DebugErrno(ret).c_str());
             return ret;
         }
         ret = StartLogger(logger);
         if (ret != 0)
         {
-            printf("start default logger error. ret:<%d>.\n", ret);
+            printf("ParseAndStartLogger error. ret:<%d>.\n", ret);
             return ret;
         }
         return 0;
@@ -4036,20 +4767,20 @@ namespace FNLog
     {
         if (logger.logger_state_ != LOGGER_STATE_UNINIT)
         {
-            printf("load and start error. state:<%u> not uninit:<%u>.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
-            return -1;
+            printf("LoadAndStartLogger error. state:<%u> not uninit:<%u>.\n", logger.logger_state_, LOGGER_STATE_UNINIT);
+            return E_LOGGER_IN_USE;
         }
-        Logger::StateLockGuard state_guard(logger.state_lock);
+        Logger::StateLockGuard state_guard(logger.state_lock_);
         int ret = InitFromYMALFile(logger, confg_path);
         if (ret != 0)
         {
-            printf("init and load default logger error. ret:<%d>.\n", ret);
+            printf("LoadAndStartLogger error. ret:<%d %s>.\n", ret, DebugErrno(ret).c_str());
             return ret;
         }
         ret = StartLogger(logger);
         if (ret != 0)
         {
-            printf("start default logger error. ret:<%d>.\n", ret);
+            printf("LoadAndStartLogger error. ret:<%d>.\n", ret);
             return ret;
         }
         return 0;
@@ -4067,7 +4798,7 @@ namespace FNLog
         {
             return 0;
         }
-        return AtomicLoadL(channel, field);
+        return AtomicLoadChannelLog(channel, field);
     }
 
     inline void SetChannelConfig(Logger& logger, int channel_id, ChannelConfigEnum field, long long val)
@@ -4099,7 +4830,7 @@ namespace FNLog
         {
             return 0;
         }
-        return AtomicLoadL(channel.devices_[device_id], field);
+        return AtomicLoadDeviceLog(channel, device_id, field);
     }
 
     inline void SetDeviceConfig(Logger& logger, int channel_id, int device_id, DeviceConfigEnum field, long long val)
@@ -4155,7 +4886,7 @@ namespace FNLog
             for (int j = 0; j < channel.device_size_; j++)
             {
                 auto& device = channel.devices_[j];
-                if (device.out_type_ == out_type || out_type == DEVICE_OUT_NULL)
+                if (device.out_type_ == (unsigned int)out_type || out_type == DEVICE_OUT_NULL)
                 {
                     device.config_fields_[dce] = v;
                 }
@@ -4173,12 +4904,15 @@ namespace FNLog
         logger.desc_len_ = 0;
         memset(logger.name_, 0, Logger::MAX_LOGGER_NAME_LEN);
         logger.name_len_ = 0;
+        memset(logger.freq_limits_, 0, sizeof(logger.freq_limits_));
         std::string name = FileHandler::process_name();
         name = name.substr(0, Logger::MAX_LOGGER_NAME_LEN - 1);
         memcpy(logger.name_, name.c_str(), name.length() + 1);
         logger.name_len_ = (int)name.length();
         logger.shm_key_ = 0;
         logger.shm_ = NULL;
+        logger.tick_sum_ = 0;
+        logger.tick_count_ = 0;
         
 
 #if ((defined WIN32) && !KEEP_INPUT_QUICK_EDIT)
@@ -4215,7 +4949,7 @@ namespace FNLog
         UnloadSharedMemory(*this);
     }
 
-#if __GNUG__ && __GNUC__ >= 6
+#if FNLOG_GCC && __GNUC__ >= 6
 #pragma GCC diagnostic pop
 #endif
 
@@ -4223,44 +4957,12 @@ namespace FNLog
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once
@@ -4280,9 +4982,45 @@ namespace FNLog
     struct LogPercent
     {
         LogPercent(float v) :v_(v) {}
+        LogPercent(double v) :v_(static_cast<float>(v)) {}
         float v_;
     };
 
+    struct LogTimestamp
+    {
+        LogTimestamp()
+        {
+#ifdef WIN32
+            FILETIME ft;
+            GetSystemTimeAsFileTime(&ft);
+            unsigned long long now = ft.dwHighDateTime;
+            now <<= 32;
+            now |= ft.dwLowDateTime;
+            now /= 10;
+            now -= 11644473600000000ULL;
+            now /= 1000;
+            ts_ = now / 1000;
+            precise_ = (unsigned int)(now % 1000);
+#else
+            struct timeval tm;
+            gettimeofday(&tm, nullptr);
+            ts_ = tm.tv_sec;
+            precise_ = tm.tv_usec / 1000;
+#endif
+        }
+        LogTimestamp(long long ts, int precise)
+        {
+            ts_ = ts;
+            precise_ = precise;
+        }
+        LogTimestamp(long long ts_ms)
+        {
+            ts_ = ts_ms/1000;
+            precise_ = ts_ms%1000;
+        }
+        long long ts_;
+        int precise_;
+    };
 
     class LogStream
     {
@@ -4299,13 +5037,33 @@ namespace FNLog
             other.log_data_ = nullptr;
             other.hold_idx_ = -1;
         }
+        long long get_tick()
+        {
+#ifdef WIN32
+            _mm_lfence();
+            return (long long)__rdtsc();
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+            unsigned int lo = 0;
+            unsigned int hi = 0;
+            __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) ::);
+            unsigned long long val = ((unsigned long long)hi << 32) | lo;
+            return (long long)val;
+#endif
+        }
 
         explicit LogStream(Logger& logger, int channel_id, int priority, int category, long long identify,
             const char * const file_name, int file_name_len, int line,
             const char * const func_name, int func_name_len, unsigned int prefix)
         {
-            logger_ = nullptr;
-            log_data_ = nullptr;
+            if (BlockInput(logger, channel_id, priority, category, identify))
+            {
+                return;
+            }
+
+#ifdef FN_LOG_CPU_COST_STAT
+            tick_ = get_tick();
+#endif 
+
             int hold_idx = HoldChannel(logger, channel_id, priority, category, identify);
             if (hold_idx < 0)
             {
@@ -4360,7 +5118,6 @@ namespace FNLog
             if (prefix & LOG_PREFIX_FILE)
             {
                 write_char_unsafe('[');
-                write_char_unsafe('(');
                 if (file_name && file_name_len > 0)
                 {
                     int jump_bytes = short_path(file_name, file_name_len);
@@ -4370,7 +5127,6 @@ namespace FNLog
                 {
                     write_buffer_unsafe("nofile", 6);
                 }
-                write_char_unsafe(')');
                 write_char_unsafe(':');
                 *this << (unsigned long long)line;
                 write_char_unsafe(']');
@@ -4413,11 +5169,19 @@ namespace FNLog
                 }
                 PushLog(*logger_, log_data_->channel_id_, hold_idx_);
                 hold_idx_ = -1;
+
+#ifdef FN_LOG_CPU_COST_STAT
+                tick_ = get_tick() - tick_;
+                logger_->tick_sum_ += tick_;
+                logger_->tick_count_++;
+#endif 
                 log_data_ = nullptr;
                 logger_ = nullptr;
             }
         }
-        
+        //trans LogStream (temporary values) to  LogStream& (left values) 
+        //all user's LogStream operator  only care about LogStream& without temporary.   
+        LogStream& self() { return *this; }
         LogStream& set_category(int category) { if (log_data_) log_data_->category_ = category;  return *this; }
         LogStream& write_char_unsafe(char ch)
         {
@@ -4664,6 +5428,15 @@ namespace FNLog
             return *this;
         }
 
+        LogStream & operator <<(const LogTimestamp& date)
+        {
+            if (log_data_ && log_data_->content_len_ + 40 < LogData::LOG_SIZE)
+            {
+                int write_bytes = write_date_unsafe(log_data_->content_ + log_data_->content_len_, date.ts_, date.precise_);
+                log_data_->content_len_ += write_bytes;
+            }
+            return *this;
+        }
         
 
 
@@ -4671,6 +5444,7 @@ namespace FNLog
         LogData * log_data_ = nullptr;
         Logger* logger_ = nullptr;
         int hold_idx_ = -1;//ring buffer  
+        long long tick_ = 0;
     };
 
 
@@ -4679,44 +5453,12 @@ namespace FNLog
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once
@@ -4826,13 +5568,18 @@ namespace FNLog
 
 //--------------------BASE STREAM MACRO ---------------------------
 
+//temporary LogStream  
 #define LOG_STREAM_ORIGIN(logger, channel, priority, category, identify, prefix) \
 FNLog::LogStream(logger, channel, priority, category, identify,\
 __FILE__, sizeof(__FILE__) - 1, \
 __LINE__, __FUNCTION__, sizeof(__FUNCTION__) -1, prefix)
 
+//
+#define LOG_STREAM_ORIGIN_REF(logger, channel, priority, category, identify, prefix) \
+    LOG_STREAM_ORIGIN(logger, channel, priority, category, identify, prefix).self()
+
 #define LOG_STREAM_DEFAULT_LOGGER(channel, priority, category, identify, prefix) \
-    LOG_STREAM_ORIGIN(FNLog::GetDefaultLogger(), channel, priority, category, identify, prefix)
+    LOG_STREAM_ORIGIN_REF(FNLog::GetDefaultLogger(), channel, priority, category, identify, prefix)
 
 #define LOG_STREAM_DEFAULT_LOGGER_WITH_PREFIX(channel, priority, category, identify) \
     LOG_STREAM_DEFAULT_LOGGER(channel, priority, category, identify, FNLog::LOG_PREFIX_DEFAULT)
@@ -4857,12 +5604,12 @@ __LINE__, __FUNCTION__, sizeof(__FUNCTION__) -1, prefix)
 
 
 //--------------------CPP TEMPLATE STYLE FORMAT ---------------------------
-inline FNLog::LogStream& LogTemplatePack(FNLog::LogStream&& ls)
+inline FNLog::LogStream& LogTemplatePack(FNLog::LogStream& ls)
 {
     return ls;
 }
 template<typename ... Args>
-FNLog::LogStream& LogTemplatePack(FNLog::LogStream&& ls, Args&& ... args)
+FNLog::LogStream& LogTemplatePack(FNLog::LogStream& ls, Args&& ... args)
 {
     char buff[] = { (ls << args, '\0') ... };
     (void)buff;
@@ -4906,22 +5653,7 @@ FNLog::LogStream& LogTemplatePack(FNLog::LogStream&& ls, Args&& ... args)
 
 
 //--------------------C STYLE FORMAT ---------------------------
-#ifdef WIN32
-#define LOG_FORMAT(channel_id, priority, category, identify, prefix, logformat, ...) \
-do{ \
-    if (FNLog::BlockInput(FNLog::GetDefaultLogger(), channel_id, priority, category, identify))  \
-    { \
-        break;   \
-    } \
-    FNLog::LogStream __log_stream(LOG_STREAM_DEFAULT_LOGGER(channel_id, priority, category, identify, prefix));\
-    if (__log_stream.log_data_)\
-    {\
-        int __log_len = _snprintf_s(__log_stream.log_data_ ->content_ + __log_stream.log_data_ ->content_len_, FNLog::LogData::LOG_SIZE - __log_stream.log_data_ ->content_len_, _TRUNCATE, logformat, ##__VA_ARGS__); \
-        if (__log_len < 0) __log_len = 0; \
-        __log_stream.log_data_ ->content_len_ += __log_len; \
-    }\
-} while (0)
-#else
+
 // function format warn:   void(int x1, int x2, const char *args, ...) __attribute__((format(printf, 3, 4)));    
 #define LOG_FORMAT(channel_id, priority, category, identify, prefix, logformat, ...) \
 do{ \
@@ -4929,15 +5661,16 @@ do{ \
     { \
         break;   \
     } \
-    FNLog::LogStream __log_stream(LOG_STREAM_DEFAULT_LOGGER(channel_id, priority, category, identify, prefix));\
+    FNLog::LogStream __log_stream(LOG_STREAM_ORIGIN(FNLog::GetDefaultLogger(), channel_id, priority, category, identify, prefix));\
     if (__log_stream.log_data_)\
     {\
-        int __log_len = snprintf(__log_stream.log_data_ ->content_ + __log_stream.log_data_ ->content_len_, FNLog::LogData::LOG_SIZE - __log_stream.log_data_ ->content_len_, logformat, ##__VA_ARGS__); \
+        int __log_len = snprintf(__log_stream.log_data_ ->content_ + __log_stream.log_data_ ->content_len_, FNLog::LogData::LOG_SIZE - __log_stream.log_data_->content_len_, logformat, ##__VA_ARGS__); \
         if (__log_len < 0) __log_len = 0; \
+        if (__log_len >= FNLog::LogData::LOG_SIZE - __log_stream.log_data_->content_len_) __log_len = FNLog::LogData::LOG_SIZE - __log_stream.log_data_->content_len_ -1; \
         __log_stream.log_data_ ->content_len_ += __log_len; \
     }\
 } while (0)
-#endif
+
 
 #define LOGFMT_TRACE(channel_id, category, identify, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_TRACE, category, identify, FNLog::LOG_PREFIX_DEFAULT, fmt, ##__VA_ARGS__)
 #define LOGFMT_DEBUG(channel_id, category, identify, fmt, ...)  LOG_FORMAT(channel_id, FNLog::PRIORITY_DEBUG, category, identify, FNLog::LOG_PREFIX_DEFAULT, fmt, ##__VA_ARGS__)
@@ -4956,44 +5689,12 @@ do{ \
 
 
 #endif
+
 /*
- *
- * MIT License
- *
- * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * ===============================================================================
- *
- * (end of COPYRIGHT)
- */
-
-
- /*
-  * AUTHORS:  YaweiZhang <yawei.zhang@foxmail.com>
-  * VERSION:  1.0.0
-  * PURPOSE:  fn-log is a cpp-based logging utility.
-  * CREATION: 2019.4.20
-  * RELEASED: 2019.6.27
-  * QQGROUP:  524700770
-  */
+* Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
+* All rights reserved
+* This file is part of the fn-log, used MIT License.
+*/
 
 
 #pragma once

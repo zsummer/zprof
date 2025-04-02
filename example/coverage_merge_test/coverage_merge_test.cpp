@@ -23,7 +23,7 @@
 
 
 template<typename ... Args>
-FNLog::LogStream& ASSERT_ARGS_LOG(FNLog::LogStream&& ls, const std::string& head, Args&& ... args)
+FNLog::LogStream& ASSERT_ARGS_LOG(FNLog::LogStream& ls, const std::string& head, Args&& ... args)
 {
     ls << head << " ";
     std::initializer_list<int>{ (ls << args, '\0') ... };
