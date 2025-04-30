@@ -150,13 +150,13 @@ int main(int argc, char *argv[])
 
     if (true)
     {
-        int low_ms = 400;
-        int high_ms = 800;
-        int sleep_count = 4;
-        int sum_ms = low_ms * sleep_count + high_ms * sleep_count;
-        int avg_ms = sum_ms / (sleep_count * 2);
-        int dv_ms = 25; //clock 
-        int dv_total_ms = dv_ms * sleep_count * 2;
+        constexpr int low_ms = 400;
+        constexpr int high_ms = 800;
+        constexpr int sleep_count = 4;
+        constexpr int sum_ms = low_ms * sleep_count + high_ms * sleep_count;
+        constexpr int avg_ms = sum_ms / (sleep_count * 2);
+        constexpr int dv_ms = 25; //clock 
+        constexpr int dv_total_ms = dv_ms * sleep_count * 2;
 
 
 
