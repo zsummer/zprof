@@ -48,13 +48,13 @@ echo $last_dist_diff
 
 echo ""
 echo "[write versions]"
-echo "version:" > ./dist/include/zprof/VERSION
-echo "last_sha1(./src)=$last_dist_sha1" >> ./dist/include/zprof/VERSION 
-echo "last_date(./src)=$last_dist_date" >> ./dist/include/zprof/VERSION 
-echo "" >> ./dist/include/zprof/VERSION 
-echo "git log -1 --stat ./src:" >> ./dist/include/zprof/VERSION 
-echo $last_dist_diff >> ./dist/include/zprof/VERSION
-cat ./dist/include/zprof/VERSION
+echo "version:" > ./dist/include/zprof/GIT_VERSION
+echo "last_sha1(./src)=$last_dist_sha1" >> ./dist/include/zprof/GIT_VERSION 
+echo "last_date(./src)=$last_dist_date" >> ./dist/include/zprof/GIT_VERSION 
+echo "" >> ./dist/include/zprof/GIT_VERSION 
+echo "git log -1 --stat ./src:" >> ./dist/include/zprof/GIT_VERSION 
+echo $last_dist_diff >> ./dist/include/zprof/GIT_VERSION
+cat ./dist/include/zprof/GIT_VERSION
 
 echo ""
 echo "[write done]"

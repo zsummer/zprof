@@ -1,30 +1,44 @@
 
+
 /*
-* zlist_ext License
 * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* All rights reserved
+* This file is part of the zbase, used MIT License.
 */
 
 
-
+#pragma once 
 #ifndef  ZLIST_EXT_H
 #define ZLIST_EXT_H
+
+#include <stdint.h>
 #include <iterator>
 #include <memory>
 #include <cstddef>
 
 
+
+
+//default use format compatible short type .  
+#if !defined(ZBASE_USE_AHEAD_TYPE) && !defined(ZBASE_USE_DEFAULT_TYPE)
+#define ZBASE_USE_DEFAULT_TYPE
+#endif 
+
+//win & unix format incompatible   
+#ifdef ZBASE_USE_AHEAD_TYPE
+using s8 = int8_t;
+using u8 = uint8_t;
+using s16 = int16_t;
+using u16 = uint16_t;
+using s32 = int32_t;
+using u32 = uint32_t;
+using s64 = int64_t;
+using u64 = uint64_t;
+using f32 = float;
+using f64 = double;
+#endif
+
+#ifdef ZBASE_USE_DEFAULT_TYPE
 using s8 = char;
 using u8 = unsigned char;
 using s16 = short int;
@@ -35,13 +49,30 @@ using s64 = long long;
 using u64 = unsigned long long;
 using f32 = float;
 using f64 = double;
+#endif
 
+
+#if __GNUG__
+#define ZBASE_ALIAS __attribute__((__may_alias__))
+#else
+#define ZBASE_ALIAS
+#endif
+
+
+
+// init new memory with 0xfd    
+//#define ZDEBUG_UNINIT_MEMORY
+
+// backed memory immediately fill 0xdf 
+//#define ZDEBUG_DEATH_MEMORY  
+
+// open and check fence 
 //#define ZLIST_EXT_USED_FENCE
 
 #if __GNUG__
-#define MAY_ALIAS __attribute__((__may_alias__))
+#define ZBASE_ALIAS __attribute__((__may_alias__))
 #else
-#define MAY_ALIAS
+#define ZBASE_ALIAS
 #endif
 
 template<class list_type>
@@ -108,12 +139,42 @@ bool operator != (const zlist_ext_iterator<list_type>& n1, const zlist_ext_itera
     return !(n1 == n2);
 }
 
+/* type_traits:
+*
+* is_trivially_copyable: in part
+    * memset: uninit or no dync heap
+    * memcpy: uninit or no dync heap
+* shm resume : safely, require heap address fixed 
+    * has vptr:     no
+    * static var:   no
+    * has heap ptr: yes
+    * has code ptr: no
+* thread safe: read safe
+*
+*/
 
-//分段双向链表; 第一段为固定内存, 第二段为动态内存, 均为定长.  
+
+template<s32 _ID = 0>
+class zlist_ext_debug_error_helper
+{
+public:
+    // record error when open fence; don't worry about thead safety. 
+    static s32 debug_error_;
+};
+template<s32 _ID>
+s32 zlist_ext_debug_error_helper<_ID>::debug_error_ = 0;
+
+template<class _Ty>
+using zlist_aligned_space_helper = typename std::conditional<std::is_trivial<_Ty>::value, _Ty, typename std::aligned_storage<sizeof(_Ty), alignof(_Ty)>::type>::type;
+
+
+//分段双向链表, 使用两块平坦连续内存, 第一块为静态, 第二块为动态.  
 //_Size == _FixedSize 大小相等时为全静态, 此时与zlist的区别在于, zlist的node和value绑在一起, value小时 zlist因不需要取指针性能更好,  value大时 zlist_ext因分离数据性能会更好一些.  
 //_FixedSize == 0 时为全动态   
 //这里使用了指针, 用在共享内存时候需要保证指针地址固定, 以及修改动态内存分配接口,.   
-template<class _Ty, size_t _Size, size_t _FixedSize, class _Alloc = std::allocator<typename std::aligned_storage<sizeof(_Ty), alignof(_Ty)>::type>>
+
+
+template<class _Ty, size_t _Size, size_t _FixedSize, class _Alloc = std::allocator<zlist_aligned_space_helper<_Ty>> >
 class zlist_ext
 {
 public:
@@ -140,8 +201,8 @@ public:
 
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-    using space_type = typename std::aligned_storage<sizeof(_Ty), alignof(_Ty)>::type;
 
+    using space_type = zlist_aligned_space_helper<_Ty>;
 public:
     struct node_type
     {
@@ -152,7 +213,7 @@ public:
         u32 next;
         space_type *space;
     };
-    static _Ty* MAY_ALIAS node_cast(node_type& node) { return reinterpret_cast<_Ty*>(node.space); }
+    static _Ty* ZBASE_ALIAS node_cast(const node_type& node) { return reinterpret_cast<_Ty*>(node.space); }
 public:
 
     zlist_ext()
@@ -272,7 +333,7 @@ public:
     reference front() { return *node_cast(data_[used_head_id_]); }
     const_reference front() const { return *node_cast(data_[used_head_id_]); }
     reference back() { return *node_cast(data_[data_[END_ID].front]); }
-    const_reference back() const { *node_cast(data_[data_[END_ID].front]); }
+    const_reference back() const {return *node_cast(data_[data_[END_ID].front]); }
 
 //       static constexpr u32 static_buf_size(u32 obj_count) { return sizeof(zlist_ext<_Ty, 1>) + sizeof(node_type) * (obj_count - 1); }
 
@@ -446,11 +507,13 @@ private:
     {
         if (id >= END_ID)
         {
+            zlist_ext_debug_error_helper<>::debug_error_++;
             return false;
         }
 #ifdef ZLIST_EXT_USED_FENCE
         if (data_[id + 1].fence != FENCE_VAL)
         {
+            zlist_ext_debug_error_helper<>::debug_error_++;
             return false;
         }
 #endif
@@ -458,11 +521,13 @@ private:
 #ifdef ZLIST_EXT_USED_FENCE
         if (node.fence != FENCE_VAL)
         {
+            zlist_ext_debug_error_helper<>::debug_error_++;
             return false;
         }
 #endif
         if (used_head_id_ >= END_ID)
         {
+            zlist_ext_debug_error_helper<>::debug_error_++;
             return false; //empty
         }
         if (!std::is_trivial<_Ty>::value)
@@ -492,7 +557,7 @@ private:
         //LogError() << "release used node error";
         return false;
     }
-    void inject(u32 pos_id, u32 new_id)
+    void inject_node(u32 pos_id, u32 new_id)
     {
         data_[new_id].next = pos_id;
         data_[new_id].front = data_[pos_id].front;
@@ -518,7 +583,7 @@ private:
         {
             return END_ID;
         }
-        inject(id, new_id);
+        inject_node(id, new_id);
         new (data_[new_id].space) _Ty(value);
         return new_id;
     }
@@ -530,7 +595,7 @@ private:
         {
             return END_ID;
         }
-        inject(id, new_id);
+        inject_node(id, new_id);
         new (data_[new_id].space) _Ty(args ...);
         return new_id;
     }
@@ -652,6 +717,7 @@ public:
     {
         return comp_bound(first, last, value, greater);
     }
+
 private:
     u32 used_count_;
     u32 free_id_;

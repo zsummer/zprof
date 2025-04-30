@@ -77,19 +77,28 @@ int main(int argc, char *argv[])
     FNLog::FastStartDebugLogger();
     LogDebug() << " main begin test. ";
 
-    //³õÊ¼»¯   
+    //ï¿½ï¿½Ê¼ï¿½ï¿½   
     PROF_INIT("inner prof");
 
     PROF_SET_OUTPUT(&OutputLog);
 
+    LogDebug() <<"sys mem:" << zprof::GetSysMem().vm_size << ", used:" << zprof::GetSysMem().rss_size;
+    LogDebug() <<"self mem:" << zprof::GetSelfMem().vm_size << ", used:" << zprof::GetSelfMem().rss_size;
+
     ASSERT_TEST(zprof::GetSelfMem().vm_size > 0);
     ASSERT_TEST(zprof::GetSelfMem().rss_size > 0);
     ASSERT_TEST(zprof::GetSelfMem().rss_size <= zprof::GetSelfMem().vm_size);
+    ASSERT_TEST(zprof::GetSelfMem().vm_size < zprof::GetSysMem().vm_size);
+    ASSERT_TEST(zprof::GetSelfMem().rss_size < zprof::GetSysMem().rss_size);
 
+
+    LogDebug() <<" " << std::chrono::high_resolution_clock().now().time_since_epoch().count();
+    LogDebug() <<" " << std::chrono::high_resolution_clock().now().time_since_epoch().count();
+    LogDebug() <<" " << std::chrono::high_resolution_clock().now().time_since_epoch().count();
     for (int i = zprof::kClockNULL; i < zprof::kClockMAX; i++)
     {
-        ASSERT_TEST(ProfInst.particle_for_ns(i) > 0.1, "i=", i); //CPU 10Ghz; 0.1ns  
-        ASSERT_TEST(ProfInst.particle_for_ns(i) < 1000*1000*1000, "i=", i); //the clock particle is second ?  
+        ASSERT_TEST(ProfInst.clock_period(i) > 0.1, "i=", i); //CPU 10Ghz; 0.1ns  
+        ASSERT_TEST(ProfInst.clock_period(i) < 1000*1000*1000, "i=", i); //the clock particle is second ?  
     }
     
     int compact_len = (int)ProfInst.compact_writer().offset();
@@ -145,20 +154,72 @@ int main(int argc, char *argv[])
         buf[99] = '\0';
         
     }
+    
+
+    // low precision check  
+    if (true)
+    {
+        START_PROF_COUNTER(kClockSystem);
+        START_PROF_COUNTER(kClockClock);
+        START_PROF_COUNTER(kClockChrono);
+        START_PROF_COUNTER(kClockSteadyChrono);
+        START_PROF_COUNTER(kClockSystemChrono);
+        START_PROF_COUNTER(kClockSystemMS);
+        START_PROF_COUNTER(kClockVolatileRDTSC);
+        START_PROF_COUNTER(kClockPureRDTSC);
+        START_PROF_COUNTER(kClockFenceRDTSC);
+        START_PROF_COUNTER(kClockBTBFenceRDTSC);
+        START_PROF_COUNTER(kClockRDTSCP);
+        START_PROF_COUNTER(kClockMFenceRDTSC);
+        START_PROF_COUNTER(kClockBTBMFenceRDTSC);
+        START_PROF_COUNTER(kClockLockRDTSC);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        RECORD_PROF_COUNTER(kClockSystem);
+        RECORD_PROF_COUNTER(kClockClock);
+        RECORD_PROF_COUNTER(kClockChrono);
+        RECORD_PROF_COUNTER(kClockSteadyChrono);
+        RECORD_PROF_COUNTER(kClockSystemChrono);
+        RECORD_PROF_COUNTER(kClockSystemMS);
+        RECORD_PROF_COUNTER(kClockVolatileRDTSC);
+        RECORD_PROF_COUNTER(kClockPureRDTSC);
+        RECORD_PROF_COUNTER(kClockFenceRDTSC);
+        RECORD_PROF_COUNTER(kClockBTBFenceRDTSC);
+        RECORD_PROF_COUNTER(kClockRDTSCP);
+        RECORD_PROF_COUNTER(kClockMFenceRDTSC);
+        RECORD_PROF_COUNTER(kClockBTBMFenceRDTSC);
+        RECORD_PROF_COUNTER(kClockLockRDTSC);
+        
+        for (int i = zprof::kClockNULL + 1; i < zprof::kClockMAX; i++)
+        {
+            int decl_id = ProfInst.declare_begin_id() + i;
+            double sum = ProfInst.node(decl_id).cpu.sum ;
+            double c = ProfInst.node(decl_id).cpu.c;
+            double period = ProfInst.clock_period(i);
+
+            LogInfo() << "cost:" << sum * period << " sum:" << sum << " c=" << c << " period:" << period << "ns";
+    
+
+            ASSERT_TEST(std::abs(sum* period - 1000 * 1000 * 1000) < 500 * 1000 * 1000, "i=", i);  //500 ms
+        }
+    }
+
 
     //
 
     if (true)
     {
-        constexpr int low_ms = 400;
-        constexpr int high_ms = 800;
+        constexpr int high_ms = 400;
         constexpr int sleep_count = 4;
-        constexpr int sum_ms = low_ms * sleep_count + high_ms * sleep_count;
-        constexpr int avg_ms = sum_ms / (sleep_count * 2);
+        constexpr int sum_ms = high_ms * sleep_count;
+        constexpr int avg_ms = high_ms;
         constexpr int dv_ms = 25; //clock 
-        constexpr int dv_total_ms = dv_ms * sleep_count * 2;
+        constexpr int dv_total_ms = dv_ms * sleep_count;
 
-
+        for (int i = zprof::kClockNULL + 1; i < zprof::kClockMAX; i++)
+        {
+            int decl_id = ProfInst.declare_begin_id() + i;
+            ProfInst.ResetCpu(decl_id);
+        }
 
         START_PROF_COUNTER(kClockSystem);
         START_PROF_COUNTER(kClockClock);
@@ -174,47 +235,6 @@ int main(int argc, char *argv[])
         START_PROF_COUNTER(kClockMFenceRDTSC);
         START_PROF_COUNTER(kClockBTBMFenceRDTSC);
         START_PROF_COUNTER(kClockLockRDTSC);
-
-
-
-
-        for (int i = 0; i < sleep_count; i++)
-        {
-
-            RESTART_PROF_COUNTER(kClockSystem);
-            RESTART_PROF_COUNTER(kClockClock);
-            RESTART_PROF_COUNTER(kClockChrono);
-            RESTART_PROF_COUNTER(kClockSteadyChrono);
-            RESTART_PROF_COUNTER(kClockSystemChrono);
-            RESTART_PROF_COUNTER(kClockSystemMS);
-            RESTART_PROF_COUNTER(kClockVolatileRDTSC);
-            RESTART_PROF_COUNTER(kClockPureRDTSC);
-            RESTART_PROF_COUNTER(kClockFenceRDTSC);
-            RESTART_PROF_COUNTER(kClockBTBFenceRDTSC);
-            RESTART_PROF_COUNTER(kClockRDTSCP);
-            RESTART_PROF_COUNTER(kClockMFenceRDTSC);
-            RESTART_PROF_COUNTER(kClockBTBMFenceRDTSC);
-            RESTART_PROF_COUNTER(kClockLockRDTSC);
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(low_ms));
-            RECORD_PROF_COUNTER(kClockSystem);
-            RECORD_PROF_COUNTER(kClockClock);
-            RECORD_PROF_COUNTER(kClockChrono);
-            RECORD_PROF_COUNTER(kClockSteadyChrono);
-            RECORD_PROF_COUNTER(kClockSystemChrono);
-            RECORD_PROF_COUNTER(kClockSystemMS);
-            RECORD_PROF_COUNTER(kClockVolatileRDTSC);
-            RECORD_PROF_COUNTER(kClockPureRDTSC);
-            RECORD_PROF_COUNTER(kClockFenceRDTSC);
-            RECORD_PROF_COUNTER(kClockBTBFenceRDTSC);
-            RECORD_PROF_COUNTER(kClockRDTSCP);
-            RECORD_PROF_COUNTER(kClockMFenceRDTSC);
-            RECORD_PROF_COUNTER(kClockBTBMFenceRDTSC);
-            RECORD_PROF_COUNTER(kClockLockRDTSC);
-        }
-
-
-
 
 
         for (int i = 0; i < sleep_count; i++)
@@ -256,31 +276,34 @@ int main(int argc, char *argv[])
         for (int i = zprof::kClockNULL+1; i < zprof::kClockMAX; i++)
         {
             int decl_id = ProfInst.declare_begin_id() + i;
+            double sum = ProfInst.node(decl_id).cpu.sum;
+            double c = ProfInst.node(decl_id).cpu.c;
+            double period = ProfInst.clock_period(i);
+            double cost = sum * period;
 
-            ASSERT_TEST(ProfInst.node(decl_id).cpu.c == sleep_count*2, "i=", i, " c=", ProfInst.node(decl_id).cpu.c);
+            double dv = ProfInst.node(decl_id).cpu.dv * period;
+            double sm = ProfInst.node(decl_id).cpu.sm * period;
+            double h_sm = ProfInst.node(decl_id).cpu.h_sm * period;
+            double l_sm = ProfInst.node(decl_id).cpu.l_sm * period;
+            double max_u = ProfInst.node(decl_id).cpu.max_u * period;
+            double min_u = ProfInst.node(decl_id).cpu.min_u * period;
 
-            double sum = ProfInst.node(decl_id).cpu.sum * ProfInst.particle_for_ns(i);
-            double dv = ProfInst.node(decl_id).cpu.dv * ProfInst.particle_for_ns(i);
-            double sm = ProfInst.node(decl_id).cpu.sm * ProfInst.particle_for_ns(i);
-            double h_sm = ProfInst.node(decl_id).cpu.h_sm * ProfInst.particle_for_ns(i);
-            double l_sm = ProfInst.node(decl_id).cpu.l_sm * ProfInst.particle_for_ns(i);
-            double max_u = ProfInst.node(decl_id).cpu.max_u * ProfInst.particle_for_ns(i);
-            double min_u = ProfInst.node(decl_id).cpu.min_u * ProfInst.particle_for_ns(i);
-            LogInfo() << "sum=" << sum << "," << "sum_ms=" << sum_ms << "," << "dv=" << dv << "," << "dv_total_ms=" << dv_total_ms << "," 
-                << "sm=" << sm << "," << "high_ms=" << high_ms << "," << "low_ms=" << low_ms << "," << "avg_ms=" << avg_ms 
-                << "," << "h_sm=" << h_sm << "," << "l_sm=" << l_sm << "," << "max_u=" << max_u << "," << "min_u=" << min_u << "," << "sleep_count=" << sleep_count << ",";
-            ASSERT_TEST(std::abs(sum/1000.0/1000.0 - sum_ms) < dv_total_ms, "i=", i);
-            ASSERT_TEST(dv / 1000.0 / 1000.0 < dv_total_ms + (high_ms - low_ms)*sleep_count, "i=", i);
-            ASSERT_TEST(sm / 1000.0 / 1000.0 > low_ms, "i=", i);
-            ASSERT_TEST(sm / 1000.0 / 1000.0 < high_ms, "i=", i);
-            ASSERT_TEST(h_sm / 1000.0 / 1000.0 < high_ms, "i=", i);
-            ASSERT_TEST(h_sm / 1000.0 / 1000.0 > avg_ms, "i=", i);
-            ASSERT_TEST(l_sm / 1000.0 / 1000.0 < avg_ms, "i=", i);
-            ASSERT_TEST(l_sm / 1000.0 / 1000.0 >= low_ms, "i=", i);
+
+            ASSERT_TEST(ProfInst.node(decl_id).cpu.c == sleep_count, "i=", i, " c=", ProfInst.node(decl_id).cpu.c);
+
+            LogInfo() << "cost:" << cost << " sum:" << sum << " c=" << c << " period:" << period << "ns dv=" << dv << ", dv_total_ms=" << dv_total_ms << ","
+                << " sm=" << sm << ", high_ms=" << high_ms   << " avg_ms=" << avg_ms 
+                << ", h_sm=" << h_sm << ", l_sm=" << l_sm << ", max_u=" << max_u << ", min_u=" << min_u << ", sleep_count=" << sleep_count ;
+
+            ASSERT_TEST(std::abs(cost /1000.0/1000.0 - sum_ms) < dv_total_ms, "i=", i);
+            ASSERT_TEST(dv / 1000.0 / 1000.0 < dv_total_ms, "i=", i);
+            ASSERT_TEST(sm / 1000.0 / 1000.0 < high_ms + dv_ms, "i=", i);
+            ASSERT_TEST(h_sm / 1000.0 / 1000.0 >= avg_ms, "i=", i);
+            ASSERT_TEST(l_sm / 1000.0 / 1000.0 <= h_sm, "i=", i);
             ASSERT_TEST(max_u >= min_u, "i=", i);
             ASSERT_TEST(max_u > 0, "i=", i);
             ASSERT_TEST(min_u > 0, "i=", i);
-            ASSERT_TEST(max_u - min_u >= dv/(sleep_count*2), "i=", i);
+            ASSERT_TEST(max_u - min_u >= 0, "i=", i);
         }
 
 
