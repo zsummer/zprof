@@ -16,36 +16,42 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    
     strategy:    
       matrix:
         cc: [gcc, clang]
+        #os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
       env:
         CC: ${{ matrix.cc }}
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - name: system info 
+      run: sysctl -a
 
-    - name: Test
-      working-directory: ${{github.workspace}}/build
-      # Execute tests defined by the CMake configuration.  
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+    - name: cpu info  
+      run: lscpu
+      if: runner.os == 'Linux'
+      
+
+    - name: build cmake 
+      # github action now use amd chip . rdtsc not expect
       run: |
-        cd ${{github.workspace}}/bin
-          ./benchmark_branch_prediction_test
-          ./benchmark_record_cpu_test
-          ./benchmark_compiler_optimization_test
-          ./benchmark_cpu_cache_matrix_test
-          ./benchmark_cpu_cache_test
-          ./benchmark_instructions_cost_test
-          ./benchmark_tree_and_array_test
+        mkdir ${{github.workspace}}/build
+        cd ${{github.workspace}}/build 
+        cmake -DPROF_NO_RDTSC=1 -DCMAKE_BUILD_TYPE=release ../
+
+
+    - name: make project
+      working-directory: ${{github.workspace}}/build
+      run: make -j4
+
+    - name: run covarage test 
+      working-directory: ${{github.workspace}}/bin
+      run: |
           ./fast_direct_using_test
           ./fast_macro_using_test
           ./coverage_format_test
@@ -54,5 +60,14 @@ jobs:
           ./coverage_merge_test
           ./coverage_test
 
-          
-          
+    - name: run benchmark test 
+      working-directory: ${{github.workspace}}/bin
+      run: |
+          ./benchmark_branch_prediction_test
+          ./benchmark_record_cpu_test
+          ./benchmark_compiler_optimization_test
+          ./benchmark_cpu_cache_matrix_test
+          ./benchmark_cpu_cache_test
+          ./benchmark_instructions_cost_test
+          ./benchmark_tree_and_array_test
+

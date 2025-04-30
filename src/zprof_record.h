@@ -451,7 +451,7 @@ namespace zprof
     public:
         Report& compact_writer() { return compact_writer_; }
         RecordNode& node(int idx) { return nodes_[idx]; }
-        double particle_for_ns(int t) { return  particle_for_ns_[t]; }
+        double clock_period(int t) { return  clock_period_[t]; }
 
 
 
@@ -491,7 +491,7 @@ namespace zprof
     private:
         RecordNode nodes_[end_id()];
         int declare_window_;
-        double particle_for_ns_[kClockMAX];
+        double clock_period_[kClockMAX];
     };
 
     template<int kInst, int kReserve, int kDeclare>
@@ -499,7 +499,7 @@ namespace zprof
     {
         memset(nodes_, 0, sizeof(nodes_));
         merge_leafs_size_ = 0;
-        memset(particle_for_ns_, 0, sizeof(particle_for_ns_));
+        memset(clock_period_, 0, sizeof(clock_period_));
         declare_window_ = declare_begin_id();
 
         output_ = &Record::DefaultOutputFunc;  //set default log;
@@ -541,23 +541,23 @@ namespace zprof
 
         // 获取所有时钟的频率换算信息  
         // 运行时输出报告时直接进行值相乘计算即可获得纳秒为单位的时间    
-        particle_for_ns_[kClockNULL] = 0;
-        particle_for_ns_[kClockSystem] = GetInverseFrequency<kClockSystem>();
-        particle_for_ns_[kClockClock] = GetInverseFrequency<kClockClock>();
-        particle_for_ns_[kClockChrono] = GetInverseFrequency<kClockChrono>();
-        particle_for_ns_[kClockSteadyChrono] = GetInverseFrequency<kClockSteadyChrono>();
-        particle_for_ns_[kClockSystemChrono] = GetInverseFrequency<kClockSystemChrono>();
-        particle_for_ns_[kClockSystemMS] = GetInverseFrequency<kClockSystemMS>();
-        particle_for_ns_[kClockPureRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockVolatileRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockFenceRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockMFenceRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockLockRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockRDTSCP] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockBTBFenceRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockBTBMFenceRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
+        clock_period_[kClockNULL] = 0;
+        clock_period_[kClockSystem] = GetClockPeriod<kClockSystem>();
+        clock_period_[kClockClock] = GetClockPeriod<kClockClock>();
+        clock_period_[kClockChrono] = GetClockPeriod<kClockChrono>();
+        clock_period_[kClockSteadyChrono] = GetClockPeriod<kClockSteadyChrono>();
+        clock_period_[kClockSystemChrono] = GetClockPeriod<kClockSystemChrono>();
+        clock_period_[kClockSystemMS] = GetClockPeriod<kClockSystemMS>();
+        clock_period_[kClockPureRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockVolatileRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockFenceRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockMFenceRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockLockRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockRDTSCP] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockBTBFenceRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockBTBMFenceRDTSC] = GetClockPeriod<kClockPureRDTSC>();
 
-        particle_for_ns_[kClockNULL] = GetInverseFrequency<zprof::kClockDefatultLevel >();
+        clock_period_[kClockNULL] = GetClockPeriod<zprof::kClockDefatultLevel >();
 
         for (int i = begin_id(); i < reserve_end_id(); i++)
         {
@@ -992,7 +992,7 @@ namespace zprof
         {
             return -10;
         }
-        double cpu_rate = particle_for_ns(node.traits.clk);
+        double cpu_rate = clock_period(node.traits.clk);
         zprof::Clock<> single_line_cost;
         single_line_cost.Start();
         rp.PushIndent(depth * 2);

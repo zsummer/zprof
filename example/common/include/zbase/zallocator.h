@@ -1,30 +1,43 @@
 
+
 /*
-* zallocator License
 * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* All rights reserved
+* This file is part of the zbase, used MIT License.
 */
 
+#pragma once 
+#ifndef  ZALLOCATOR_H
+#define ZALLOCATOR_H
 
+#include <stdint.h>
 #include "zmalloc.h"
 #include <memory>
 #include <limits>
 #include <cstddef>
-#ifndef  ZALLOCATOR_H
-#define ZALLOCATOR_H
 
 
+
+//default use format compatible short type .  
+#if !defined(ZBASE_USE_AHEAD_TYPE) && !defined(ZBASE_USE_DEFAULT_TYPE)
+#define ZBASE_USE_DEFAULT_TYPE
+#endif 
+
+//win & unix format incompatible   
+#ifdef ZBASE_USE_AHEAD_TYPE
+using s8 = int8_t;
+using u8 = uint8_t;
+using s16 = int16_t;
+using u16 = uint16_t;
+using s32 = int32_t;
+using u32 = uint32_t;
+using s64 = int64_t;
+using u64 = uint64_t;
+using f32 = float;
+using f64 = double;
+#endif
+
+#ifdef ZBASE_USE_DEFAULT_TYPE
 using s8 = char;
 using u8 = unsigned char;
 using s16 = short int;
@@ -35,6 +48,14 @@ using s64 = long long;
 using u64 = unsigned long long;
 using f32 = float;
 using f64 = double;
+#endif
+
+
+#if __GNUG__
+#define ZBASE_ALIAS __attribute__((__may_alias__))
+#else
+#define ZBASE_ALIAS
+#endif
 
 
 template <class _Ty, unsigned short _Color = 0>

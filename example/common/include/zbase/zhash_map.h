@@ -1,29 +1,42 @@
 
+
 /*
-* zhash_map License
 * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* All rights reserved
+* This file is part of the zbase, used MIT License.
 */
 
 
-
+#pragma once 
 #ifndef  ZHASH_MAP_H
 #define ZHASH_MAP_H
+
+#include <stdint.h>
 #include <type_traits>
 #include <cstddef>
 
 
+
+//default use format compatible short type .  
+#if !defined(ZBASE_USE_AHEAD_TYPE) && !defined(ZBASE_USE_DEFAULT_TYPE)
+#define ZBASE_USE_DEFAULT_TYPE
+#endif 
+
+//win & unix format incompatible   
+#ifdef ZBASE_USE_AHEAD_TYPE
+using s8 = int8_t;
+using u8 = uint8_t;
+using s16 = int16_t;
+using u16 = uint16_t;
+using s32 = int32_t;
+using u32 = uint32_t;
+using s64 = int64_t;
+using u64 = uint64_t;
+using f32 = float;
+using f64 = double;
+#endif
+
+#ifdef ZBASE_USE_DEFAULT_TYPE
 using s8 = char;
 using u8 = unsigned char;
 using s16 = short int;
@@ -34,8 +47,23 @@ using s64 = long long;
 using u64 = unsigned long long;
 using f32 = float;
 using f64 = double;
+#endif
 
 
+#if __GNUG__
+#define ZBASE_ALIAS __attribute__((__may_alias__))
+#else
+#define ZBASE_ALIAS
+#endif
+
+// init new memory with 0xfd    
+//#define ZDEBUG_UNINIT_MEMORY
+
+// backed memory immediately fill 0xdf 
+//#define ZDEBUG_DEATH_MEMORY  
+
+// open and check fence 
+// not support
 
 
 template<class node_type, class value_type, u32 INVALID_NODE_ID, u32 HASH_COUNT>
@@ -53,9 +81,9 @@ struct zhash_map_iterator
         cur_node_id_ = INVALID_NODE_ID;
         max_node_id_ = 0;
     }
-    zhash_map_iterator(node_type* pool,  u32 node_id, u32 max_node_id)
+    zhash_map_iterator(const node_type* pool,  u32 node_id, u32 max_node_id)
     {
-        node_pool_ = pool;
+        node_pool_ = const_cast<node_type *>(pool);
         cur_node_id_ = node_id;
         max_node_id_ = max_node_id;
     }
@@ -151,6 +179,23 @@ struct zhash_get_key
     }
 };
 
+
+/* type_traits:  (when _Ty is is_trivially_copyable)
+*
+* is_trivially_copyable: safely
+    * memset: no(need call reset);
+    * memcpy: safely;
+* shm resume:  safely
+    * has vptr:     no
+    * static var:   no
+    * has heap ptr: no
+    * has code ptr: no
+    * has sys ptr:  no
+* thread safe: read safely
+*
+*/
+
+
 /*
 * 支持obj和pod: 针对pod和非pod有静态模版分支 pod更快.
 * 固定长度, 其中桶数量为总长2倍. 即hash因子是0.5
@@ -177,7 +222,10 @@ public:
     using value_type = Value;
     using reference = value_type&;
     using const_reference = const value_type&;
-    using space_type = typename std::aligned_storage<sizeof(value_type), alignof(value_type)>::type;
+
+    using inner_space_type = typename std::aligned_storage<sizeof(value_type), alignof(value_type)>::type;
+    using space_type = typename std::conditional<std::is_trivial<value_type>::value, value_type, inner_space_type>::type;
+
     struct node_type
     {
         size_type next;
@@ -185,17 +233,15 @@ public:
         space_type val_space;
     };
     using iterator = zhash_map_iterator<node_type, value_type, INVALID_NODE_ID, HASH_COUNT>;
-    using const_iterator = const iterator;
-    Hash hasher;
-    GetKey get_key;
+    using const_iterator = iterator;
 protected:
     size_type buckets_[HASH_COUNT];
     node_type node_pool_[INVALID_NODE_ID+1]; // dereference end() will panic;  it's user error.  
     size_type first_valid_node_id_;
     size_type exploit_offset_; //is the last valid node index(unexploit it the next index) & the value is the buckets used nodes num. 
     size_type count_;
-    iterator mi(size_type node_id) { return iterator(node_pool_, node_id, exploit_offset_ + 1); }
-    static reference rf(node_type& b) { return *reinterpret_cast<value_type*>(&b.val_space); }
+    iterator mi(size_type node_id) const noexcept { return iterator(node_pool_, node_id, exploit_offset_ + 1); }
+    static reference rf(node_type& b)  { return *reinterpret_cast<value_type*>(&b.val_space); }
 
     void reset()
     {
@@ -246,11 +292,11 @@ protected:
             first_valid_node_id_ = next_b(first_valid_node_id_+1).cur_node_id_;
         }
 #ifdef ZDEBUG_DEATH_MEMORY
-        memset(&node_pool_[node_id].val_space, 0xfd, sizeof(space_type));
+        memset(&node_pool_[node_id].val_space, 0xdf, sizeof(space_type));
 #endif // ZDEBUG_DEATH_MEMORY
     }
 
-    iterator next_b(size_type node_id)
+    iterator next_b(size_type node_id) const
     {
         size_type exploit_offset = exploit_offset_ > NODE_COUNT ? NODE_COUNT : exploit_offset_; //clear gcc warning. it's safe. 
         for (size_type i = node_id; i <= exploit_offset; i++)
@@ -267,7 +313,7 @@ protected:
 
     std::pair<iterator, bool> insert_v(const value_type& val, bool assign)
     {
-        iterator finder = find(get_key(val));
+        iterator finder = find(GetKey()(val));
         if (finder != end())
         {
             if (assign)
@@ -277,7 +323,7 @@ protected:
             return { finder, false };
         }
 
-        auto ukey = hasher(get_key(val));
+        auto ukey = Hash()(GetKey()(val));
         size_type hash_id = (size_type)(ukey % HASH_COUNT);
 
         size_type new_node_id = pop_free();
@@ -367,10 +413,10 @@ public:
 
     iterator find(const key_type& key)
     {
-        auto ukey = hasher(key);
+        auto ukey = Hash()(key);
         size_type hash_id = (size_type)(ukey % HASH_COUNT);
         size_type node_id = buckets_[hash_id];
-        while (node_id != FREE_POOL_SIZE && get_key(rf(node_pool_[node_id])) != key)
+        while (node_id != FREE_POOL_SIZE && GetKey()(rf(node_pool_[node_id])) != key)
         {
             node_id = node_pool_[node_id].next;
         }
@@ -438,7 +484,7 @@ public:
 
     iterator erase(const key_type& key)
     {
-        auto ukey = hasher(key);
+        auto ukey = Hash()(key);
         size_type hash_id = (size_type)(ukey % HASH_COUNT);
         size_type pre_node_id = buckets_[hash_id];
         if (pre_node_id == FREE_POOL_SIZE)
@@ -447,7 +493,7 @@ public:
         }
 
         size_type node_id = FREE_POOL_SIZE;
-        if (get_key(rf(node_pool_[pre_node_id])) == key)
+        if (GetKey()(rf(node_pool_[pre_node_id])) == key)
         {
             node_id = pre_node_id;
             buckets_[hash_id] = node_pool_[pre_node_id].next;
@@ -457,7 +503,7 @@ public:
             size_type cur_node_id = pre_node_id;
             while (node_pool_[cur_node_id].next != FREE_POOL_SIZE)
             {
-                if (get_key(rf(node_pool_[node_pool_[cur_node_id].next])) != key)
+                if (GetKey()(rf(node_pool_[node_pool_[cur_node_id].next])) != key)
                 {
                     cur_node_id = node_pool_[cur_node_id].next;
                     continue;
