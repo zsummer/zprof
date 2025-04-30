@@ -1,29 +1,43 @@
 
+
 /*
-* zlist License
 * Copyright (C) 2019 YaweiZhang <yawei.zhang@foxmail.com>.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* All rights reserved
+* This file is part of the zbase, used MIT License.
 */
 
 
-
-#ifndef  ZLIST_H
+#pragma once 
+#ifndef ZLIST_H
 #define ZLIST_H
+
+#include <stdint.h>
 #include <iterator>
 #include <cstddef>
 
 
+
+
+//default use format compatible short type .  
+#if !defined(ZBASE_USE_AHEAD_TYPE) && !defined(ZBASE_USE_DEFAULT_TYPE)
+#define ZBASE_USE_DEFAULT_TYPE
+#endif 
+
+//win & unix format incompatible   
+#ifdef ZBASE_USE_AHEAD_TYPE
+using s8 = int8_t;
+using u8 = uint8_t;
+using s16 = int16_t;
+using u16 = uint16_t;
+using s32 = int32_t;
+using u32 = uint32_t;
+using s64 = int64_t;
+using u64 = uint64_t;
+using f32 = float;
+using f64 = double;
+#endif
+
+#ifdef ZBASE_USE_DEFAULT_TYPE
 using s8 = char;
 using u8 = unsigned char;
 using s16 = short int;
@@ -34,15 +48,23 @@ using s64 = long long;
 using u64 = unsigned long long;
 using f32 = float;
 using f64 = double;
+#endif
 
-
-//#define ZLIST_USED_FENCE
 
 #if __GNUG__
-#define MAY_ALIAS __attribute__((__may_alias__))
+#define ZBASE_ALIAS __attribute__((__may_alias__))
 #else
-#define MAY_ALIAS
+#define ZBASE_ALIAS
 #endif
+
+// init new memory with 0xfd    
+//#define ZDEBUG_UNINIT_MEMORY
+
+// backed memory immediately fill 0xdf 
+//#define ZDEBUG_DEATH_MEMORY  
+
+// open and check fence 
+//#define ZLIST_USED_FENCE
 
 template<class list_type>
 struct const_zlist_iterator;
@@ -109,6 +131,31 @@ bool operator != (const zlist_iterator<list_type>& n1, const zlist_iterator<list
 }
 
 
+/* type_traits:
+*
+* is_trivially_copyable: safely
+    * memset: safely
+    * memcpy: safely
+* shm resume : safely
+    * has vptr:     no
+    * static var:   no
+    * has heap ptr: no
+    * has code ptr: no
+* thread safe: read safe
+*
+*/
+
+template<s32 _ID = 0>
+class zlist_debug_error_helper
+{
+public:
+    // record error when open fence; don't worry about thead safety. 
+    static s32 debug_error_;
+};
+template<s32 _ID>
+s32 zlist_debug_error_helper<_ID>::debug_error_ = 0;
+
+
 //È«¾²Ì¬Ë«ÏòÁ´±í  
 template<class _Ty, size_t _Size>
 class zlist
@@ -132,8 +179,8 @@ public:
 
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-    using space_type = typename std::aligned_storage<sizeof(_Ty), alignof(_Ty)>::type;
-
+    using inner_space_type = typename std::aligned_storage<sizeof(_Ty), alignof(_Ty)>::type;
+    using space_type = typename std::conditional<std::is_trivial<_Ty>::value, _Ty, inner_space_type>::type;
 public:
     struct node_type
     {
@@ -298,7 +345,7 @@ private:
     {
         node_type& node = data_[id];
 #ifdef ZDEBUG_DEATH_MEMORY
-        memset(&node.space, 0xfd, sizeof(space_type));
+        memset(&node.space, 0xdf, sizeof(space_type));
 #endif // ZDEBUG_DEATH_MEMORY
         node.next = free_id_;
         node.front = END_ID;
@@ -329,11 +376,13 @@ private:
     {
         if (id >= END_ID)
         {
+            zlist_debug_error_helper<>::debug_error_ ++;
             return false;
         }
 #ifdef ZLIST_USED_FENCE
         if (data_[id + 1].fence != FENCE_VAL)
         {
+            zlist_debug_error_helper<>::debug_error_++;
             return false;
         }
 #endif
@@ -341,11 +390,13 @@ private:
 #ifdef ZLIST_USED_FENCE
         if (node.fence != FENCE_VAL)
         {
+            zlist_debug_error_helper<>::debug_error_++;
             return false;
         }
 #endif
         if (used_head_id_ >= END_ID)
         {
+            zlist_debug_error_helper<>::debug_error_++;
             return false; //empty
         }
         if (!std::is_trivial<_Ty>::value)
@@ -375,7 +426,7 @@ private:
 //            LogError() << "release used node error";
         return false;
     }
-    void inject(u32 pos_id, u32 new_id)
+    void inject_node(u32 pos_id, u32 new_id)
     {
         data_[new_id].next = pos_id;
         data_[new_id].front = data_[pos_id].front;
@@ -403,7 +454,7 @@ private:
         {
             return END_ID;
         }
-        inject(id, new_id);
+        inject_node(id, new_id);
         *node_cast(data_[new_id]) = value;
         return new_id;
     }
@@ -416,7 +467,7 @@ private:
         {
             return END_ID;
         }
-        inject(id, new_id);
+        inject_node(id, new_id);
         new (&data_[new_id].space) _Ty(value);
         return new_id;
     }
@@ -430,7 +481,7 @@ private:
         {
             return END_ID;
         }
-        inject(id, new_id);
+        inject_node(id, new_id);
         new (&data_[new_id].space) _Ty(args ...);
         return new_id;
     }
@@ -551,6 +602,7 @@ public:
     {
         return comp_bound(first, last, value, greater);
     }
+
 private:
     u32 used_count_;
     u32 free_id_;
@@ -564,6 +616,7 @@ bool operator==(const zlist<_Ty, _Size>& a1, const zlist<_Ty, _Size>& a2)
 {
     return a1.data() == a2.data();
 }
+
 
 
 
