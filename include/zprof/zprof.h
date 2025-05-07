@@ -73,6 +73,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include <mach/mach.h>
 #if !TARGET_OS_IPHONE
 #define NFLOG_HAVE_LIBPROC
 #include <libproc.h>
@@ -102,9 +103,11 @@
 #define PROF_ALWAYS_INLINE inline
 #endif
 
+//#define PROF_NO_RDTSC
+
 namespace zprof
 {
-    // ≤ªÕ¨µƒ ±÷”¿‡–Õ   
+    // ‰∏çÂêåÁöÑÊó∂ÈíüÁ±ªÂûã   
     enum ClockType
     {
         kClockNULL,
@@ -115,7 +118,7 @@ namespace zprof
         kClockSystemChrono,
         kClockSystemMS, //wall clock 
 
-        //rdtsc÷∏¡Ó”Îfenceµƒ◊È∫œ  
+        //rdtscÊåá‰ª§‰∏éfenceÁöÑÁªÑÂêà  
         kClockPureRDTSC,
         kClockVolatileRDTSC,
         kClockFenceRDTSC,
@@ -149,7 +152,7 @@ namespace zprof
 #ifdef WIN32
         _mm_lfence();
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) ::);
@@ -169,7 +172,7 @@ namespace zprof
         ret = (long long)__rdtsc();
         _mm_lfence();
         return ret;
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("lfence;rdtsc;lfence" : "=a" (lo), "=d" (hi) ::);
@@ -186,7 +189,7 @@ namespace zprof
     {
 #ifdef WIN32
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)  && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) ::);
@@ -202,10 +205,10 @@ namespace zprof
     {
 #ifdef WIN32
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
-        __asm__("rdtsc" : "=a"(lo), "=d"(hi));
+        __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));  //pure need __volatile__ too  . 
         unsigned long long val = (((unsigned long long)hi) << 32 | ((unsigned long long)lo));
         return (long long)val;
 #else
@@ -219,7 +222,7 @@ namespace zprof
 #ifdef WIN32
         _mm_mfence();
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__("lock addq $0, 0(%%rsp); rdtsc" : "=a"(lo), "=d"(hi)::"memory");
@@ -240,7 +243,7 @@ namespace zprof
         ret = (long long)__rdtsc();
         _mm_mfence();
         return ret;
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("mfence;rdtsc;mfence" : "=a" (lo), "=d" (hi) ::);
@@ -257,7 +260,7 @@ namespace zprof
 #ifdef WIN32
         _mm_mfence();
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("mfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
@@ -274,7 +277,7 @@ namespace zprof
 #ifdef WIN32
         unsigned int ui = 0;
         return (long long)__rdtscp(&ui);
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi)::"memory");
@@ -294,12 +297,10 @@ namespace zprof
         win_freq.QuadPart = 0;
         QueryPerformanceCounter((LARGE_INTEGER*)&win_freq);
         return win_freq.QuadPart;
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#else
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         return ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec;
-#else
-        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -315,12 +316,10 @@ namespace zprof
         tsc /= 10;
         tsc -= 11644473600000000ULL;
         return (long long)tsc * 1000; //ns
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
+#else
         struct timeval tm;
         gettimeofday(&tm, nullptr);
         return tm.tv_sec * 1000 * 1000 * 1000 + tm.tv_usec * 1000;
-#else
-        return std::chrono::high_resolution_clock().now().time_since_epoch().count();
 #endif
     }
 
@@ -362,6 +361,17 @@ namespace zprof
             vm.vm_size = (unsigned long long)pmc.WorkingSetSize;
             vm.rss_size = (unsigned long long)pmc.WorkingSetSize;
         }
+#elif defined(__APPLE__)
+        mach_task_basic_info info;
+        mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+        kern_return_t kr = task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
+        if (kr != KERN_SUCCESS)
+        {
+            return vm;
+        }
+        vm.rss_size = info.resident_size;
+        vm.vm_size = info.resident_size_max;
+        vm.shr_size = 0;
 #else
         const char* file = "/proc/self/statm";
         FILE* fp = fopen(file, "r");
@@ -396,6 +406,17 @@ namespace zprof
 
         vm.vm_size = (unsigned long long)state.dwTotalPhys;
         vm.rss_size = (unsigned long long)(state.dwTotalPhys - state.dwAvailPhys);
+#elif defined(__APPLE__)
+
+        size_t len = sizeof(vm.vm_size);
+        sysctlbyname("hw.memsize", &vm.vm_size, &len, NULL, 0);
+        len = sizeof(vm.shr_size);
+        sysctlbyname("hw.pagesize", &vm.shr_size, &len, NULL, 0);
+        len = sizeof(vm.rss_size);
+        sysctlbyname("hw.page_free_count", &vm.rss_size, &len, NULL, 0);    
+        vm.rss_size = vm.vm_size - vm.shr_size * vm.rss_size; 
+        vm.shr_size = 0;
+
 #else
         const char* file = "/proc/meminfo";
         FILE* fp = fopen(file, "r");
@@ -457,22 +478,15 @@ namespace zprof
         ULONG  CurrentIdleState;
     };
 #endif
-    inline double GetCpuFreq()
+
+    // U: nanosecond   
+    inline double GetCpuPeriod()
     {
-        double mhz = 1;
-//#ifdef __APPLE__
-#ifdef __APPLE__
-#if defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)
-        int mib[2];
-        unsigned int freq;
-        size_t len;
-        mib[0] = CTL_HW;
-        mib[1] = HW_CPU_FREQ;
-        len = sizeof(freq);
-        sysctl(mib, 2, &freq, &len, NULL, 0);
-        mhz = freq;
-        mhz /= 1000.0 * 1000.0;
-#endif
+        double period = 0;
+        double ns_per_second = 1000 * 1000 * 1000;
+
+#ifdef PROF_NO_RDTSC //apple m1 | some amd chip 
+        period = ns_per_second * std::chrono::high_resolution_clock::period().num / std::chrono::high_resolution_clock::period().den;
 #elif (defined WIN32)
         SYSTEM_INFO si = { 0 };
         GetSystemInfo(&si);
@@ -482,10 +496,25 @@ namespace zprof
         long ret = CallNtPowerInformation(ProcessorInformation, NULL, 0, &pppi[0], dwSize);
         if (ret != 0 || pppi[0].MaxMhz <= 0)
         {
-            return 1;
+            return 0;
         }
-        mhz = pppi[0].MaxMhz;
-#else
+        period = pppi[0].MaxMhz;
+        period *= 1000 * 1000;  //mhz --> hz 
+        period = ns_per_second / period;
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)  && defined(__APPLE__)
+        int mib[2];
+        unsigned int freq;
+        size_t len;
+        mib[0] = CTL_HW;
+        mib[1] = HW_CPU_FREQ;
+        len = sizeof(freq);
+        sysctl(mib, 2, &freq, &len, NULL, 0);
+        if (freq == 0) //error
+        {
+            return 0;
+        }
+        period = ns_per_second / freq;
+#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)  //linux 
         const char* file = "/proc/cpuinfo";
         FILE* fp = fopen(file, "r");
         if (NULL == fp)
@@ -509,145 +538,142 @@ namespace zprof
                     break;
                 }
 
-                int ret = sscanf(p, "%lf", &mhz);
+                int ret = sscanf(p, "%lf", &period);
                 if (ret <= 0)
                 {
-                    mhz = 1;
+                    period = 0;
                     break;
                 }
                 break;
             }
         }
         fclose(fp);
+        period *= 1000 * 1000; //mhz --> hz 
+        if (period < 1)
+        {
+            return 0;
+        }
+        period = ns_per_second / period;
+#else
+        period = ns_per_second * std::chrono::high_resolution_clock::period().num / std::chrono::high_resolution_clock::period().den;
 #endif // 
-        return mhz;
+        return period;
     }
 
 
 
-    // ªÒ»° ±÷”µƒ∆µ¬  “‘ƒ…√ÎŒ™µ•Œª æˆ∂® ±÷”µƒ’Ê µæ´∂».    
-    // ¿˝»ÁCPU «2.5G ‘ÚRDTSC–Õ ±÷” ∆µ¬  «2.5/ns  
+
+
     template<ClockType _C>
-    inline double GetFrequency()
+    inline double GetClockPeriod()
     {
-        return 1.0;
+        return 1.0;  //1 ns
     }
 
     template<>
-    inline double GetFrequency<kClockFenceRDTSC>()
+    inline double GetClockPeriod<kClockFenceRDTSC>()
     {
-        const static double frequency_per_ns = GetCpuFreq() * 1000.0 * 1000.0 / 1000.0 / 1000.0 / 1000.0;
-        return frequency_per_ns;
+        const static double period = GetCpuPeriod();
+        return period;
     }
     template<>
-    inline double GetFrequency<kClockBTBFenceRDTSC>()
+    inline double GetClockPeriod<kClockBTBFenceRDTSC>()
     {
-        return GetFrequency<kClockFenceRDTSC>();
-    }
-
-    template<>
-    inline double GetFrequency<kClockVolatileRDTSC>()
-    {
-        return GetFrequency<kClockFenceRDTSC>();
+        return GetClockPeriod<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double GetFrequency<kClockPureRDTSC>()
+    inline double GetClockPeriod<kClockVolatileRDTSC>()
     {
-        return GetFrequency<kClockFenceRDTSC>();
+        return GetClockPeriod<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double GetFrequency<kClockLockRDTSC>()
+    inline double GetClockPeriod<kClockPureRDTSC>()
     {
-        return GetFrequency<kClockFenceRDTSC>();
+        return GetClockPeriod<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double GetFrequency<kClockMFenceRDTSC>()
+    inline double GetClockPeriod<kClockLockRDTSC>()
     {
-        return GetFrequency<kClockFenceRDTSC>();
+        return GetClockPeriod<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double GetFrequency<kClockBTBMFenceRDTSC>()
+    inline double GetClockPeriod<kClockMFenceRDTSC>()
     {
-        return GetFrequency<kClockFenceRDTSC>();
+        return GetClockPeriod<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double GetFrequency<kClockRDTSCP>()
+    inline double GetClockPeriod<kClockBTBMFenceRDTSC>()
     {
-        return GetFrequency<kClockFenceRDTSC>();
+        return GetClockPeriod<kClockFenceRDTSC>();
     }
 
     template<>
-    inline double GetFrequency<kClockClock>()
+    inline double GetClockPeriod<kClockRDTSCP>()
+    {
+        return GetClockPeriod<kClockFenceRDTSC>();
+    }
+
+    template<>
+    inline double GetClockPeriod<kClockClock>()
     {
 #ifdef WIN32
-        double frequency_per_ns = 0;
-        LARGE_INTEGER win_freq;
-        win_freq.QuadPart = 0;
-        QueryPerformanceFrequency((LARGE_INTEGER*)&win_freq);
-        frequency_per_ns = win_freq.QuadPart / 1000.0 / 1000.0 / 1000.0;
-        return frequency_per_ns;
+        static double period = 0.0;
+        if (period == 0.0)
+        {
+            LARGE_INTEGER win_freq;
+            win_freq.QuadPart = 0;
+            QueryPerformanceFrequency((LARGE_INTEGER*)&win_freq);
+            if (win_freq.QuadPart == 0)
+            {
+                win_freq.QuadPart = 1;
+            }
+            period = 1000.0 * 1000.0 * 1000.0 / win_freq.QuadPart;
+        }
+        return period;
 #else
-        return 1.0;
+        return 1.0; //1 ns
 #endif
     }
 
     template<>
-    inline double GetFrequency<kClockSystem>()
+    inline double GetClockPeriod<kClockSystem>()
     {
-        return 1.0;
+        return 1.0; //1 ns
     }
 
     template<>
-    inline double GetFrequency<kClockChrono>()
+    inline double GetClockPeriod<kClockChrono>()
     {
-        const static double chrono_frequency = 
-            std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(1)).count() 
-            / 1000.0 / 1000.0 / 1000.0;
-        return chrono_frequency;
+        return 1000.0 * 1000.0 * 1000.0 * std::chrono::high_resolution_clock::period().num / std::chrono::high_resolution_clock::period().den;
     }
 
     template<>
-    inline double GetFrequency<kClockSteadyChrono>()
+    inline double GetClockPeriod<kClockSteadyChrono>()
     {
-        const static double chrono_frequency = 
-            std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(1)).count() 
-            / 1000.0 / 1000.0 / 1000.0;
-        return chrono_frequency;
+        return 1000.0 * 1000.0 * 1000.0 * std::chrono::steady_clock::period().num / std::chrono::steady_clock::period().den;
     }
 
     template<>
-    inline double GetFrequency<kClockSystemChrono>()
+    inline double GetClockPeriod<kClockSystemChrono>()
     {
-        const static double chrono_frequency = 
-            std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1)).count() 
-            / 1000.0 / 1000.0 / 1000.0;
-        return chrono_frequency;
+        return 1000.0 * 1000.0 * 1000.0 * std::chrono::system_clock::period().num / std::chrono::system_clock::period().den;
     }
 
     template<>
-    inline double GetFrequency<kClockSystemMS>()
+    inline double GetClockPeriod<kClockSystemMS>()
     {
-        static double chrono_frequency = 1.0 / 1000.0 / 1000.0;
-        return chrono_frequency;
-    }
-
-    // ªÒ»°∆µ¬ (ƒ…√Îµ•Œª)µƒµπ ˝   
-    // ¿˝»ÁCPU 2.5G  RDTSC–Õ ±÷”µƒµπ ˝Œ™0.4 ¥˙±Ì√ø¥Œtickµƒº‰∏Ù ±º‰ «0.4ns 
-    template<ClockType _C>
-    inline double GetInverseFrequency()
-    {
-        const static double inverse_frequency_per_ns = 1.0 / (GetFrequency<_C>() <= 0.0 ? 1.0 : GetFrequency<_C>());
-        return inverse_frequency_per_ns;
+        return 1000.0 * 1000.0 * 1000.0 / 1000;
     }
 
 
 
-    //clock ∑‚◊∞: Ã·π©Õ≥“ªµƒ π”√∑Ω Ω∫Õ ‰≥ˆ 
+
+    //clock Â∞ÅË£Ö: Êèê‰æõÁªü‰∏ÄÁöÑ‰ΩøÁî®ÊñπÂºèÂíåËæìÂá∫ 
     template<ClockType _C = kClockVolatileRDTSC>
     class ClockBase
     {
@@ -680,26 +706,27 @@ namespace zprof
             begin_ = c.begin_;
             ticks_ = c.ticks_;
         }
-        // ∆Ù∂ØÕ≥º∆ 
+        // ÂêØÂä®ÁªüËÆ° 
         void Start()
         {
             begin_ = GetTick<_C>();
             ticks_ = 0;
         }
-        // º«¬ºelpased ticks  
+        // ËÆ∞ÂΩïelpased ticks  
         ClockBase& Save()
         {
+            
             ticks_ = GetTick<_C>() - begin_;
             return *this;
         }
 
         ClockBase& StopAndSave() { return Save(); }
 
-        // elpased ticks, ∆‰À˚±√˚∫Õ ±º‰µ•Œª 
+        // elpased ticks, ÂÖ∂‰ªñÂà´ÂêçÂíåÊó∂Èó¥Âçï‰Ωç 
         long long ticks()const { return ticks_; }
         long long cycles()const { return ticks_; }
         long long cost()const { return ticks_; }
-        long long cost_ns()const { return (long long)(ticks_ * GetInverseFrequency<_C>()); }
+        long long cost_ns()const { return (long long)(ticks_ * GetClockPeriod<_C>()); }
         long long cost_ms()const { return cost_ns() / 1000 / 1000; }
         double cost_s() const { return (double)cost_ns() / (1000.0 * 1000.0 * 1000.0); }
 
@@ -1594,7 +1621,7 @@ namespace zprof
     public:
         Report& compact_writer() { return compact_writer_; }
         RecordNode& node(int idx) { return nodes_[idx]; }
-        double particle_for_ns(int t) { return  particle_for_ns_[t]; }
+        double clock_period(int t) { return  clock_period_[t]; }
 
 
 
@@ -1634,7 +1661,7 @@ namespace zprof
     private:
         RecordNode nodes_[end_id()];
         int declare_window_;
-        double particle_for_ns_[kClockMAX];
+        double clock_period_[kClockMAX];
     };
 
     template<int kInst, int kReserve, int kDeclare>
@@ -1642,7 +1669,7 @@ namespace zprof
     {
         memset(nodes_, 0, sizeof(nodes_));
         merge_leafs_size_ = 0;
-        memset(particle_for_ns_, 0, sizeof(particle_for_ns_));
+        memset(clock_period_, 0, sizeof(clock_period_));
         declare_window_ = declare_begin_id();
 
         output_ = &Record::DefaultOutputFunc;  //set default log;
@@ -1684,23 +1711,23 @@ namespace zprof
 
         // ªÒ»°À˘”– ±÷”µƒ∆µ¬ ªªÀ„–≈œ¢  
         // ‘À–– ± ‰≥ˆ±®∏Ê ±÷±Ω”Ω¯––÷µœ‡≥Àº∆À„º¥ø…ªÒµ√ƒ…√ÎŒ™µ•Œªµƒ ±º‰    
-        particle_for_ns_[kClockNULL] = 0;
-        particle_for_ns_[kClockSystem] = GetInverseFrequency<kClockSystem>();
-        particle_for_ns_[kClockClock] = GetInverseFrequency<kClockClock>();
-        particle_for_ns_[kClockChrono] = GetInverseFrequency<kClockChrono>();
-        particle_for_ns_[kClockSteadyChrono] = GetInverseFrequency<kClockSteadyChrono>();
-        particle_for_ns_[kClockSystemChrono] = GetInverseFrequency<kClockSystemChrono>();
-        particle_for_ns_[kClockSystemMS] = GetInverseFrequency<kClockSystemMS>();
-        particle_for_ns_[kClockPureRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockVolatileRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockFenceRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockMFenceRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockLockRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockRDTSCP] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockBTBFenceRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
-        particle_for_ns_[kClockBTBMFenceRDTSC] = GetInverseFrequency<kClockPureRDTSC>();
+        clock_period_[kClockNULL] = 0;
+        clock_period_[kClockSystem] = GetClockPeriod<kClockSystem>();
+        clock_period_[kClockClock] = GetClockPeriod<kClockClock>();
+        clock_period_[kClockChrono] = GetClockPeriod<kClockChrono>();
+        clock_period_[kClockSteadyChrono] = GetClockPeriod<kClockSteadyChrono>();
+        clock_period_[kClockSystemChrono] = GetClockPeriod<kClockSystemChrono>();
+        clock_period_[kClockSystemMS] = GetClockPeriod<kClockSystemMS>();
+        clock_period_[kClockPureRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockVolatileRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockFenceRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockMFenceRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockLockRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockRDTSCP] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockBTBFenceRDTSC] = GetClockPeriod<kClockPureRDTSC>();
+        clock_period_[kClockBTBMFenceRDTSC] = GetClockPeriod<kClockPureRDTSC>();
 
-        particle_for_ns_[kClockNULL] = GetInverseFrequency<zprof::kClockDefatultLevel >();
+        clock_period_[kClockNULL] = GetClockPeriod<zprof::kClockDefatultLevel >();
 
         for (int i = begin_id(); i < reserve_end_id(); i++)
         {
@@ -2135,7 +2162,7 @@ namespace zprof
         {
             return -10;
         }
-        double cpu_rate = particle_for_ns(node.traits.clk);
+        double cpu_rate = clock_period(node.traits.clk);
         zprof::Clock<> single_line_cost;
         single_line_cost.Start();
         rp.PushIndent(depth * 2);

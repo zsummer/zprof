@@ -1,0 +1,6 @@
+version:
+last_sha1(./src)=f97e384f3887509b80bf10e0db26b0fb987ec69a
+last_date(./src)=2025-05-07 21:05:01 +0800
+
+git log -1 --stat ./src:
+commit f97e384f3887509b80bf10e0db26b0fb987ec69a Author: zsummer <yawei.zhang@foxmail.com> Date: Wed Apr 30 16:03:59 2025 +0800 disable rdtsc on apple (m1 chip ) and github action; src/zprof_clock.h | 227 ++++++++++++++++++++++++++++++----------------------- src/zprof_record.h | 42 +++++----- 2 files changed, 148 insertions(+), 121 deletions(-)
