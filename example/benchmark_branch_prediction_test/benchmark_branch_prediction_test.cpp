@@ -32,10 +32,7 @@ typedef unsigned long pointer;
 typedef float f32;
 
 
-void test()
-{
 
-}
 
 int main(int argc, char *argv[])
 {
