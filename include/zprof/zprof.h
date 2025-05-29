@@ -152,7 +152,7 @@ namespace zprof
 #ifdef WIN32
         _mm_lfence();
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
+#elif defined(__linux__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("lfence;rdtsc" : "=a" (lo), "=d" (hi) ::);
@@ -172,7 +172,7 @@ namespace zprof
         ret = (long long)__rdtsc();
         _mm_lfence();
         return ret;
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
+#elif defined(__linux__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("lfence;rdtsc;lfence" : "=a" (lo), "=d" (hi) ::);
@@ -189,7 +189,7 @@ namespace zprof
     {
 #ifdef WIN32
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)  && !defined(PROF_NO_RDTSC)
+#elif defined(__linux__) && defined(__x86_64__)  && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) ::);
@@ -205,7 +205,7 @@ namespace zprof
     {
 #ifdef WIN32
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
+#elif defined(__linux__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));  //pure need __volatile__ too  . 
@@ -222,7 +222,7 @@ namespace zprof
 #ifdef WIN32
         _mm_mfence();
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
+#elif defined(__linux__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__("lock addq $0, 0(%%rsp); rdtsc" : "=a"(lo), "=d"(hi)::"memory");
@@ -243,7 +243,7 @@ namespace zprof
         ret = (long long)__rdtsc();
         _mm_mfence();
         return ret;
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
+#elif defined(__linux__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("mfence;rdtsc;mfence" : "=a" (lo), "=d" (hi) ::);
@@ -260,7 +260,7 @@ namespace zprof
 #ifdef WIN32
         _mm_mfence();
         return (long long)__rdtsc();
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
+#elif defined(__linux__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("mfence;rdtsc" : "=a" (lo), "=d" (hi) :: "memory");
@@ -277,7 +277,7 @@ namespace zprof
 #ifdef WIN32
         unsigned int ui = 0;
         return (long long)__rdtscp(&ui);
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
+#elif defined(__linux__) && defined(__x86_64__) && !defined(PROF_NO_RDTSC)
         unsigned int lo = 0;
         unsigned int hi = 0;
         __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi)::"memory");
@@ -501,7 +501,7 @@ namespace zprof
         period = pppi[0].MaxMhz;
         period *= 1000 * 1000;  //mhz --> hz 
         period = ns_per_second / period;
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)  && defined(__APPLE__)
+#elif defined(__linux__) && defined(__x86_64__)  && defined(__APPLE__)
         int mib[2];
         unsigned int freq;
         size_t len;
@@ -514,7 +514,7 @@ namespace zprof
             return 0;
         }
         period = ns_per_second / freq;
-#elif defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(__x86_64__)  //linux 
+#elif defined(__linux__) && defined(__x86_64__)  //linux 
         const char* file = "/proc/cpuinfo";
         FILE* fp = fopen(file, "r");
         if (NULL == fp)
