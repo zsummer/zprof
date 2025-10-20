@@ -317,6 +317,7 @@ int main(int argc, char *argv[])
 
 
     LogInfo() << "all test success";
+    LogInfo() << FNLog::GetDefaultLogger().tick_sum_ / (FNLog::GetDefaultLogger().tick_count_ + 1);
 
     return 0;
 }

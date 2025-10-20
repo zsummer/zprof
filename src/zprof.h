@@ -288,7 +288,7 @@ private:
 
 // 记录用户自定义信息 没有额外处理   
 #define PROF_RECORD_USER(idx, a1, ...) ProfInst.RecordUser(idx, a1, ##__VA_ARGS__)
-#define PROF_RERECORD_USER(idx, a1, ...) ProfInst.RecordUser(idx, a1, ##__VA_ARGS__)
+#define PROF_RERECORD_USER(idx, a1, ...) ProfInst.RerecordUser(idx, a1, ##__VA_ARGS__)
 
 
 // -------手动计时器-----------
