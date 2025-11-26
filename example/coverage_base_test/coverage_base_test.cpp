@@ -105,13 +105,13 @@ int main(int argc, char *argv[])
     for (int i = zprof::kClockNULL; i < zprof::kClockMAX; i++)
     {
         int decl_id = ProfInst.declare_begin_id() + i;
-        ASSERT_TEST(!ProfInst.node(decl_id).active);
+        ASSERT_TEST(!ProfInst.active(decl_id));
         int ret = ProfInst.Regist(decl_id, "reserve", i, true, false);
         ASSERT_TEST(ret == 0);
-        ASSERT_TEST(ProfInst.node(decl_id).active);
+        ASSERT_TEST(ProfInst.active(decl_id));
         ASSERT_TEST(ProfInst.compact_writer().offset()== (size_t)compact_len);
-        ASSERT_TEST(ProfInst.node(decl_id).traits.clk == i);
-        ASSERT_TEST(ProfInst.node(decl_id).traits.resident == true);
+        ASSERT_TEST(ProfInst.trait(decl_id).clk == i);
+        ASSERT_TEST(ProfInst.trait(decl_id).resident == true);
     }
 
     
@@ -124,20 +124,20 @@ int main(int argc, char *argv[])
         int compact_len = (int)ProfInst.compact_writer().offset();
         int ret = ProfInst.Regist(decl_id, buf, i, false, true);
         ASSERT_TEST(ret == 0);
-        ASSERT_TEST(ProfInst.node(decl_id).active);
+        ASSERT_TEST(ProfInst.active(decl_id));
         ASSERT_TEST(ProfInst.compact_writer().offset() == (size_t)compact_len + (size_t)buf_len + 1);
-        ASSERT_TEST(ProfInst.node(decl_id).traits.clk == i);
-        ASSERT_TEST(ProfInst.node(decl_id).traits.resident == false);
+        ASSERT_TEST(ProfInst.trait(decl_id).clk == i);
+        ASSERT_TEST(ProfInst.trait(decl_id).resident == false);
 
 
-        int name_id = ProfInst.node(decl_id).traits.name;
+        int name_id = ProfInst.trait(decl_id).name;
         
         ASSERT_TEST(name_id >= 0);
         ASSERT_TEST(name_id <= (int)ProfInst.compact_writer().offset());
 
         const char* name = &ProfInst.compact_writer().buff()[name_id];
 
-        ASSERT_TEST(strlen(name) == (size_t)ProfInst.node(decl_id).traits.name_len);
+        ASSERT_TEST(strlen(name) == (size_t)ProfInst.trait(decl_id).name_len);
         ASSERT_TEST(strcmp(name, buf) == 0);
     }
 
@@ -192,8 +192,8 @@ int main(int argc, char *argv[])
         for (int i = zprof::kClockNULL + 1; i < zprof::kClockMAX; i++)
         {
             int decl_id = ProfInst.declare_begin_id() + i;
-            double sum = ProfInst.node(decl_id).cpu.sum ;
-            double c = ProfInst.node(decl_id).cpu.c;
+            double sum = ProfInst.cpu(decl_id).sum ;
+            double c = ProfInst.cpu(decl_id).c;
             double period = ProfInst.clock_period(i);
 
             LogInfo() << "cost:" << sum * period << " sum:" << sum << " c=" << c << " period:" << period << "ns";
@@ -276,20 +276,20 @@ int main(int argc, char *argv[])
         for (int i = zprof::kClockNULL+1; i < zprof::kClockMAX; i++)
         {
             int decl_id = ProfInst.declare_begin_id() + i;
-            double sum = ProfInst.node(decl_id).cpu.sum;
-            double c = ProfInst.node(decl_id).cpu.c;
+            double sum = ProfInst.cpu(decl_id).sum;
+            double c = ProfInst.cpu(decl_id).c;
             double period = ProfInst.clock_period(i);
             double cost = sum * period;
 
-            double dv = ProfInst.node(decl_id).cpu.dv * period;
-            double sm = ProfInst.node(decl_id).cpu.sm * period;
-            double h_sm = ProfInst.node(decl_id).cpu.h_sm * period;
-            double l_sm = ProfInst.node(decl_id).cpu.l_sm * period;
-            double max_u = ProfInst.node(decl_id).cpu.max_u * period;
-            double min_u = ProfInst.node(decl_id).cpu.min_u * period;
+            double dv = ProfInst.cpu(decl_id).dv * period;
+            double sm = ProfInst.cpu(decl_id).sm * period;
+            double h_sm = ProfInst.cpu(decl_id).h_sm * period;
+            double l_sm = ProfInst.cpu(decl_id).l_sm * period;
+            double max_u = ProfInst.cpu(decl_id).max_u * period;
+            double min_u = ProfInst.cpu(decl_id).min_u * period;
 
 
-            ASSERT_TEST(ProfInst.node(decl_id).cpu.c == sleep_count, "i=", i, " c=", ProfInst.node(decl_id).cpu.c);
+            ASSERT_TEST(ProfInst.cpu(decl_id).c == sleep_count, "i=", i, " c=", ProfInst.cpu(decl_id).c);
 
             LogInfo() << "cost:" << cost << " sum:" << sum << " c=" << c << " period:" << period << "ns dv=" << dv << ", dv_total_ms=" << dv_total_ms << ","
                 << " sm=" << sm << ", high_ms=" << high_ms   << " avg_ms=" << avg_ms 
