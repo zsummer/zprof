@@ -51,7 +51,7 @@ namespace zprof
     };
 
 
-    struct RecordTraits
+    struct TraitInfo
     {
         int name;
         int name_len;
@@ -59,14 +59,14 @@ namespace zprof
         bool resident;
     };
 
-    struct RecordMerge
+    struct MergeInfo
     {
         int to;
         int childs;
         int merged;
     };
 
-    struct RecordShow
+    struct ShowInfo
     {
         int upper;
         int jumps;
@@ -75,7 +75,7 @@ namespace zprof
     };
 
 
-    struct RecordCPU
+    struct TscInfo
     {
         long long c; 
         long long sum;  
@@ -88,12 +88,12 @@ namespace zprof
         long long t_u;
     };
 
-    struct RecordTimer
+    struct TimerInfo
     {
         long long last;
     };
 
-    struct RecordMem
+    struct MemInfo
     {
         long long c;  
         long long sum;
@@ -102,7 +102,7 @@ namespace zprof
     };
 
 
-    struct RecordUser
+    struct UserInfo
     {
         long long param1;
         long long param2;
@@ -112,22 +112,6 @@ namespace zprof
 
 
 
-
-
-    struct RecordNode
-    {
-        bool active;  
-        RecordTraits traits;
-        RecordShow show;
-        RecordMerge merge;
-        RecordCPU cpu; 
-        RecordMem mem; 
-        RecordTimer timer;
-        RecordUser user;
-        VMData vm;
-    };  
-
-    constexpr static int kNodeSize = sizeof(RecordNode);
 
 
     enum OutFlags : unsigned int
@@ -239,29 +223,29 @@ namespace zprof
         // 重置记录的数据 
         PROF_ALWAYS_INLINE  void ResetCpu(int idx)
         {
-            RecordNode& node = nodes_[idx];
-            memset(&node.cpu, 0, sizeof(node.cpu));
-            node.cpu.min_u = LLONG_MAX;
+            TscInfo& cpu = cpu_[idx];
+            memset(&cpu, 0, sizeof(cpu));
+            cpu.min_u = LLONG_MAX;
         }
         PROF_ALWAYS_INLINE void ResetMem(int idx)
         {
-            RecordNode& node = nodes_[idx];
-            memset(&node.mem, 0, sizeof(node.mem));
+            MemInfo& mem = mem_[idx];
+            memset(&mem, 0, sizeof(mem));
         }
         PROF_ALWAYS_INLINE void ResetVm(int idx)
         {
-            RecordNode& node = nodes_[idx];
-            memset(&node.vm, 0, sizeof(node.vm));
+            VMData& vm = vm_[idx];
+            memset(&vm, 0, sizeof(vm));
         }
         PROF_ALWAYS_INLINE void ResetTimer(int idx)
         {
-            RecordNode& node = nodes_[idx];
-            memset(&node.timer, 0, sizeof(node.timer));
+            TimerInfo& timer = timer_[idx];
+            memset(&timer, 0, sizeof(timer));
         }
         PROF_ALWAYS_INLINE void ResetUser(int idx)
         {
-            RecordNode& node = nodes_[idx];
-            memset(&node.user, 0, sizeof(node.user));
+            UserInfo& user = user_[idx];
+            memset(&user, 0, sizeof(user));
         }
         PROF_ALWAYS_INLINE void ResetNode(int idx)
         {
@@ -276,7 +260,7 @@ namespace zprof
         {
             for (int idx = first_idx; idx < end_idx; idx++)
             {
-                if (!keep_resident || !nodes_[idx].traits.resident)
+                if (!keep_resident || !traits_[idx].resident)
                 {
                     ResetNode(idx);
                 }
@@ -306,124 +290,124 @@ namespace zprof
         PROF_ALWAYS_INLINE void RecordCpu(int idx, long long c, long long ticks)
         {
             long long dis = ticks / c;
-            RecordNode& node = nodes_[idx];
-            node.cpu.c += c;
-            node.cpu.sum += ticks;
-            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);
-            node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
-            node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
-            node.cpu.dv += abs(dis - node.cpu.sum/node.cpu.c);
-            node.cpu.t_u += ticks;
+            TscInfo& cpu = cpu_[idx];
+            cpu.c += c;
+            cpu.sum += ticks;
+            cpu.sm = SMOOTH_CYCLES_WITH_INIT(cpu.sm, ticks);
+            cpu.max_u = (cpu.max_u < dis ? dis : cpu.max_u);
+            cpu.min_u = (cpu.min_u < dis ? cpu.min_u : dis);
+            cpu.dv += abs(dis - cpu.sum/cpu.c);
+            cpu.t_u += ticks;
         }
 
         PROF_ALWAYS_INLINE void RecordCpu(int idx, long long ticks)
         {
-            RecordNode& node = nodes_[idx];
-            node.cpu.c += 1;
-            node.cpu.sum += ticks;
-            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);
-            node.cpu.max_u = (node.cpu.max_u < ticks ? ticks : node.cpu.max_u);
-            node.cpu.min_u = (node.cpu.min_u < ticks ? node.cpu.min_u : ticks);
-            node.cpu.dv += abs(ticks - node.cpu.sm);
-            node.cpu.t_u += ticks;
+            TscInfo& cpu = cpu_[idx];
+            cpu.c += 1;
+            cpu.sum += ticks;
+            cpu.sm = SMOOTH_CYCLES_WITH_INIT(cpu.sm, ticks);
+            cpu.max_u = (cpu.max_u < ticks ? ticks : cpu.max_u);
+            cpu.min_u = (cpu.min_u < ticks ? cpu.min_u : ticks);
+            cpu.dv += abs(ticks - cpu.sm);
+            cpu.t_u += ticks;
         }
         PROF_ALWAYS_INLINE void RecordCpuNoSM(int idx, long long ticks)
         {
-            RecordNode& node = nodes_[idx];
-            node.cpu.c += 1;
-            node.cpu.sum += ticks;
-            node.cpu.sm = ticks;
-            node.cpu.t_u += ticks;
+            TscInfo& cpu = cpu_[idx];
+            cpu.c += 1;
+            cpu.sum += ticks;
+            cpu.sm = ticks;
+            cpu.t_u += ticks;
         }
         PROF_ALWAYS_INLINE void RecordCpuNoSM(int idx, long long count, long long ticks)
         {
             long long dis = ticks / count;
-            RecordNode& node = nodes_[idx];
-            node.cpu.c += count;
-            node.cpu.sum += ticks;
-            node.cpu.sm = dis;
-            node.cpu.t_u += ticks;
+            TscInfo& cpu = cpu_[idx];
+            cpu.c += count;
+            cpu.sum += ticks;
+            cpu.sm = dis;
+            cpu.t_u += ticks;
         }
 
         // 这个方法记录的内容最详细  
         PROF_ALWAYS_INLINE void RecordCpuFull(int idx, long long ticks)
         {
-            RecordNode& node = nodes_[idx];
-            node.cpu.c += 1;
-            node.cpu.sum += ticks;
+            TscInfo& cpu = cpu_[idx];
+            cpu.c += 1;
+            cpu.sum += ticks;
             long long dis = ticks;
-            long long avg = node.cpu.sum / node.cpu.c;
+            long long avg = cpu.sum / cpu.c;
 
-            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);  
+            cpu.sm = SMOOTH_CYCLES_WITH_INIT(cpu.sm, ticks);  
 
             //上下两个水位线的平滑值  
-            node.cpu.h_sm = (dis >= avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
-            node.cpu.l_sm = (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
+            cpu.h_sm = (dis >= avg ? SMOOTH_CYCLES_WITH_INIT(cpu.h_sm, dis) : cpu.h_sm);
+            cpu.l_sm = (dis > avg ? cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(cpu.l_sm, dis));
 
-            node.cpu.dv += abs(dis - node.cpu.sm);
-            node.cpu.t_u += ticks;
-            node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
-            node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
+            cpu.dv += abs(dis - cpu.sm);
+            cpu.t_u += ticks;
+            cpu.max_u = (cpu.max_u < dis ? dis : cpu.max_u);
+            cpu.min_u = (cpu.min_u < dis ? cpu.min_u : dis);
         }
 
         // 带count数据 
         PROF_ALWAYS_INLINE void RecordCpuFull(int idx, long long c, long long ticks)
         {
         
-            RecordNode& node = nodes_[idx];
-            node.cpu.c += c;
-            node.cpu.sum += ticks;
+            TscInfo& cpu = cpu_[idx];
+            cpu.c += c;
+            cpu.sum += ticks;
             long long dis = ticks / c;
-            long long avg = node.cpu.sum / node.cpu.c;
+            long long avg = cpu.sum / cpu.c;
 
-            node.cpu.sm = SMOOTH_CYCLES_WITH_INIT(node.cpu.sm, ticks);
-            node.cpu.h_sm =  (dis > avg ? SMOOTH_CYCLES_WITH_INIT(node.cpu.h_sm, dis) : node.cpu.h_sm);
-            node.cpu.l_sm =  (dis > avg ? node.cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(node.cpu.l_sm, dis));
-            node.cpu.dv += abs(dis - node.cpu.sm);
-            node.cpu.t_u += ticks;
-            node.cpu.max_u = (node.cpu.max_u < dis ? dis : node.cpu.max_u);
-            node.cpu.min_u = (node.cpu.min_u < dis ? node.cpu.min_u : dis);
+            cpu.sm = SMOOTH_CYCLES_WITH_INIT(cpu.sm, ticks);
+            cpu.h_sm =  (dis > avg ? SMOOTH_CYCLES_WITH_INIT(cpu.h_sm, dis) : cpu.h_sm);
+            cpu.l_sm =  (dis > avg ? cpu.l_sm : SMOOTH_CYCLES_WITH_INIT(cpu.l_sm, dis));
+            cpu.dv += abs(dis - cpu.sm);
+            cpu.t_u += ticks;
+            cpu.max_u = (cpu.max_u < dis ? dis : cpu.max_u);
+            cpu.min_u = (cpu.min_u < dis ? cpu.min_u : dis);
         }
 
 
         PROF_ALWAYS_INLINE void RecordTimer(int idx, long long stamp)
         {
-            RecordNode& node = nodes_[idx];
-            if (node.timer.last == 0)
+            TimerInfo& timer = timer_[idx];
+            if (timer.last == 0)
             {
-                node.timer.last = stamp;
+                timer.last = stamp;
                 return;
             }
-            RecordCpuFull(idx, 1, stamp - node.timer.last);
-            node.timer.last = stamp;
+            RecordCpuFull(idx, 1, stamp - timer.last);
+            timer.last = stamp;
         }
 
         PROF_ALWAYS_INLINE void RecordMem(int idx, long long c, long long add)
         {
-            RecordNode& node = nodes_[idx];
-            node.mem.c += c;
-            node.mem.sum += add;
-            node.mem.t_u += add;
+            MemInfo& mem = mem_[idx];
+            mem.c += c;
+            mem.sum += add;
+            mem.t_u += add;
         }
         PROF_ALWAYS_INLINE void RecordVm(int idx, const VMData& vm)
         {
-            nodes_[idx].vm = vm;
+            vm_[idx] = vm;
         }
         PROF_ALWAYS_INLINE void RecordUser(int idx, long long param1, long long param2 = 0, long long param3 = 0, long long param4 = 0)
         {
-            RecordNode& node = nodes_[idx];
-            node.user.param1 += param1;
-            node.user.param2 += param2;
-            node.user.param3 += param3;
-            node.user.param4 += param4;
+            UserInfo& user = user_[idx];
+            user.param1 += param1;
+            user.param2 += param2;
+            user.param3 += param3;
+            user.param4 += param4;
         }
         PROF_ALWAYS_INLINE void RerecordUser(int idx, long long param1, long long param2 = 0, long long param3 = 0, long long param4 = 0)
         {
-            RecordNode& node = nodes_[idx];
-            node.user.param1 = param1;
-            node.user.param2 = param2;
-            node.user.param3 = param3;
-            node.user.param4 = param4;
+            UserInfo& user = user_[idx];
+            user.param1 = param1;
+            user.param2 = param2;
+            user.param3 = param3;
+            user.param4 = param4;
         }
 
         PROF_ALWAYS_INLINE void RerecordMem(int idx, long long c, long long add)
@@ -434,10 +418,10 @@ namespace zprof
 
 
         // 层级递归输出所有报告   
-        int OutputCpu(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
-        int OutputMem(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
-        int OutputVm(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
-        int OutputUser(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
+        int OutputCpu(Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
+        int OutputMem(Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
+        int OutputVm(Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
+        int OutputUser(Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding);
         int RecursiveOutput(int entry_idx, int depth, const char* opt_name, int opt_name_len, Report& rp);
 
 
@@ -450,7 +434,19 @@ namespace zprof
 
     public:
         Report& compact_writer() { return compact_writer_; }
-        RecordNode& node(int idx) { return nodes_[idx]; }
+
+
+        int active(int idx) { return active_[idx]; };
+        TraitInfo trait(int idx) { return traits_[idx]; };
+        ShowInfo show(int idx) { return show_[idx]; };
+        MergeInfo merge(int idx) { return merge_[idx]; };
+        TscInfo cpu(int idx) { return cpu_[idx]; };
+        MemInfo mem(int idx) { return mem_[idx]; };
+        TimerInfo timer(int idx) { return timer_[idx]; };
+        UserInfo user(int idx) { return user_[idx]; };
+        VMData vm(int idx) { return vm_[idx]; };
+
+
         double clock_period(int t) { return  clock_period_[t]; }
 
 
@@ -489,7 +485,18 @@ namespace zprof
         int no_name_space_len_;
 
     private:
-        RecordNode nodes_[end_id()];
+
+
+        bool active_[end_id()];
+        TraitInfo traits_[end_id()];
+        ShowInfo show_[end_id()];
+        MergeInfo merge_[end_id()];
+        TscInfo cpu_[end_id()];
+        MemInfo mem_[end_id()];
+        TimerInfo timer_[end_id()];
+        UserInfo user_[end_id()];
+        VMData vm_[end_id()];
+
         int declare_window_;
         double clock_period_[kClockMAX];
     };
@@ -497,7 +504,16 @@ namespace zprof
     template<int kInst, int kReserve, int kDeclare>
     Record<kInst, kReserve, kDeclare>::Record() : compact_writer_(compact_data_, compact_data_size())
     {
-        memset(nodes_, 0, sizeof(nodes_));
+        memset(active_, 0, sizeof(active_));
+        memset(traits_, 0, sizeof(traits_));
+        memset(show_, 0, sizeof(show_));
+        memset(merge_, 0, sizeof(merge_));
+        memset(cpu_, 0, sizeof(cpu_));
+        memset(mem_, 0, sizeof(mem_));
+        memset(timer_, 0, sizeof(timer_));
+        memset(user_, 0, sizeof(user_));
+        memset(vm_, 0, sizeof(vm_));
+
         merge_leafs_size_ = 0;
         memset(clock_period_, 0, sizeof(clock_period_));
         declare_window_ = declare_begin_id();
@@ -690,7 +706,7 @@ namespace zprof
             while (next_upper_id < declare_end_id())
             {
                 //找到下一个顶层节点  
-                if (nodes_[next_upper_id].show.upper == 0)
+                if (show_[next_upper_id].upper == 0)
                 {
                     break;
                 }
@@ -701,7 +717,7 @@ namespace zprof
             // 默认指向下一个 即使不执行跳点优化也是逻辑正确的   
             for (int j = i; j < next_upper_id; j++)
             {
-                nodes_[j].show.jumps = next_upper_id - j - 1;
+                show_[j].jumps = next_upper_id - j - 1;
             }
             i = next_upper_id;
         }
@@ -721,20 +737,20 @@ namespace zprof
         }
     
     
-        RecordNode& node = nodes_[idx];
-
-
-        if (!re_reg && node.active)
+        if (!re_reg && active_[idx])
         {
             return 0;
         }
+        ResetNode(idx);
+        memset(&traits_[idx], 0, sizeof(traits_[idx]));
+        memset(&show_[idx], 0, sizeof(show_[idx]));
+        active_[idx] = false;
 
-        memset(&node, 0, sizeof(node));
         Rename(idx, name);
-        nodes_[idx].traits.clk = clk;
-        nodes_[idx].traits.resident = resident;
-        node.active = true;
-        node.cpu.min_u = LLONG_MAX;
+        traits_[idx].clk = clk;
+        traits_[idx].resident = resident;
+        active_[idx] = true;
+        cpu_[idx].min_u = LLONG_MAX;
 
         if (idx >= declare_begin_id() && idx < declare_end_id() && idx + 1 > declare_window_)
         {
@@ -755,23 +771,24 @@ namespace zprof
         {
             return -3;
         }
+
         if (strcmp(name, "reserve") == 0)
         {
-            nodes_[idx].traits.name = reserve_desc_;
-            nodes_[idx].traits.name_len = 7;
+            traits_[idx].name = reserve_desc_;
+            traits_[idx].name_len = 7;
             return 0;
         }
 
 
-        nodes_[idx].traits.name = (int)compact_writer_.offset();// node name is "" when compact rp full 
+        traits_[idx].name = (int)compact_writer_.offset();// node name is "" when compact rp full 
         compact_writer_.PushString(name);
         compact_writer_.PushChar('\0');
         compact_writer_.ClosingString();
-        nodes_[idx].traits.name_len = (int)strlen(&compact_data_[nodes_[idx].traits.name]);
-        if (nodes_[idx].traits.name_len == 0)
+        traits_[idx].name_len = (int)strlen(&compact_data_[traits_[idx].name]);
+        if (traits_[idx].name_len == 0)
         {
-            nodes_[idx].traits.name = no_name_space_;
-            nodes_[idx].traits.name_len = no_name_space_len_;
+            traits_[idx].name = no_name_space_;
+            traits_[idx].name_len = no_name_space_len_;
         }
         return 0;
     }
@@ -784,7 +801,7 @@ namespace zprof
         {
             return "";
         }
-        RecordTraits& traits = nodes_[idx].traits;
+        TraitInfo& traits = traits_[idx];
         if (traits.name >= compact_data_size())
         {
             return "";
@@ -800,7 +817,7 @@ namespace zprof
         {
             return ;
         }
-        RecordNode& node = nodes_[idx];
+
         ResetCpu(idx);
         ResetMem(idx);
         ResetTimer(idx);
@@ -809,10 +826,9 @@ namespace zprof
         {
             return;
         }
-        for (int i = node.show.child; i < node.show.child + node.show.window; i++)
+        for (int i = show_[idx].child; i < show_[idx].child + show_[idx].window; i++)
         {
-            RecordNode& child = nodes_[i];
-            if (child.show.upper == idx)
+            if (show_[i].upper == idx)
             {
                ResetChilds(i, depth + 1);
             }
@@ -833,9 +849,9 @@ namespace zprof
             return -2;
         }
 
-        RecordNode& node = nodes_[idx];
-        RecordNode& child = nodes_[cidx];
-        if (!node.active || !child.active)
+
+  
+        if (!active_[idx] || !active_[cidx])
         {
             return -3; //Regist method has memset all info ; 
         }
@@ -844,25 +860,25 @@ namespace zprof
         // 单个节点的所有子节点一般聚集在一个小的范围内, 最优情况下连续分布    
         // 通过child+window确定最大最小范围, 规避掉使用list造成额外的存储开销和性能浪费  
 
-        if (node.show.child == 0)
+        if (show_[idx].child == 0)
         {
-            node.show.child = cidx;
-            node.show.window = 1;
+            show_[idx].child = cidx;
+            show_[idx].window = 1;
         }
         else
         {
-            if (cidx < node.show.child)
+            if (cidx < show_[idx].child)
             {
-                node.show.window += node.show.child - cidx;
-                node.show.child = cidx;
+                show_[idx].window += show_[idx].child - cidx;
+                show_[idx].child = cidx;
             }
-            else if (cidx >= node.show.child + node.show.window)
+            else if (cidx >= show_[idx].child + show_[idx].window)
             {
-                node.show.window = cidx - node.show.child + 1;
+                show_[idx].window = cidx - show_[idx].child + 1;
             }
         }
 
-        child.show.upper = idx;
+        show_[cidx].upper = idx;
         return 0;
     }
 
@@ -884,30 +900,29 @@ namespace zprof
         {
             return -3;
         }
-        RecordNode& node = nodes_[child];
-        RecordNode& to_node = nodes_[to];
-        if (!node.active || !to_node.active)
+
+        if (!active_[child] || !active_[to])
         {
             return -3; //Regist method has memset all info ; 
         }
 
         // duplicate bind   
-        if (node.merge.to != 0)
+        if (merge_[child].to != 0)
         {
             return -4;
         }
 
-        to_node.merge.childs++;
-        node.merge.to = to;
+        merge_[to].childs++;
+        merge_[child].to = to;
 
         // 非叶子节点 
-        if (node.merge.childs > 0)
+        if (merge_[child].childs > 0)
         {
             return 0;
         }
 
         // 合并的目标节点如果也存在向上合并 那么要从当前的叶子节点中剔除    
-        if (to_node.merge.to != 0)
+        if (merge_[to].to != 0)
         {
             for (int i = 0; i < merge_leafs_size_; i++)
             {
@@ -935,31 +950,30 @@ namespace zprof
         for (int i = 0; i < merge_leafs_size_; i++)
         {
             int leaf_id = merge_leafs_[i];
-            RecordNode& leaf = nodes_[leaf_id];
-            RecordNode* node = NULL;
+
             long long append_cpu = 0;
             long long append_mem = 0;
             int id = 0;
-            node = &nodes_[leaf.merge.to];
-            append_cpu = leaf.cpu.t_u;
-            append_mem = leaf.mem.t_u;
-            id = leaf.merge.to;
-            leaf.cpu.t_u = 0;
-            leaf.mem.t_u = 0;
+            int to_id = merge_[leaf_id].to;
+            append_cpu = cpu_[leaf_id].t_u;
+            append_mem = mem_[leaf_id].t_u;
+            id = merge_[leaf_id].to;
+            cpu_[leaf_id].t_u = 0;
+            mem_[leaf_id].t_u = 0;
 
             // 1-N层父级   
             do
             {
-                node->cpu.t_u += append_cpu;
-                node->mem.t_u += append_mem;
-                node->merge.merged++;
+                cpu_[to_id].t_u += append_cpu;
+                mem_[to_id].t_u += append_mem;
+                merge_[to_id].merged++;
 
                 // 非叶子节点只有当前所有子叶子节点合并完成后才能继续向上合并 
-                if (node->merge.merged >= node->merge.childs)
+                if (merge_[to_id].merged >= merge_[to_id].childs)
                 {
-                    node->merge.merged = 0;
-                    append_cpu = node->cpu.t_u;
-                    append_mem = node->mem.t_u;
+                    merge_[to_id].merged = 0;
+                    append_cpu = cpu_[to_id].t_u;
+                    append_mem = mem_[to_id].t_u;
                     if (append_cpu > 0)
                     {
                         RecordCpuFull(id, append_cpu);
@@ -968,14 +982,14 @@ namespace zprof
                     {
                         RecordMem(id, 1, append_mem);
                     }
-                    node->cpu.t_u = 0;
-                    node->mem.t_u = 0;
-                    if (node->merge.to == 0)
+                    cpu_[to_id].t_u = 0;
+                    mem_[to_id].t_u = 0;
+                    if (merge_[to_id].to == 0)
                     {
                         break;
                     }
-                    id = node->merge.to;
-                    node = &nodes_[node->merge.to];
+                    id = merge_[to_id].to;
+                    to_id = merge_[to_id].to;
                     continue;
                 }
                 break;
@@ -986,13 +1000,13 @@ namespace zprof
 
 
     template<int kInst, int kReserve, int kDeclare>
-    int Record<kInst, kReserve, kDeclare>::OutputCpu(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
+    int Record<kInst, kReserve, kDeclare>::OutputCpu(Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
     {
         if (name == NULL  || name_len + name_padding > kProfDescMaxSize)
         {
             return -10;
         }
-        double cpu_rate = clock_period(node.traits.clk);
+        double cpu_rate = clock_period(traits_[entry_idx].clk);
         zprof::Clock<> single_line_cost;
         single_line_cost.Start();
         rp.PushIndent(depth * 2);
@@ -1006,38 +1020,38 @@ namespace zprof
         rp.PushString(UNWIND_STR("\tcpu*|-- "));
         if (true)
         {
-            rp.PushHumanCount(node.cpu.c);
+            rp.PushHumanCount(cpu_[entry_idx].c);
             rp.PushString(UNWIND_STR("c, "));
-            rp.PushHumanTime((long long)(node.cpu.sum * cpu_rate / node.cpu.c));
+            rp.PushHumanTime((long long)(cpu_[entry_idx].sum * cpu_rate / cpu_[entry_idx].c));
             rp.PushString(UNWIND_STR(", "));
-            rp.PushHumanTime((long long)(node.cpu.sum * cpu_rate));
+            rp.PushHumanTime((long long)(cpu_[entry_idx].sum * cpu_rate));
         }
 
 
-        if (node.cpu.min_u != LLONG_MAX && node.cpu.max_u > 0)
+        if (cpu_[entry_idx].min_u != LLONG_MAX && cpu_[entry_idx].max_u > 0)
         {
             rp.PushString(UNWIND_STR(" --|\tmax-min:|-- "));
-            rp.PushHumanTime((long long)(node.cpu.max_u * cpu_rate));
+            rp.PushHumanTime((long long)(cpu_[entry_idx].max_u * cpu_rate));
             rp.PushString(UNWIND_STR(", "));
-            rp.PushHumanTime((long long)(node.cpu.min_u * cpu_rate));
+            rp.PushHumanTime((long long)(cpu_[entry_idx].min_u * cpu_rate));
         }
 
 
-        if (node.cpu.dv > 0 || node.cpu.sm > 0)
+        if (cpu_[entry_idx].dv > 0 || cpu_[entry_idx].sm > 0)
         {
             rp.PushString(UNWIND_STR(" --|\tdv-sm:|-- "));
-            rp.PushHumanTime((long long)(node.cpu.dv * cpu_rate / node.cpu.c));
+            rp.PushHumanTime((long long)(cpu_[entry_idx].dv * cpu_rate / cpu_[entry_idx].c));
             rp.PushString(UNWIND_STR(", "));
-            rp.PushHumanTime((long long)(node.cpu.sm * cpu_rate));
+            rp.PushHumanTime((long long)(cpu_[entry_idx].sm * cpu_rate));
         }
 
 
-        if (node.cpu.h_sm > 0 || node.cpu.l_sm > 0)
+        if (cpu_[entry_idx].h_sm > 0 || cpu_[entry_idx].l_sm > 0)
         {
             rp.PushString(UNWIND_STR(" --|\th-l:|-- "));
-            rp.PushHumanTime((long long)(node.cpu.h_sm * cpu_rate));
+            rp.PushHumanTime((long long)(cpu_[entry_idx].h_sm * cpu_rate));
             rp.PushString(UNWIND_STR(", "));
-            rp.PushHumanTime((long long)(node.cpu.l_sm * cpu_rate));
+            rp.PushHumanTime((long long)(cpu_[entry_idx].l_sm * cpu_rate));
         }
         rp.PushString(UNWIND_STR(" --|"));
         single_line_cost.StopAndSave();
@@ -1053,7 +1067,7 @@ namespace zprof
 
 
     template<int kInst, int kReserve, int kDeclare>
-    int Record<kInst, kReserve, kDeclare>::OutputMem(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
+    int Record<kInst, kReserve, kDeclare>::OutputMem(Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
     {
         if (name == NULL || name_len + name_padding > kProfDescMaxSize)
         {
@@ -1072,19 +1086,19 @@ namespace zprof
         rp.PushString(UNWIND_STR("\tmem*|-- "));
         if (true)
         {
-            rp.PushHumanCount(node.mem.c);
+            rp.PushHumanCount(mem_[entry_idx].c);
             rp.PushString(UNWIND_STR("c, "));
-            rp.PushHumanMem(node.mem.sum / node.mem.c);
+            rp.PushHumanMem(mem_[entry_idx].sum / mem_[entry_idx].c);
             rp.PushString(UNWIND_STR(", "));
-            rp.PushHumanMem(node.mem.sum);
+            rp.PushHumanMem(mem_[entry_idx].sum);
         }
 
         rp.PushString(UNWIND_STR(" --||-- "));
-        if (node.mem.delta > 0)
+        if (mem_[entry_idx].delta > 0)
         {
-            rp.PushHumanMem(node.mem.sum - node.mem.delta);
+            rp.PushHumanMem(mem_[entry_idx].sum - mem_[entry_idx].delta);
             rp.PushString(UNWIND_STR(", "));
-            rp.PushHumanMem(node.mem.delta);
+            rp.PushHumanMem(mem_[entry_idx].delta);
         }
         rp.PushString(UNWIND_STR(" --|"));
         single_line_cost.StopAndSave();
@@ -1098,7 +1112,7 @@ namespace zprof
         return 0;
     }
     template<int kInst, int kReserve, int kDeclare>
-    int Record<kInst, kReserve, kDeclare>::OutputVm(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
+    int Record<kInst, kReserve, kDeclare>::OutputVm(Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
     {
         if (name == NULL || name_len + name_padding > kProfDescMaxSize)
         {
@@ -1118,13 +1132,13 @@ namespace zprof
         rp.PushString(UNWIND_STR("\t vm*|-- "));
         if (true)
         {
-            rp.PushHumanMem(node.vm.vm_size);
+            rp.PushHumanMem(vm_[entry_idx].vm_size);
             rp.PushString(UNWIND_STR("(vm), "));
-            rp.PushHumanMem(node.vm.rss_size);
+            rp.PushHumanMem(vm_[entry_idx].rss_size);
             rp.PushString(UNWIND_STR("(rss), "));
-            rp.PushHumanMem(node.vm.shr_size);
+            rp.PushHumanMem(vm_[entry_idx].shr_size);
             rp.PushString(UNWIND_STR("(shr), "));
-            rp.PushHumanMem(node.vm.rss_size - node.vm.shr_size);
+            rp.PushHumanMem(vm_[entry_idx].rss_size - vm_[entry_idx].shr_size);
             rp.PushString(UNWIND_STR("(uss)"));
         }
 
@@ -1139,7 +1153,7 @@ namespace zprof
         return 0;
     }
     template<int kInst, int kReserve, int kDeclare>
-    int Record<kInst, kReserve, kDeclare>::OutputUser(RecordNode& node, Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
+    int Record<kInst, kReserve, kDeclare>::OutputUser(Report& rp, int entry_idx, int depth, const char* name, int name_len, int name_padding)
     {
         if (name == NULL || name_len + name_padding > kProfDescMaxSize)
         {
@@ -1159,13 +1173,13 @@ namespace zprof
         rp.PushString(UNWIND_STR("\tuser*|-- "));
         if (true)
         {
-            rp.PushHumanCount(node.user.param1);
+            rp.PushHumanCount(user_[entry_idx].param1);
             rp.PushString(UNWIND_STR(" \t/ "));
-            rp.PushHumanCount(node.user.param2);
+            rp.PushHumanCount(user_[entry_idx].param2);
             rp.PushString(UNWIND_STR(" \t/ "));
-            rp.PushHumanCount(node.user.param3);
+            rp.PushHumanCount(user_[entry_idx].param3);
             rp.PushString(UNWIND_STR(" \t/ "));
-            rp.PushHumanCount(node.user.param4);
+            rp.PushHumanCount(user_[entry_idx].param4);
         }
 
         rp.PushString(UNWIND_STR(" --|"));
@@ -1197,21 +1211,20 @@ namespace zprof
             return -3;
         }
 
-        RecordNode& node = nodes_[entry_idx];
 
-        if (depth == 0 && node.show.upper)
+        if (depth == 0 && show_[entry_idx].upper)
         {
             return 0;
         }
-        if (!node.active)
+        if (!active_[entry_idx])
         {
             return 0;
         }
-        if (node.traits.name + node.traits.name_len >= compact_data_size())
+        if (traits_[entry_idx].name + traits_[entry_idx].name_len >= compact_data_size())
         {
             return 0;
         }
-        if (node.traits.clk >= kClockMAX)
+        if (traits_[entry_idx].clk >= kClockMAX)
         {
             return 0;
         }
@@ -1220,8 +1233,8 @@ namespace zprof
     
         zprof::Clock<> single_line_cost;
 
-        const char* name = &compact_data_[node.traits.name];
-        int name_len = node.traits.name_len;
+        const char* name = &compact_data_[traits_[entry_idx].name];
+        int name_len = traits_[entry_idx].name_len;
         
         if (opt_name != NULL)
         {
@@ -1240,24 +1253,24 @@ namespace zprof
         rp.reset_offset();
 
 
-        if (node.cpu.c > 0)
+        if (cpu_[entry_idx].c > 0)
         {
-            OutputCpu(node, rp, entry_idx, depth, name, name_len, name_padding);
+            OutputCpu(rp, entry_idx, depth, name, name_len, name_padding);
         }
 
-        if (node.mem.c > 0)
+        if (mem_[entry_idx].c > 0)
         {
-            OutputMem(node, rp, entry_idx, depth, name, name_len, name_padding);
+            OutputMem(rp, entry_idx, depth, name, name_len, name_padding);
         }
 
-        if (node.vm.rss_size + node.vm.vm_size > 0)
+        if (vm_[entry_idx].rss_size + vm_[entry_idx].vm_size > 0)
         {
-            OutputVm(node, rp, entry_idx, depth, name, name_len, name_padding);
+            OutputVm(rp, entry_idx, depth, name, name_len, name_padding);
         }
 
-        if (node.user.param1 != 0 || node.user.param2 != 0 || node.user.param3 != 0 || node.user.param4 != 0)
+        if (user_[entry_idx].param1 != 0 || user_[entry_idx].param2 != 0 || user_[entry_idx].param3 != 0 || user_[entry_idx].param4 != 0)
         {
-            OutputUser(node, rp, entry_idx, depth, name, name_len, name_padding);
+            OutputUser(rp, entry_idx, depth, name, name_len, name_padding);
         }
 
         if (depth > kProfMaxDepth)
@@ -1268,10 +1281,9 @@ namespace zprof
         }
 
         //递归输出所有子表
-        for (int i = node.show.child; i < node.show.child + node.show.window; i++)
+        for (int i = show_[entry_idx].child; i < show_[entry_idx].child + show_[entry_idx].window; i++)
         {
-            RecordNode& child = nodes_[i];
-            if (child.show.upper == entry_idx)
+            if (show_[i].upper == entry_idx)
             {
                 int ret = RecursiveOutput(i, depth + 1, NULL, 0, rp);
                 if (ret < 0)
@@ -1335,9 +1347,9 @@ namespace zprof
         rp.PushString(UNWIND_STR(" output report at: "));
         rp.PushNowDate();
         rp.PushString(UNWIND_STR(" dist start time:["));
-        rp.PushHumanTime((Clock<>::SystemNowMs() - nodes_[kInnerInitTs].user.param1)*1000*1000);
+        rp.PushHumanTime((Clock<>::SystemNowMs() - user_[kInnerInitTs].param1)*1000*1000);
         rp.PushString(UNWIND_STR("] dist reset time:["));
-        rp.PushHumanTime((Clock<>::SystemNowMs() - nodes_[kInnerResetTs].user.param1) * 1000 * 1000);
+        rp.PushHumanTime((Clock<>::SystemNowMs() - user_[kInnerInitTs].param1) * 1000 * 1000);
         rp.PushChar(']');
         rp.PushChar(' ');
 
@@ -1381,7 +1393,7 @@ namespace zprof
             {
                 int ret = RecursiveOutput(i, 0, NULL, 0, rp);
                 (void)ret;
-                i += nodes_[i].show.jumps + 1;
+                i += show_[i].jumps + 1;
             }
         }
 
