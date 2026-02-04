@@ -95,11 +95,11 @@ namespace zprof
     };
 
 
-
+	const int kU64MaxCharLen = 30;
 
     inline Report& Report::PushHumanCount(long long count)
     {
-        if (buff_len_ <= offset_ + 35)
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -124,7 +124,7 @@ namespace zprof
 
     inline Report& Report::PushHumanTime(long long ns)
     {
-        if (buff_len_ <= offset_ + 35)
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -170,7 +170,7 @@ namespace zprof
 
     inline Report& Report::PushHumanMem(long long bytes)
     {
-        if (buff_len_ <= offset_ + 35)
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -218,7 +218,8 @@ namespace zprof
 
     inline Report& Report::PushNumber(unsigned long long number, int wide)
     {
-        if (buff_len_ <= offset_ + 30)
+		static const int buf_len = kU64MaxCharLen; // u64 max char length is 20 , plus wide padding 
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -234,7 +235,7 @@ namespace zprof
             "80818283848586878889"
             "90919293949596979899";
 
-        static const int buf_len = 30;
+        
         char buf[buf_len];
         int write_index = buf_len;
         unsigned long long m1 = 0;
@@ -265,7 +266,7 @@ namespace zprof
 
     inline Report& Report::PushNumber(long long number, int wide)
     {
-        if (buff_len_ <= offset_ + 30)
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -391,9 +392,10 @@ namespace zprof
     class StaticReport : public Report
     {
     public:
-        static const int BUFF_SIZE = 350;
-        static_assert(BUFF_SIZE > kProfLineMinSize, "");
-        StaticReport() :Report(buff_, BUFF_SIZE)
+        static const int LINE_BUFF_SIZE = 350;  // single line (report)   
+
+        static_assert(LINE_BUFF_SIZE > kProfLineMinSize, "");
+        StaticReport() :Report(buff_, LINE_BUFF_SIZE)
         {
             buff_[0] = '\0';
         }
@@ -403,7 +405,7 @@ namespace zprof
         }
 
     private:
-        char buff_[BUFF_SIZE];
+        char buff_[LINE_BUFF_SIZE];
     };
 
 }

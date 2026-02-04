@@ -285,8 +285,9 @@ namespace zprof
 
         // 记录CPU开销  
         // 这里的ticks要从zprof::Clock获取, 并且要求和注册的时钟类型一致, 否则输出报告时候可能产生不正确的物理时间换算.   
-        // c为统计的次数  
-        // ticks为对应次数的总开销  
+        // c为统计的次数    
+        // ticks为对应次数的总开销    
+        // c must > 0 
         PROF_ALWAYS_INLINE void RecordCpu(int idx, long long c, long long ticks)
         {
             long long dis = ticks / c;
@@ -471,7 +472,8 @@ namespace zprof
         std::array<int, end_id()> merge_leafs_;
         int merge_leafs_size_;
 
-
+    public:
+        int error_count_;
 
     private:
         int title_;  
@@ -533,6 +535,7 @@ namespace zprof
         no_name_space_len_ = (int)(compact_writer_.offset() - no_name_space_);
         compact_writer_.PushChar('\0');
         title_ = 0;
+        error_count_ = 0;
 
     };
 
@@ -824,6 +827,7 @@ namespace zprof
         ResetUser(idx);
         if (depth > kProfMaxDepth)
         {
+            error_count_++;
             return;
         }
         for (int i = show_[idx].child; i < show_[idx].child + show_[idx].window; i++)
