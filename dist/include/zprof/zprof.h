@@ -855,11 +855,11 @@ namespace zprof
     };
 
 
-
+	const int kU64MaxCharLen = 30;
 
     inline Report& Report::PushHumanCount(long long count)
     {
-        if (buff_len_ <= offset_ + 35)
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -884,7 +884,7 @@ namespace zprof
 
     inline Report& Report::PushHumanTime(long long ns)
     {
-        if (buff_len_ <= offset_ + 35)
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -930,7 +930,7 @@ namespace zprof
 
     inline Report& Report::PushHumanMem(long long bytes)
     {
-        if (buff_len_ <= offset_ + 35)
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -978,7 +978,8 @@ namespace zprof
 
     inline Report& Report::PushNumber(unsigned long long number, int wide)
     {
-        if (buff_len_ <= offset_ + 30)
+		static const int buf_len = kU64MaxCharLen; // u64 max char length is 20 , plus wide padding 
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -994,7 +995,7 @@ namespace zprof
             "80818283848586878889"
             "90919293949596979899";
 
-        static const int buf_len = 30;
+        
         char buf[buf_len];
         int write_index = buf_len;
         unsigned long long m1 = 0;
@@ -1025,7 +1026,7 @@ namespace zprof
 
     inline Report& Report::PushNumber(long long number, int wide)
     {
-        if (buff_len_ <= offset_ + 30)
+        if (buff_len_ <= offset_ + kU64MaxCharLen)
         {
             return *this;
         }
@@ -1151,9 +1152,10 @@ namespace zprof
     class StaticReport : public Report
     {
     public:
-        static const int BUFF_SIZE = 350;
-        static_assert(BUFF_SIZE > kProfLineMinSize, "");
-        StaticReport() :Report(buff_, BUFF_SIZE)
+        static const int LINE_BUFF_SIZE = 350;  // single line (report)   
+
+        static_assert(LINE_BUFF_SIZE > kProfLineMinSize, "");
+        StaticReport() :Report(buff_, LINE_BUFF_SIZE)
         {
             buff_[0] = '\0';
         }
@@ -1163,7 +1165,7 @@ namespace zprof
         }
 
     private:
-        char buff_[BUFF_SIZE];
+        char buff_[LINE_BUFF_SIZE];
     };
 
 }
@@ -1455,8 +1457,9 @@ namespace zprof
 
         // 记录CPU开销  
         // 这里的ticks要从zprof::Clock获取, 并且要求和注册的时钟类型一致, 否则输出报告时候可能产生不正确的物理时间换算.   
-        // c为统计的次数  
-        // ticks为对应次数的总开销  
+        // c为统计的次数    
+        // ticks为对应次数的总开销    
+        // c must > 0 
         PROF_ALWAYS_INLINE void RecordCpu(int idx, long long c, long long ticks)
         {
             long long dis = ticks / c;
@@ -1641,7 +1644,8 @@ namespace zprof
         std::array<int, end_id()> merge_leafs_;
         int merge_leafs_size_;
 
-
+    public:
+        int error_count_;
 
     private:
         int title_;  
@@ -1703,6 +1707,7 @@ namespace zprof
         no_name_space_len_ = (int)(compact_writer_.offset() - no_name_space_);
         compact_writer_.PushChar('\0');
         title_ = 0;
+        error_count_ = 0;
 
     };
 
@@ -1994,6 +1999,7 @@ namespace zprof
         ResetUser(idx);
         if (depth > kProfMaxDepth)
         {
+            error_count_++;
             return;
         }
         for (int i = show_[idx].child; i < show_[idx].child + show_[idx].window; i++)
